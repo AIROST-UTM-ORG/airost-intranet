@@ -1,10 +1,11 @@
 import "./Dashboard.css";
-import useAuth from '../../hooks/useAuth';
-import axios from 'axios';
-import { useState, useEffect } from 'react';
+import useAuth from "../../hooks/useAuth";
+import axios from "axios";
+import { useState, useEffect } from "react";
+import { API_URL } from "../../config/api";
 
 function Dashboard() {
-  const user = useAuth();
+  const { user, setUser } = useAuth();
 
   const [description, setDescription] = useState(user?.description || "");
   const [year, setYear] = useState(user?.year || "");
@@ -46,7 +47,7 @@ function Dashboard() {
     setPhonenum(profile.phonenum || "");
     setInstagram(profile.instagram || "");
     setErrorMessage("");
-    const modal = document.getElementById('my_modal_2');
+    const modal = document.getElementById("my_modal_2");
     if (modal) {
       modal.showModal();
     }
@@ -56,14 +57,18 @@ function Dashboard() {
     if (e && e.preventDefault) {
       e.preventDefault();
     }
-    if (!user?._id) return;
+    const userId = user?._id || user?.id;
+    if (!userId) {
+      setErrorMessage("User identifier is missing. Please refresh and try again.");
+      return;
+    }
 
     setIsUpdating(true);
     setErrorMessage("");
 
     try {
       const response = await axios.patch(
-        `${process.env.REACT_APP_API_URL}/user/${user._id}`,
+        `${API_URL}/user/${userId}`,
         {
           description,
           year,
@@ -86,38 +91,51 @@ function Dashboard() {
           instagram: updated?.instagram ?? instagram,
         };
         setProfile(newProfile);
-        if (user) {
-          user.description = newProfile.description;
-          user.year = newProfile.year;
-          user.course = newProfile.course;
-          user.phonenum = newProfile.phonenum;
-          user.instagram = newProfile.instagram;
+        if (setUser && updated) {
+          setUser((prev) => ({
+            ...prev,
+            ...updated,
+          }));
         }
-        const modal = document.getElementById('my_modal_2');
+        const modal = document.getElementById("my_modal_2");
         if (modal) {
           modal.close();
         }
       }
     } catch (err) {
       console.error("Error updating user profile:", err);
-      setErrorMessage(err.response?.data?.message || err.message || "Failed to update profile.");
+      setErrorMessage(
+        err.response?.data?.message ||
+          err.response?.data?.error ||
+          err.message ||
+          "Failed to update profile."
+      );
     } finally {
       setIsUpdating(false);
     }
   };
 
   return (
-    <div className='dashboard'>
+    <div className="dashboard">
       <div className="header-container">
-        <div className="background"><img src="profile_bg.png" alt="Profile background" /></div>
+        <div className="background">
+          <img src="profile_bg.png" alt="Profile background" />
+        </div>
         <div className="profile-section">
-          <img src={user?.photo} alt="Profile" className='profile-pic' referrerPolicy="no-referrer"/>
+          <img
+            src={user?.photo}
+            alt="Profile"
+            className="profile-pic"
+            referrerPolicy="no-referrer"
+          />
           <div className="about-section">
             <div className="name">{user?.name}</div>
             <div className="about-header">
               <div className="left-section">
                 <div className="profile-description">{profile.description}</div>
-                <div className="year-course">{(profile.year || "") + " year " + (profile.course || "") + " student"}</div>
+                <div className="year-course">
+                  {(profile.year || "") + " year " + (profile.course || "") + " student"}
+                </div>
               </div>
               <div className="right-section">
                 <div className="phonenum">Phone no: {profile.phonenum}</div>
@@ -135,7 +153,7 @@ function Dashboard() {
       </div>
       <div className="buttons-container">
         <div className="buttons">
-          <button className="btn btn-primary" onClick={openModal}>
+          <button className="btn btn-primary" type="button" onClick={openModal}>
             Edit Profile
           </button>
           <button className=""></button>
@@ -144,7 +162,7 @@ function Dashboard() {
       </div>
       <dialog id="my_modal_2" className="modal">
         <div className="modal-box">
-          <form className="form grid grid-cols-1 gap-2" id='userForm' onSubmit={handleSubmit}>
+          <form className="form grid grid-cols-1 gap-2" id="userForm" onSubmit={handleSubmit}>
             <div className="subtitle">Profile Info</div>
             {errorMessage && (
               <div className="alert alert-error text-sm py-2">
@@ -155,46 +173,76 @@ function Dashboard() {
               <div className="label">
                 <span className="label-text">Description</span>
               </div>
-              <input 
-                id="profile-description" className="input input-bordered w-full max-w-xs"
-                type="text" placeholder={profile.description || "Description"} value={description}
-                onChange={(e) => { setDescription(e.target.value); }} />
+              <input
+                id="profile-description"
+                className="input input-bordered w-full max-w-xs"
+                type="text"
+                placeholder={profile.description || "Description"}
+                value={description}
+                onChange={(e) => {
+                  setDescription(e.target.value);
+                }}
+              />
             </label>
             <label className="w-full max-w-xs">
               <div className="label">
                 <span className="label-text">Year</span>
               </div>
-              <input 
-                id="profile-year" className="input input-bordered w-full max-w-xs"
-                type="text" placeholder={profile.year || "Year"} value={year}
-                onChange={(e) => { setYear(e.target.value); }} />
+              <input
+                id="profile-year"
+                className="input input-bordered w-full max-w-xs"
+                type="text"
+                placeholder={profile.year || "Year"}
+                value={year}
+                onChange={(e) => {
+                  setYear(e.target.value);
+                }}
+              />
             </label>
             <label className="w-full max-w-xs">
               <div className="label">
                 <span className="label-text">Course</span>
               </div>
-              <input 
-                id="profile-course" className="input input-bordered w-full max-w-xs"
-                type="text" placeholder={profile.course || "Course"} value={course}
-                onChange={(e) => { setCourse(e.target.value); }} />
+              <input
+                id="profile-course"
+                className="input input-bordered w-full max-w-xs"
+                type="text"
+                placeholder={profile.course || "Course"}
+                value={course}
+                onChange={(e) => {
+                  setCourse(e.target.value);
+                }}
+              />
             </label>
             <label className="w-full max-w-xs">
               <div className="label">
                 <span className="label-text">Phone Number</span>
               </div>
-              <input 
-                id="profile-phonenum" className="input input-bordered w-full max-w-xs"
-                type="text" placeholder={profile.phonenum || "Phone Number"} value={phonenum}
-                onChange={(e) => { setPhonenum(e.target.value); }} />
+              <input
+                id="profile-phonenum"
+                className="input input-bordered w-full max-w-xs"
+                type="text"
+                placeholder={profile.phonenum || "Phone Number"}
+                value={phonenum}
+                onChange={(e) => {
+                  setPhonenum(e.target.value);
+                }}
+              />
             </label>
             <label className="w-full max-w-xs">
               <div className="label">
                 <span className="label-text">Instagram</span>
               </div>
-              <input 
-                id="profile-instagram" className="input input-bordered w-full max-w-xs"
-                type="text" placeholder={profile.instagram || "Instagram"} value={instagram}
-                onChange={(e) => { setInstagram(e.target.value); }} />
+              <input
+                id="profile-instagram"
+                className="input input-bordered w-full max-w-xs"
+                type="text"
+                placeholder={profile.instagram || "Instagram"}
+                value={instagram}
+                onChange={(e) => {
+                  setInstagram(e.target.value);
+                }}
+              />
             </label>
             <div className="modal-action">
               <button type="submit" disabled={isUpdating} className="btn btn-neutral">
