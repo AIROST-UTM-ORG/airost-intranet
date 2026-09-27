@@ -38,7 +38,9 @@ function Dashboard() {
   }, [user]);
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) {
+      e.preventDefault();
+    }
     if (!user?._id) return;
 
     try {
@@ -166,8 +168,10 @@ function Dashboard() {
                 type="text" placeholder={profile.instagram || "Instagram"} value={instagram}
                 onChange={(e) => { setInstagram(e.target.value); }} />
             </label>
+            <div className="modal-action">
+              <button type="button" onClick={handleSubmit} className="btn btn-neutral">Update</button>
+            </div>
           </form>
-          <button type="submit" form='userForm' className="btn btn-neutral">Update</button>
         </div>
         <form method="dialog" className="modal-backdrop">
           <button>close</button>
