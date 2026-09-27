@@ -54,10 +54,15 @@ app.use(passport.authenticate('session'))
 app.use(passport.initialize())
 app.use(passport.session());
 
+const allowedOrigins = [
+  process.env.REACT_APP_URL,
+  "http://localhost:3000",
+  "http://localhost:1234",
+].filter(Boolean);
 
 app.use(cors({
-    origin: process.env.REACT_APP_URL,
-    methods: "GET, POST, PUT, DELETE",
+    origin: allowedOrigins,
+    methods: "GET, POST, PUT, PATCH, DELETE",
     credentials: true,
     exposedHeaders: ["set-cookie"]
 }))
