@@ -53,7 +53,22 @@ router.get('/logout', (req, res) => {
           message: "Error during logout process",
         });
       }
-      res.redirect(process.env.REACT_APP_URL + "/login");
+      if (req.session) {
+        req.session.destroy((destroyErr) => {
+          if (destroyErr) {
+            console.error("Error destroying session:", destroyErr);
+          }
+          const isProduction = process.env.NODE_ENV === 'production';
+          res.clearCookie('connect.sid', {
+            path: '/',
+            secure: isProduction,
+            sameSite: isProduction ? "none" : "lax",
+          });
+          res.redirect(process.env.REACT_APP_URL + "/login");
+        });
+      } else {
+        res.redirect(process.env.REACT_APP_URL + "/login");
+      }
     });
   } catch (error) {
     console.error("Error in logout route:", error);
@@ -67,7 +82,8 @@ router.get('/logout', (req, res) => {
 router.get('/google', (req, res, next) => {
   try {
     passport.authenticate('google', { 
-      scope: ['profile', 'email'] 
+      scope: ['profile', 'email'],
+      prompt: 'select_account'
     })(req, res, next);
   } catch (error) {
     console.error("Error initiating Google authentication:", error);
