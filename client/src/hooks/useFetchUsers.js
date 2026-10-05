@@ -1,15 +1,21 @@
-import { useQuery} from '@tanstack/react-query'
-import axios from 'axios'
+import { useQuery } from '@tanstack/react-query';
+import axios from 'axios';
+import { API_URL } from '../config/api';
+
 const useFetchUsers = () => {
     const getUsers = async () => {
-        return axios.get(`${process.env.REACT_APP_API_URL}/admin/users`)
-        .then(res => res.data)
-        .catch(err => console.log(err))
-    }
+        try {
+            const res = await axios.get(`${API_URL}/admin/users`, { withCredentials: true });
+            return res.data || [];
+        } catch (err) {
+            console.error("Failed to fetch users:", err);
+            return [];
+        }
+    };
     return useQuery({
-        queryKey:["users"],
+        queryKey: ["users"],
         queryFn: getUsers,
-    })
-}
+    });
+};
  
 export default useFetchUsers;
