@@ -3,53 +3,68 @@ const Project = require('../models/Project')
 const { trackTaskChanges, trackTaskCreation, getTaskHistory, getProjectHistory } = require('../utils/historyHelper')
 
 const getProjects = async (req, res) => {
-    try{
-        let projects = await Project.find()
+    try {
+        let projects = await Project.find().sort({ projectId: 1 })
         res.status(200).json(projects)
-    } catch(error){
-        console.log(error.message)
+    } catch (error) {
+        console.error("Error fetching projects:", error.message)
+        res.status(500).json({ message: 'Error fetching projects', error: error.message })
     }
 }
 
 const createProject = async (req, res) => {
-    try{
-        const projectId = await Project.countDocuments();
-        const lastProject = await Project.findOne({}, {}, { sort: { 'createdAt' : -1 } })
-        console.log(lastProject.projectId)
+    try {
+        const lastProject = await Project.findOne({}, {}, { sort: { 'projectId': -1 } })
+        const nextProjectId = (lastProject && typeof lastProject.projectId === 'number')
+            ? lastProject.projectId + 1
+            : 1;
+
         const newProject = {
-            projectId: lastProject.projectId + 1,
-            ...req.body,
+            title: req.body.title,
+            description: req.body.description || "",
+            lead: req.body.lead || "",
+            projectId: nextProjectId,
         };
+
         const savedNewProject = await Project.create(newProject)
-        res.status(200).json(savedNewProject)
-        const newProjectBoard = await ProjectBoard.create(newProject)
-    } catch(error){
-        console.log(error.message)
+
+        await ProjectBoard.findOneAndUpdate(
+            { projectId: savedNewProject.projectId },
+            { $setOnInsert: { projectId: savedNewProject.projectId, tasks: [] } },
+            { upsert: true, new: true }
+        )
+
+        res.status(201).json(savedNewProject)
+    } catch (error) {
+        console.error("Error creating project:", error.message)
+        res.status(500).json({ message: 'Error creating project', error: error.message })
     }
 }
 
 const getProjectBoard = async (req, res) => {
     const projectId = req.params.uid;
-    if (!isNaN(projectId)){
-        try{
-            let projectBoard = await ProjectBoard.findOne({"projectId": projectId})
-            const tasks=projectBoard
-            
+    if (!isNaN(projectId)) {
+        try {
+            let projectBoard = await ProjectBoard.findOne({ "projectId": Number(projectId) })
+            if (!projectBoard) {
+                return res.status(200).json({ projectId: Number(projectId), tasks: [] })
+            }
             res.status(200).json(projectBoard)
-        } catch(error){
-            console.log(error.message)
+        } catch (error) {
+            console.error("Error fetching project board:", error.message)
+            res.status(500).json({ message: 'Error fetching project board', error: error.message })
         }
-    }
-    else{
+    } else {
         console.log(`projectId: ${projectId} is not a number`)
+        res.status(400).json({ message: `projectId: ${projectId} is not a number` })
     }
 }
 
 const createProjectBoard = async (req, res) => {
     // if projectId(docuemnt) is not available in the db, then create a new document
-    try{
-        const existingBoard=await ProjectBoard.findOne({projectId:req.body.projectId})
-        if(!existingBoard){
+    try {
+        const existingBoard = await ProjectBoard.findOne({ projectId: req.body.projectId })
+        if (!existingBoard) {
             const newProjectBoard = await ProjectBoard.create(req.body)
             
             // Track task creation for new tasks
@@ -61,7 +76,7 @@ const createProjectBoard = async (req, res) => {
             
             res.status(201).json(newProjectBoard)
             console.log("Created new project board")
-        }else{
+        } else {
             // If the board already exists, update the existing project board with the new tasks
             const oldTasks = existingBoard.tasks || [];
             existingBoard.tasks = req.body.tasks
@@ -80,22 +95,28 @@ const createProjectBoard = async (req, res) => {
             res.status(200).json(existingBoard)
             console.log(`Creating tasks...Project board with id ${existingBoard.projectId} already exists, tasks updated.`);
         }
-    } catch(error){
+    } catch (error) {
         console.log("Error creating/updating project board: ", error.message);
         res.status(400).json(error.message);
     }
 }
 
-const refreshProjectBoard = async (req, res) => {//from client
-
-    try{
-        const updatedProjectBoard = await ProjectBoard.findOneAndUpdate({projectId: req.body.projectId},{$set:{tasks: req.body.tasks}})
+const refreshProjectBoard = async (req, res) => {
+    try {
+        const updatedProjectBoard = await ProjectBoard.findOneAndUpdate(
+            { projectId: req.body.projectId },
+            { $set: { tasks: req.body.tasks } },
+            { new: true }
+        )
         res.status(200).json(updatedProjectBoard)
-    }catch{error => console.log(error.message)}
+    } catch (error) {
+        console.error("Error refreshing project board:", error.message)
+        res.status(500).json({ message: 'Error refreshing project board', error: error.message })
+    }
 }
 
 const updateProjectBoard = async (req, res) => {
-    try{
+    try {
         // First, get the current task to compare changes
         const currentBoard = await ProjectBoard.findOne({
             projectId: req.body.projectId,
@@ -106,24 +127,26 @@ const updateProjectBoard = async (req, res) => {
         
         // Update the project board
         const updatedProjectBoard = await ProjectBoard.findOneAndUpdate(
-            {projectId: req.body.projectId,
+            {
+                projectId: req.body.projectId,
                 "tasks.task_id": req.body.tasks.task_id,
             },
-            {$set:
-                {"tasks.$": req.body.tasks}
+            {
+                $set: { "tasks.$": req.body.tasks }
             },
-            {new:true}
-        )        // Track the changes
+            { new: true }
+        )
+        // Track the changes
         if (oldTask) {
             const changedBy = req.body.changedBy || req.body.tasks.assignee || 'system';
             await trackTaskChanges(oldTask, req.body.tasks, req.body.projectId, changedBy);
         }
         
-        console.log("Updating project...update successfully at document ",req.body.projectId,"at ",req.body.tasks)
+        console.log("Updating project...update successfully at document ", req.body.projectId, "at ", req.body.tasks)
         res.status(200).json(updatedProjectBoard)
 
-    }catch(error){
-        console.log(error.message)
+    } catch (error) {
+        console.error("Error updating project board:", error.message)
         res.status(500).json({ message: 'Error updating project board', error: error.message });
     }
 }
@@ -147,8 +170,9 @@ const deleteProject = async (req, res) => {
             deletedProject 
         });
     } catch (error) {
-        console.log(error.message);
-        res.status(500).json({ message: 'Error deleting project', error: error.message });    }
+        console.error("Error deleting project:", error.message);
+        res.status(500).json({ message: 'Error deleting project', error: error.message });
+    }
 }
 
 const getTaskHistoryController = async (req, res) => {
@@ -157,7 +181,7 @@ const getTaskHistoryController = async (req, res) => {
         const history = await getTaskHistory(taskId);
         res.status(200).json(history);
     } catch (error) {
-        console.log('Error fetching task history:', error.message);
+        console.error('Error fetching task history:', error.message);
         res.status(500).json({ message: 'Error fetching task history', error: error.message });
     }
 }
@@ -168,7 +192,7 @@ const getProjectTasksHistoryController = async (req, res) => {
         const history = await getProjectHistory(parseInt(projectId));
         res.status(200).json(history);
     } catch (error) {
-        console.log('Error fetching project history:', error.message);
+        console.error('Error fetching project history:', error.message);
         res.status(500).json({ message: 'Error fetching project history', error: error.message });
     }
 }
@@ -184,4 +208,3 @@ module.exports = {
     getTaskHistoryController,
     getProjectTasksHistoryController
 }
-
