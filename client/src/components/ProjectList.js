@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import useAuth from "../hooks/useAuth";
 
-const ProjectList = ({ projects, onDeleteProject }) => {
+const ProjectList = ({ projects = [], onDeleteProject }) => {
   const { user } = useAuth();
   const isAdmin =
     user &&
@@ -22,9 +22,13 @@ const ProjectList = ({ projects, onDeleteProject }) => {
 
   return (
     <div className="project-list w-10/12">
-      {projects.map((project) => (
-        <div className="project-preview" key={project.id}>
-          <Link style={{ textDecoration: "none" }} to={``}>
+      {(projects || []).map((project, index) => (
+        <div className="project-preview" key={project._id || project.projectId || project.id || index}>
+          <Link
+            style={{ textDecoration: "none" }}
+            to={project.projectId ? `/projects/tracking/${project.projectId}` : ``}
+            state={{ projectId: project.projectId }}
+          >
             <h2>{project.title}</h2>
             {!!project.advisor ? (
               <p>
