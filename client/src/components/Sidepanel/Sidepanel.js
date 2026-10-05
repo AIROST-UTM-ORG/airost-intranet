@@ -1,62 +1,63 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import * as aiicon from 'react-icons/ai';
-import { IconContext } from 'react-icons';
-import './Sidepanel.css';
-import { Sidebar } from './Sidebar';
-import useAuth from '../../hooks/useAuth';
+import * as aiicon from "react-icons/ai";
+import { IconContext } from "react-icons";
+import "./Sidepanel.css";
+import { Sidebar } from "./Sidebar";
+import useAuth from "../../hooks/useAuth";
 
-function Sidepanel(){
-    const user = useAuth();    
-    // const [sidebar, setSidebar] = useState(false);
-    // const showSidebar = () => setSidebar(!sidebar);
+function Sidepanel() {
+  const { user, logout } = useAuth();
 
-    const logout = () =>{
-      window.open(`${process.env.REACT_APP_API_URL}/auth/logout`,"_self")
+  const handleLogout = () => {
+    if (logout) {
+      logout();
     }
-    return (
-        <>
+  };
 
-        <IconContext.Provider value={{ color: '#fff' }}>
-        {/* <div className='sidebar'>
-          
-          <Link to='#' className='menu-bars'>
-            <faicon.FaBars onClick={showSidebar} />
-          </Link>
-        </div> */}
-        {/* <sidebar className={sidebar ? 'side-menu active' : 'side-menu'}> */}
-        <sidebar className='side-menu active'>
-          <ul className='side-menu-items'>
-          
-            {/* <li className='sidebar-toggle' onClick={showSidebar}>
-              <Link to='#' className='menu-bars'>
-                <aiicon.AiOutlineClose />
-              </Link>
-            </li> */}
-            <img src="airost-icon.jpg" />
+  const isAdmin =
+    user?.position &&
+    (Array.isArray(user.position) ? user.position.includes("admin") : user.position === "admin");
+
+  return (
+    <>
+      <IconContext.Provider value={{ color: "#fff" }}>
+        <sidebar className="side-menu active">
+          <ul className="side-menu-items">
+            <img src="airost-icon.jpg" alt="Airost logo" />
             {Sidebar.map((item, index) => {
               return (
-                !item.hideNavItem && 
-                <li key={index} className={item.cName}>
-                  <Link to={item.path}>
-                    {item.icon}
-                    <span>{item.title}</span>
-                  </Link>
-                </li>
+                !item.hideNavItem && (
+                  <li key={index} className={item.cName}>
+                    <Link to={item.path}>
+                      {item.icon}
+                      <span>{item.title}</span>
+                    </Link>
+                  </li>
+                )
               );
             })}
 
             {/* Show admin menu item if user is admin */}
-            {(user.position[0] === "admin")
-              ? <li className="side-text"><Link to="/admin"><aiicon.AiFillSetting /><span>Admin</span></Link></li>
-              : null
-            }
-            <li className="side-text" onClick={logout}><Link><aiicon.AiOutlineLogout /><span>Log Out</span></Link></li>
+            {isAdmin ? (
+              <li className="side-text">
+                <Link to="/admin">
+                  <aiicon.AiFillSetting />
+                  <span>Admin</span>
+                </Link>
+              </li>
+            ) : null}
+            <li className="side-text" onClick={handleLogout}>
+              <Link to="#">
+                <aiicon.AiOutlineLogout />
+                <span>Log Out</span>
+              </Link>
+            </li>
           </ul>
         </sidebar>
       </IconContext.Provider>
-        </>
-    )
+    </>
+  );
 }
 
 export default Sidepanel;

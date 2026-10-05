@@ -1,15 +1,16 @@
 import axios from 'axios'
 import { useQueryClient, useMutation} from '@tanstack/react-query'
 import useAuth from '../../../hooks/useAuth'
+import { API_URL } from '../../../config/api'
 
 const usePBMUpdate = ({projectId, cards}) => {    
     const queryClient = useQueryClient()
-    const user = useAuth() // useAuth() returns the user directly, not { user }
+    const { user } = useAuth()
       const updateProjectBoard = async () => {
         try{
             console.log("Sending pending update data to backend")
             console.log("Current user:", user) // Debug log to see user structure
-            const response=await axios.put(`${process.env.REACT_APP_API_URL}/projects/update`,{
+            const response=await axios.put(`${API_URL}/projects/update`,{
                 projectId:projectId,
                 tasks: cards, //should be only a single task (not a whole array)
                 changedBy: user?.email || user?.name || user?.username || 'Unknown User'
