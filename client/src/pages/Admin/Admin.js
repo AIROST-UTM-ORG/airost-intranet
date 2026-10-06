@@ -1,60 +1,68 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios'
-import './Admin.css'
-import { FaCheck, FaXmark } from "react-icons/fa6";const Admin = () => {
+import axios from 'axios';
+import './Admin.css';
+import { FaCheck } from "react-icons/fa6";
+import { API_URL } from "../../config/api";
+
+const Admin = () => {
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [position, setPosition] = useState("");
-    const [showModal, setShowModal] = useState(false);
-    const [users, setUsers]  = useState([])
-    const [createSuccess, setCreateSuccess] = useState(false);
+    const [users, setUsers]  = useState([]);
 
     useEffect(() => {
         getUsers();
-    }, [])
+    }, []);
 
     const getUsers = async () => {
-        axios.get(`${process.env.REACT_APP_API_URL}/admin/users`)
-        .then(users => setUsers(users.data))
-        .catch(err => console.log(err))
-    }
+        try {
+            const res = await axios.get(`${API_URL}/admin/users`, { withCredentials: true });
+            setUsers(res.data || []);
+        } catch (err) {
+            console.error("Error fetching users:", err);
+        }
+    };
 
     const approveUser = async (user) => {
         try {
-            const response = await axios.post(`${process.env.REACT_APP_API_URL}/admin/users/verified`, {
+            const response = await axios.post(`${API_URL}/admin/users/verified`, {
                 name: user.name,
                 email: user.email,
                 position: "member"
-            });
+            }, { withCredentials: true });
             
             if (response.data.createStatus === "success") {
-                // Refresh the user list to show updated status
                 getUsers();
             }
         } catch (error) {
             console.error("Error approving user:", error);
         }
-    }
+    };
     
     const handleSubmit = async (e) => {
         e.preventDefault();
   
-        const response = await axios.post(`${process.env.REACT_APP_API_URL}/admin/users/verified`, {
-            name : name,
-            email : email,
-            position : position,
-        })
-        
-        if (response.data.createStatus == "success"){
-            setCreateSuccess(true);
-            setName("");
-            setEmail("");
-            setPosition("");
+        try {
+            const response = await axios.post(`${API_URL}/admin/users/verified`, {
+                name: name,
+                email: email,
+                position: position,
+            }, { withCredentials: true });
+            
+            if (response.data.createStatus === "success") {
+                setName("");
+                setEmail("");
+                setPosition("");
+                getUsers();
+                const modal = document.getElementById('add-user-modal');
+                if (modal && typeof modal.close === 'function') {
+                    modal.close();
+                }
+            }
+        } catch (error) {
+            console.error("Error creating verified user:", error);
         }
-    }
-    
-    const handleCloseModal = () => setShowModal(false);
-    const handleShowModal = () => setShowModal(true);
+    };
 
     return (
     <div className='admin-page container'>
@@ -76,8 +84,8 @@ import { FaCheck, FaXmark } from "react-icons/fa6";const Admin = () => {
                                         id="email" className="form-control input input-bordered w-full  my-2" 
                                         required type="text" placeholder="Email" value={email}
                                         onChange={(e) => {setEmail(e.target.value)}}/>
-                                <select className="select select-bordered w-full my-2" onChange={(e) => {setPosition(e.target.value)}}>
-                                    <option selected>Select position</option>
+                                <select className="select select-bordered w-full my-2" value={position} onChange={(e) => {setPosition(e.target.value)}}>
+                                    <option value="">Select position</option>
                                     <option value="member">Member</option>
                                     <option value="admin">Admin</option>
                                 </select>
@@ -103,7 +111,7 @@ import { FaCheck, FaXmark } from "react-icons/fa6";const Admin = () => {
                             {
                                 users.map(
                                     (user,index) => {
-                                        return <tr key={index}>
+                                        return <tr key={user._id || index}>
                                             <td><img src={user.photo} alt="Profile"/></td>
                                             <td>{user.name}</td>
                                             <td>{user.email}</td>
