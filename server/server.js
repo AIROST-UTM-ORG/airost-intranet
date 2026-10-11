@@ -11,6 +11,12 @@ const adminRoutes = require("./routes/adminRoutes");
 const userRoutes = require("./routes/userRoutes");
 const eventRoutes = require("./routes/eventRoutes");
 const projectRoutes = require("./routes/projectsRoutes");
+const dns = require("dns");
+
+dns.setServers([
+  "8.8.8.8",
+  "8.8.4.4"
+]);
 
 require("dotenv").config();
 
@@ -19,7 +25,8 @@ const PORT = process.env.PORT || 4000;
 // Connect to db
 const connectDatabase = async () => {
   try {
-    await mongoose.connect(process.env.MONGO_URI);
+    mongoose.set("strictQuery", false);
+    await mongoose.connect(process.env.MONGO_URI || process.env.MONGODB_URI);
     console.log("connected to database");
   } catch (error) {
     console.log(error);
