@@ -2,42 +2,63 @@ import '../style/Doc-card.css';
 import React from 'react';
 import { Link } from "react-router-dom";
 
-const DocCard = (prop) => {
-  const type = prop.articleType;
-  const documentationData = prop.docs;
-  const docCard= (type==='All') ? documentationData : documentationData.filter((doc)=>doc.type===type) ;
-  const getFontSize = (textLength) => {
-    var textLength =  (textLength > 50) ? textLength*0.17 :
-                      (textLength > 40) ? textLength*0.32 :
-                      textLength=15;
-    return textLength;
-  };
+const DocCard = ({ docs, articleType, searchQuery }) => {
+  const filteredByType =
+    articleType === 'All'
+      ? docs
+      : docs?.filter((doc) => {
+          if (articleType === 'Web & Apps' || articleType === 'Web & App Resources') {
+            return doc.type === 'Web & Apps' || doc.type === 'Web & App Resources';
+          }
+          return doc.type === articleType;
+        });
 
-  return ( 
-    <div className="articleContainer">  
-    {docCard?.map((doc) => {
-      return (
-      <div className='articleList'>
-      <div key={doc._id} className='articleCard'>
-      <Link to={`/doc/${doc._id}`} className='articleLink'>
-        <img src={doc.image} alt='article-img' className='articleImage'></img>
-        <div className="article">
-        <div className='articleDetail'>
-          <h1>{doc.author} • </h1>
-          <h1>{doc.date} • </h1>
-          <h1>{doc.type}</h1>
-        </div>
-          <div className='articleTitle' style={{fontSize:`${getFontSize(doc.title.length)}px`}}><h2> {doc.title}</h2></div>
-          <div className='articleDescription'><p>{doc.description} </p></div>
-        </div>
-        </Link>
+  const finalDocs = searchQuery
+    ? filteredByType?.filter((doc) =>
+        doc.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        doc.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        doc.author?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        doc.type?.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : filteredByType;
+
+  if (!finalDocs || finalDocs.length === 0) {
+    return (
+      <div className="no-articles">
+        <h3>No resources found</h3>
+        <p>Try selecting a different category or adjusting your search keyword.</p>
       </div>
+    );
+  }
+
+  return (
+    <div className="articleContainer">
+      {finalDocs.map((doc, index) => {
+        const id = doc._id || doc.id || index;
+        return (
+          <div key={id} className="articleCard">
+            <Link to={`/doc/${id}`} className="articleLink">
+              <div className="articleImageWrapper">
+                <img src={doc.image} alt={doc.title} className="articleImage" />
+              </div>
+              <div className="articleContent">
+                <div className="articleDetail">
+                  <span className="author-name">{doc.author}</span>
+                  <span className="dot">•</span>
+                  <span className="publish-date">{doc.date}</span>
+                  <span className="dot">•</span>
+                  <span className="category-tag">{doc.type}</span>
+                </div>
+                <h2 className="articleTitle">{doc.title}</h2>
+                <p className="articleDescription">{doc.description}</p>
+              </div>
+            </Link>
+          </div>
+        );
+      })}
     </div>
-    )
-    })}
-    </div>
-   );
-}
- 
+  );
+};
+
 export default DocCard;
 

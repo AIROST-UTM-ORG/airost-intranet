@@ -20,15 +20,15 @@ export const ProjectTracking = () => {
   }, [projects, searchTerm]);
 
   const ProjectCard = ({ project }) => (
-    <Link 
-      to={`/projects/tracking/${project.projectId}`} 
-      state={{ projectId: project.projectId }} 
+    <Link
+      to={`/projects/tracking/${project.projectId}`}
+      state={{ projectId: project.projectId }}
       className="group block transition-all duration-200 hover:scale-[1.02]"
     >
       <div className="bg-white border border-gray-200 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 overflow-hidden" style={{ backgroundColor: '#ffffff', borderColor: '#e5e7eb' }}>
         {/* Header with gradient */}
         <div className="bg-gradient-to-r from-blue-500 to-purple-600 h-2"></div>
-        
+
         <div className="p-6">
           {/* Project Title */}
           <div className="flex items-start justify-between mb-4">
@@ -65,9 +65,9 @@ export const ProjectTracking = () => {
   );
 
   const ProjectListItem = ({ project }) => (
-    <Link 
-      to={`/projects/tracking/${project.projectId}`} 
-      state={{ projectId: project.projectId }} 
+    <Link
+      to={`/projects/tracking/${project.projectId}`}
+      state={{ projectId: project.projectId }}
       className="group block transition-all duration-200"
     >
       <div className="bg-white border border-gray-200 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 p-4" style={{ backgroundColor: '#ffffff', borderColor: '#e5e7eb' }}>
@@ -101,38 +101,36 @@ export const ProjectTracking = () => {
         </div>
       </div>
     </Link>
-  );  return (
+  ); return (
     <div className="project-tracking-white-theme min-h-screen bg-white" style={{ backgroundColor: '#ffffff', color: '#1f2937' }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header Section */}
         <div className="mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>              <h1 className="text-3xl font-bold text-gray-900" style={{ color: '#111827' }}>
-                Project Tracking
-              </h1>
+              Project Tracking
+            </h1>
               <p className="text-gray-600 mt-2" style={{ color: '#4b5563' }}>
                 Monitor and manage your projects efficiently
               </p>
             </div>
-            
+
             {/* View Mode Toggle */}
             <div className="flex items-center gap-2 bg-white rounded-lg p-1 border border-gray-200" style={{ backgroundColor: '#ffffff', borderColor: '#e5e7eb' }}>
               <button
-                onClick={() => setViewMode("grid")}                className={`p-2 rounded-md transition-colors ${
-                  viewMode === "grid"
-                    ? "bg-blue-100 text-blue-600"
-                    : "text-gray-400 hover:text-gray-600"
-                }`}
+                onClick={() => setViewMode("grid")} className={`p-2 rounded-md transition-colors ${viewMode === "grid"
+                  ? "bg-blue-100 text-blue-600"
+                  : "text-gray-400 hover:text-gray-600"
+                  }`}
                 style={viewMode === "grid" ? { backgroundColor: '#dbeafe', color: '#2563eb' } : { color: '#9ca3af' }}
               >
                 <FiGrid className="w-4 h-4" />
               </button>
               <button
-                onClick={() => setViewMode("list")}                className={`p-2 rounded-md transition-colors ${
-                  viewMode === "list"
-                    ? "bg-blue-100 text-blue-600"
-                    : "text-gray-400 hover:text-gray-600"
-                }`}
+                onClick={() => setViewMode("list")} className={`p-2 rounded-md transition-colors ${viewMode === "list"
+                  ? "bg-blue-100 text-blue-600"
+                  : "text-gray-400 hover:text-gray-600"
+                  }`}
                 style={viewMode === "list" ? { backgroundColor: '#dbeafe', color: '#2563eb' } : { color: '#9ca3af' }}
               >
                 <FiList className="w-4 h-4" />
@@ -168,38 +166,38 @@ export const ProjectTracking = () => {
 
         {/* Content */}
         {isLoading ? (
-          <div className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" : "space-y-4"}>            {[...Array(6)].map((_, index) => (              <div key={index} className="bg-white border border-gray-200 rounded-xl shadow-md overflow-hidden" style={{ backgroundColor: '#ffffff', borderColor: '#e5e7eb' }}>
-                <div className="bg-gray-200 h-2 animate-pulse" style={{ backgroundColor: '#f3f4f6' }}></div>
-                <div className="p-6 space-y-4">
-                  <div className="h-6 bg-gray-200 rounded animate-pulse" style={{ backgroundColor: '#f3f4f6' }}></div>
-                  <div className="h-4 bg-gray-200 rounded animate-pulse" style={{ backgroundColor: '#f3f4f6' }}></div>
-                  <div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse" style={{ backgroundColor: '#f3f4f6' }}></div>
-                </div>
-              </div>
-            ))}
+          <div className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" : "space-y-4"}>            {[...Array(6)].map((_, index) => (<div key={index} className="bg-white border border-gray-200 rounded-xl shadow-md overflow-hidden" style={{ backgroundColor: '#ffffff', borderColor: '#e5e7eb' }}>
+            <div className="bg-gray-200 h-2 animate-pulse" style={{ backgroundColor: '#f3f4f6' }}></div>
+            <div className="p-6 space-y-4">
+              <div className="h-6 bg-gray-200 rounded animate-pulse" style={{ backgroundColor: '#f3f4f6' }}></div>
+              <div className="h-4 bg-gray-200 rounded animate-pulse" style={{ backgroundColor: '#f3f4f6' }}></div>
+              <div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse" style={{ backgroundColor: '#f3f4f6' }}></div>
+            </div>
+          </div>
+          ))}
           </div>
         ) : isError ? (
           <div className="text-center py-12">            <div className="bg-red-50 border border-red-200 rounded-lg p-8 max-w-md mx-auto" style={{ backgroundColor: '#fef2f2', borderColor: '#fecaca' }}>
-              <div className="text-red-600 mb-2" style={{ color: '#dc2626' }}>
-                <FiFolder className="w-12 h-12 mx-auto" />
-              </div>
-              <h3 className="text-lg font-semibold text-red-900 mb-2" style={{ color: '#7f1d1d' }}>
-                Unable to load projects
-              </h3>
-              <p className="text-red-700 text-sm" style={{ color: '#b91c1c' }}>
-                There was an error loading your projects. Please try again later.
-              </p>
+            <div className="text-red-600 mb-2" style={{ color: '#dc2626' }}>
+              <FiFolder className="w-12 h-12 mx-auto" />
             </div>
+            <h3 className="text-lg font-semibold text-red-900 mb-2" style={{ color: '#7f1d1d' }}>
+              Unable to load projects
+            </h3>
+            <p className="text-red-700 text-sm" style={{ color: '#b91c1c' }}>
+              There was an error loading your projects. Please try again later.
+            </p>
+          </div>
           </div>
         ) : filteredProjects.length === 0 ? (
           <div className="text-center py-12">            <div className="text-gray-400 mb-4" style={{ color: '#9ca3af' }}>
-              <FiFolder className="w-16 h-16 mx-auto" />
-            </div>
+            <FiFolder className="w-16 h-16 mx-auto" />
+          </div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2" style={{ color: '#111827' }}>
               {searchTerm ? "No projects found" : "No projects available"}
             </h3>
             <p className="text-gray-600" style={{ color: '#4b5563' }}>
-              {searchTerm 
+              {searchTerm
                 ? "Try adjusting your search terms or clear the search to see all projects."
                 : "There are no projects to display at the moment."
               }
@@ -215,11 +213,11 @@ export const ProjectTracking = () => {
           </div>
         ) : (
           <div className={
-            viewMode === "grid" 
+            viewMode === "grid"
               ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
               : "space-y-4"
           }>
-            {filteredProjects.map((project) => 
+            {filteredProjects?.map((project) =>
               viewMode === "grid" ? (
                 <ProjectCard key={project.projectId} project={project} />
               ) : (

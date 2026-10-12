@@ -1,5 +1,5 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import * as aiicon from "react-icons/ai";
 import { IconContext } from "react-icons";
 import "./Sidepanel.css";
@@ -8,6 +8,7 @@ import useAuth from "../../hooks/useAuth";
 
 function Sidepanel() {
   const { user, logout } = useAuth();
+  const location = useLocation();
 
   const handleLogout = () => {
     if (logout) {
@@ -24,12 +25,16 @@ function Sidepanel() {
       <IconContext.Provider value={{ color: "#fff" }}>
         <sidebar className="side-menu active">
           <ul className="side-menu-items">
-            <img src="airost-icon.jpg" alt="Airost logo" />
+            <img src="/airost-icon.jpg" alt="Airost logo" />
             {Sidebar.map((item, index) => {
+              const isActive =
+                item.path === "/"
+                  ? location.pathname === "/"
+                  : location.pathname.startsWith(item.path);
               return (
                 !item.hideNavItem && (
-                  <li key={index} className={item.cName}>
-                    <Link to={item.path}>
+                  <li key={index} className={`${item.cName} ${isActive ? "active" : ""}`}>
+                    <Link to={item.path} className={isActive ? "active-link" : ""}>
                       {item.icon}
                       <span>{item.title}</span>
                     </Link>

@@ -13,18 +13,19 @@ const getProjects = async (req, res) => {
 
 const createProject = async (req, res) => {
     try{
-        const projectId = await Project.countDocuments();
         const lastProject = await Project.findOne({}, {}, { sort: { 'createdAt' : -1 } })
-        console.log(lastProject.projectId)
+        const nextProjectId = lastProject && typeof lastProject.projectId === 'number' ? lastProject.projectId + 1 : 1;
+        console.log("Creating project with projectId:", nextProjectId)
         const newProject = {
-            projectId: lastProject.projectId + 1,
+            projectId: nextProjectId,
             ...req.body,
         };
         const savedNewProject = await Project.create(newProject)
-        res.status(200).json(savedNewProject)
         const newProjectBoard = await ProjectBoard.create(newProject)
+        return res.status(200).json(savedNewProject)
     } catch(error){
         console.log(error.message)
+        return res.status(500).json({ error: error.message })
     }
 }
 
