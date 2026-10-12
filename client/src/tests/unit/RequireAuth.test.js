@@ -96,8 +96,7 @@ describe('RequireAuth', () => {
   test('renders a loading spinner when authentication is still loading', () => {
     const authValue = { user: null, loading: true };
     renderWithAuth(authValue);
-    // The spinner uses class "loading loading-spinner"
-    const spinner = document.querySelector('.loading.loading-spinner');
+    const spinner = screen.getByRole('status', { name: 'Loading' });
     expect(spinner).toBeInTheDocument();
     expect(screen.queryByTestId('protected-content')).not.toBeInTheDocument();
     expect(screen.queryByTestId('login-page')).not.toBeInTheDocument();
