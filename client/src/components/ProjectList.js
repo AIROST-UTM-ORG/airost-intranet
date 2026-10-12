@@ -43,14 +43,40 @@ const ProjectList = ({ projects, onDeleteProject }) => {
                 </p>
               )}
             </Link>
-            {isAdmin && (
-              <button
-                className="btn btn-error btn-sm mt-2"
-                onClick={(e) => handleDelete(e, project.projectId)}
-              >
-                Delete Project
-              </button>
-            )}
+            {/* Action buttons */}
+            <div className="project-card-actions mt-3 flex items-center gap-2">
+              {(isAdmin ||
+                project.permissions?.canEdit ||
+                (user && (
+                  user.email === project.lead ||
+                  user.name === project.lead ||
+                  user.email === project.createdBy ||
+                  project.teamMembers?.includes(user.email) ||
+                  project.access?.includes(user.email)
+                ))) && (
+                <Link
+                  to={`/projects/edit/${project.projectId}`}
+                  className="btn btn-outline btn-sm"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Edit Project
+                </Link>
+              )}
+              {(isAdmin ||
+                project.permissions?.canDelete ||
+                (user && (
+                  user.email === project.lead ||
+                  user.name === project.lead ||
+                  user.email === project.createdBy
+                ))) && (
+                <button
+                  className="btn btn-error btn-sm"
+                  onClick={(e) => handleDelete(e, project.projectId)}
+                >
+                  Delete Project
+                </button>
+              )}
+            </div>
           </div>
         ))
       ) : (
