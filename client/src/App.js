@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import Dashboard from "./pages/Dashboard/Dashboard.js";
 import Projects from "./pages/Projects/Projects";
 import ProjectDetails from "./pages/Projects/ProjectDetails";
+import ProjectForm from "./pages/Projects/ProjectForm";
 import Login from "./pages/Login/Login";
 import Layout from "./components/Layout/Layout";
 import RequireAuth from "./components/RequireAuth";
@@ -56,6 +57,10 @@ function AppRoutes() {
         <Route element={<RequireAuth allowedPosition={["member", "admin"]} />}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/projects" element={<Projects />} />
+          <Route path="/projects/add" element={<ProjectForm mode="create" />} />
+          <Route path="/projects/create" element={<ProjectForm mode="create" />} />
+          <Route path="/projects/edit/:projectId" element={<ProjectForm mode="edit" />} />
+          <Route path="/projects/update/:projectId" element={<ProjectForm mode="edit" />} />
           <Route path="/projects/:id" element={<ProjectDetails />} />
           <Route path="/events" element={<Events />} />
           <Route path="/doc" element={<Doc />} />

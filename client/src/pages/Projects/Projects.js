@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './Projects.css';
 import ProjectList from '../../components/ProjectList';
 import { useForm } from "react-hook-form"
@@ -9,6 +10,7 @@ import axios from 'axios';
 import { API_URL } from '../../config/api';
 
 function Projects() {
+  const navigate = useNavigate();
   const projectsQuery = useGetProjects();
   const [projects, setProjects] = useState([]);
   const queryClient = useQueryClient();
@@ -97,9 +99,25 @@ function Projects() {
     <div className='Projects p-5'>
       <div className='flex flex-row justify-between items-center w-10/12'>
         <h1 className='project-title'>Projects</h1>
-        <button className="btn btn-primary" onClick={() => document.getElementById('my_modal_2').showModal()}>Add New Project</button>
-      </div>      {projectsQuery.isLoading
-        ? <div className="flex flex-col gap-2">
+        <button
+          className="btn btn-primary"
+          onClick={() => navigate('/projects/add')}
+        >
+          + Add New Project
+        </button>
+      </div>
+
+      {projectsQuery.isError && (
+        <div className="alert alert-error w-10/12 mt-4 shadow-sm">
+          <span>Failed to load projects. Please check your connection and try again.</span>
+          <button className="btn btn-sm btn-ghost" onClick={() => projectsQuery.refetch()}>
+            Retry
+          </button>
+        </div>
+      )}
+
+      {projectsQuery.isLoading
+        ? <div className="flex flex-col gap-2 mt-4 w-10/12">
           <div className="skeleton h-20"></div>
           <div className="skeleton h-20"></div>
           <div className="skeleton h-20"></div>
