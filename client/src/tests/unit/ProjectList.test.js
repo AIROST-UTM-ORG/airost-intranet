@@ -34,6 +34,14 @@ const renderProjectList = (authValue, onDeleteProject = jest.fn()) => {
 // ── Tests ──────────────────────────────────────────────────────────────────────
 
 describe('ProjectList', () => {
+  beforeEach(() => {
+    jest.spyOn(window, 'confirm').mockReturnValue(true);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   test('renders all project titles', () => {
     renderProjectList({ user: { position: ['member'] } });
     expect(screen.getByText('Alpha Project')).toBeInTheDocument();
@@ -52,10 +60,6 @@ describe('ProjectList', () => {
   });
 
   test('calls onDeleteProject with the correct projectId after confirmation', async () => {
-    // Stub window.confirm to return true
-    const originalConfirm = window.confirm;
-    window.confirm = jest.fn(() => true);
-
     const onDeleteProject = jest.fn();
     renderProjectList({ user: { position: ['admin'] } }, onDeleteProject);
 
@@ -64,13 +68,10 @@ describe('ProjectList', () => {
 
     expect(window.confirm).toHaveBeenCalledTimes(1);
     expect(onDeleteProject).toHaveBeenCalledWith(sampleProjects[0].projectId);
-
-    window.confirm = originalConfirm;
   });
 
   test('does NOT call onDeleteProject when user cancels the confirmation dialog', async () => {
-    const originalConfirm = window.confirm;
-    window.confirm = jest.fn(() => false);
+    window.confirm.mockReturnValue(false);
 
     const onDeleteProject = jest.fn();
     renderProjectList({ user: { position: ['admin'] } }, onDeleteProject);
@@ -79,8 +80,6 @@ describe('ProjectList', () => {
     await userEvent.click(deleteButtons[0]);
 
     expect(onDeleteProject).not.toHaveBeenCalled();
-
-    window.confirm = originalConfirm;
   });
 
   test('renders lead information in the project description', () => {
