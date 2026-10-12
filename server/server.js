@@ -1,13 +1,8 @@
 require("dotenv").config();
 
 const mongoose = require("mongoose");
-const dns = require("dns");
 const { createApp } = require("./app");
 
-dns.setServers([
-  "8.8.8.8",
-  "8.8.4.4"
-]);
 
 const PORT = process.env.PORT || 4000;
 const app = createApp();
