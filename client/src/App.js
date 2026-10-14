@@ -58,7 +58,7 @@ function AppRoutes() {
           <Route path="/projects" element={<Projects />} />
           <Route path="/projects/:id" element={<ProjectDetails />} />
           <Route path="/events" element={<Events />} />
-          <Route path="/doc" element={<Doc />} />
+          <Route path="/doc/*" element={<Doc />} />
           <Route path="/doc/:id" element={<DocBlog />} />
           <Route path="/doc/create/:id" element={<CreateDoc />} />
           <Route path="/projects/tracking" element={<ProjectTracking />} />
