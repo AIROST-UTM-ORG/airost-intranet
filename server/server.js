@@ -15,14 +15,13 @@ const app = createApp();
 // npm run start 
 // Please delete this guideline if you found other alternative
 
-dns.setServers([
-  "8.8.8.8",
-  "8.8.4.4"
-]);
+if (process.env.USE_CUSTOM_DNS === 'true') {
+  dns.setServers(['8.8.8.8', '8.8.4.4']);
+}
 
 const startServer = async () => {
   try {
-    if (MONGODB_URI) {
+    if (!MONGODB_URI) {
       throw new Error("MONGODB_URI is not configured");
     }
 
