@@ -28,7 +28,10 @@ const SpaceListScreen = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const totalDocuments = spaces.reduce((acc, s) => acc + (s.activeDocumentCount || 0), 0);
+  const totalDocuments = spaces.reduce(
+    (acc, s) => acc + (s.activeDocumentCount ?? s.documentCount ?? 0),
+    0
+  );
 
   const filteredSpaces = spaces.filter((space) => {
     if (!searchQuery.trim()) return true;
@@ -304,7 +307,7 @@ const SpaceListScreen = ({
                               <span className="text-[#171717]">Project: {space.projectId.title}</span>
                               <span className="text-[#686868]">·</span>
                               <span className="text-[#686868]">
-                                {space.activeDocumentCount || 0} documents
+                                {space.activeDocumentCount ?? space.documentCount ?? 0} documents
                               </span>
                             </>
                           ) : (
@@ -312,7 +315,7 @@ const SpaceListScreen = ({
                               <span className="text-[#171717]">No project · Standalone space</span>
                               <span className="text-[#686868]">·</span>
                               <span className="text-[#686868]">
-                                {space.activeDocumentCount || 0} documents
+                                {space.activeDocumentCount ?? space.documentCount ?? 0} documents
                               </span>
                             </>
                           )}
@@ -326,7 +329,7 @@ const SpaceListScreen = ({
                     {/* Right Action Stack */}
                     <div className="flex flex-col items-end justify-between flex-shrink-0 relative">
                       {/* Overflow Button (Shown if user has manager rights) */}
-                      {space.isManager ? (
+                      {Boolean(space.isManager || space.canManage) ? (
                         <div className="relative">
                           <button
                             type="button"

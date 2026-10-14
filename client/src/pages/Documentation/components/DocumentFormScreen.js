@@ -39,6 +39,19 @@ const DocumentFormScreen = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Map backend field-level validation errors (400 VALIDATION_ERROR details)
+  useEffect(() => {
+    if (serverError && typeof serverError === "object" && Array.isArray(serverError.details)) {
+      const fieldErrs = {};
+      serverError.details.forEach((d) => {
+        if (d.field) fieldErrs[d.field] = d.message;
+      });
+      if (Object.keys(fieldErrs).length > 0) {
+        setErrors((prev) => ({ ...prev, ...fieldErrs }));
+      }
+    }
+  }, [serverError]);
+
   const validate = () => {
     const errs = {};
     if (!title.trim()) {
@@ -136,7 +149,7 @@ const DocumentFormScreen = ({
             className="mb-6 p-4 rounded bg-red-50 border border-red-200 text-red-700 text-[14px]"
             data-testid="doc-form-server-error"
           >
-            {serverError}
+            {typeof serverError === "string" ? serverError : serverError?.message}
           </div>
         )}
 
