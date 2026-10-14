@@ -29,4 +29,7 @@ module.exports = async () => {
   process.env.MONGODB_URI = '';
   process.env.MONGO_URI = '';
   process.env.NODE_ENV = 'test';
+  if (!process.env.CREDENTIALS) {
+    process.env.CREDENTIALS = '{}';
+  }
 };
