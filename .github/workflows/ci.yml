@@ -1,0 +1,109 @@
+name: CI Test Gatekeeper
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  server-tests:
+    name: Server Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run server tests
+        run: |
+          if [ -n "$(npm run | grep '^  test:coverage$')" ]; then
+            npm run test:coverage
+          elif [ -n "$(npm run | grep '^  test$')" ]; then
+            npm test
+          else
+            echo "No test script found in server/package.json"
+          fi
+
+  client-tests:
+    name: Client Tests & Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Run client tests
+        run: |
+          if [ -n "$(npm run | grep '^  test:ci$')" ]; then
+            npm run test:ci
+          elif [ -n "$(npm run | grep '^  test$')" ]; then
+            CI=true npm test -- --watchAll=false
+          else
+            echo "No test script found in client/package.json"
+          fi
+
+      - name: Build client production bundle
+        run: npm run build
+        env:
+          CI: false
+
+  docker-dry-run:
+    name: Docker Build Validation (Dry-Run)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Validate Server Dockerfile
+        uses: docker/build-push-action@v6
+        with:
+          context: server
+          file: server/Dockerfile
+          push: false
+          tags: airost-server:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Validate Client Dockerfile
+        uses: docker/build-push-action@v6
+        with:
+          context: client
+          file: client/Dockerfile
+          push: false
+          tags: airost-client:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
