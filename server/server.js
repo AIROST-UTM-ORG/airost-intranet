@@ -12,7 +12,9 @@ const userRoutes = require("./routes/userRoutes");
 const eventRoutes = require("./routes/eventRoutes");
 const projectRoutes = require("./routes/projectsRoutes");
 
-require("dotenv").config();
+if (process.env.NODE_ENV !== "test") {
+  require("dotenv").config();
+}
 
 const PORT = process.env.PORT || 4000;
 
@@ -27,7 +29,9 @@ const connectDatabase = async () => {
   }
 };
 
-connectDatabase();
+if (require.main === module) {
+  connectDatabase();
+}
 
 app.set("trust proxy", 1);
 app.use(express.json());
@@ -92,6 +96,10 @@ app.use("/user", userRoutes);
 app.use("/projects", projectRoutes);
 app.use("/calendar", eventRoutes);
 
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`connected to server on port ${PORT}`);
-});
+if (require.main === module) {
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`connected to server on port ${PORT}`);
+  });
+}
+
+module.exports = app;
