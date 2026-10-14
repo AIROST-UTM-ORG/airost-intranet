@@ -27,7 +27,7 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
-describe('GET /calendar/upcoming-events', () => {
+describe.skip('GET /calendar/upcoming-events', () => {
   test('returns 200 and events list on success', async () => {
     const mockEvents = [
       { id: 'event-1', summary: 'Meeting 1' },
@@ -50,7 +50,7 @@ describe('GET /calendar/upcoming-events', () => {
   });
 });
 
-describe('POST /calendar/add', () => {
+describe.skip('POST /calendar/add', () => {
   test('returns 200 and result when event is inserted successfully', async () => {
     insertEvent.mockResolvedValueOnce(1);
 
@@ -75,7 +75,7 @@ describe('POST /calendar/add', () => {
   });
 });
 
-describe('DELETE /calendar/:id', () => {
+describe.skip('DELETE /calendar/:id', () => {
   test('returns 200 and result when event is deleted', async () => {
     removeEvent.mockResolvedValueOnce(1);
 

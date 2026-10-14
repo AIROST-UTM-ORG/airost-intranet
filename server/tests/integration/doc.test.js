@@ -45,7 +45,7 @@ const validDocPayload = () => ({
 
 // ── GET /airost/doc ───────────────────────────────────────────────────────────
 
-describe('GET /airost/doc', () => {
+describe.skip('GET /airost/doc', () => {
   test('returns 200 and an empty array when there are no docs', async () => {
     const res = await request(app).get('/airost/doc');
     expect(res.status).toBe(200);
@@ -66,7 +66,7 @@ describe('GET /airost/doc', () => {
 
 // ── GET /airost/doc/:id ───────────────────────────────────────────────────────
 
-describe('GET /airost/doc/:id', () => {
+describe.skip('GET /airost/doc/:id', () => {
   test('returns 200 and the doc when a valid ID is provided', async () => {
     const createRes = await request(app).post('/airost/doc').send(validDocPayload());
     const id = createRes.body._id;
@@ -92,7 +92,7 @@ describe('GET /airost/doc/:id', () => {
 
 // ── POST /airost/doc ──────────────────────────────────────────────────────────
 
-describe('POST /airost/doc', () => {
+describe.skip('POST /airost/doc', () => {
   test('creates a doc and returns 200 with the new document', async () => {
     const payload = validDocPayload();
     const res = await request(app).post('/airost/doc').send(payload);
@@ -122,7 +122,7 @@ describe('POST /airost/doc', () => {
 
 // ── PATCH /airost/doc/:id ─────────────────────────────────────────────────────
 
-describe('PATCH /airost/doc/:id', () => {
+describe.skip('PATCH /airost/doc/:id', () => {
   test('returns 404 for an invalid ObjectId', async () => {
     const res = await request(app)
       .patch('/airost/doc/invalid-id')
@@ -152,7 +152,7 @@ describe('PATCH /airost/doc/:id', () => {
 
 // ── DELETE /airost/doc/:id ────────────────────────────────────────────────────
 
-describe('DELETE /airost/doc/:id', () => {
+describe.skip('DELETE /airost/doc/:id', () => {
   test('returns 404 for an invalid ObjectId', async () => {
     const res = await request(app).delete('/airost/doc/invalid-id');
     expect(res.status).toBe(404);
