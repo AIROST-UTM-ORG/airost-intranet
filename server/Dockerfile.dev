@@ -1,0 +1,20 @@
+# Dedicated Dockerfile for server local development
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install dependencies first for layer caching
+COPY package*.json ./
+RUN npm install
+
+# Copy source code
+COPY . .
+
+# Environment defaults for dev
+ENV NODE_ENV=development
+ENV PORT=4000
+
+EXPOSE 4000
+
+# Start server using nodemon for hot reload
+CMD ["npx", "nodemon", "server.js"]
