@@ -5,6 +5,7 @@ const { createApp } = require("./app");
 const dns = require("dns");
 
 const PORT = process.env.PORT || 4000;
+const MONGODB_URI = process.env.MONGODB_URI || process.env.MONGO_URI
 const app = createApp();
 
 
@@ -21,11 +22,11 @@ dns.setServers([
 
 const startServer = async () => {
   try {
-    if (!process.env.MONGODB_URI) {
+    if (MONGODB_URI) {
       throw new Error("MONGODB_URI is not configured");
     }
 
-    await mongoose.connect(process.env.MONGODB_URI);
+    await mongoose.connect(MONGODB_URI);
     console.log("connected to database");
 
     app.listen(PORT, "0.0.0.0", () => {
