@@ -3,9 +3,12 @@ import { API_URL } from "../../config/api";
 
 /**
  * Flag to toggle between the in-memory mock API and the real backend API.
- * Default is true per specifications.
+ * Defaults to false for development/production (real backend API),
+ * while defaulting to true in automated test environments.
  */
-export let USE_MOCK = true;
+export let USE_MOCK =
+  process.env.REACT_APP_USE_MOCK === "true" ||
+  (process.env.NODE_ENV === "test" && process.env.REACT_APP_USE_MOCK !== "false");
 
 export const setUseMock = (value) => {
   USE_MOCK = Boolean(value);
@@ -613,7 +616,13 @@ export const listSpaces = async () => {
   }
 
   const response = await realApiClient.get("/doc/spaces");
-  return response.data;
+  return (response.data || []).map((space) => ({
+    ...space,
+    isManager: Boolean(space.canManage ?? space.isManager),
+    canManage: Boolean(space.canManage ?? space.isManager),
+    documentCount: space.documentCount ?? space.activeDocumentCount ?? 0,
+    activeDocumentCount: space.documentCount ?? space.activeDocumentCount ?? 0,
+  }));
 };
 
 /**
@@ -655,7 +664,16 @@ export const getSpace = async (spaceId) => {
   }
 
   const response = await realApiClient.get(`/doc/spaces/${spaceId}`);
-  return response.data;
+  const data = response.data;
+  return {
+    ...data,
+    isManager: Boolean(data.canManage ?? data.isManager),
+    canManage: Boolean(data.canManage ?? data.isManager),
+    documentCount: data.documentCount ?? data.activeDocumentCount ?? 0,
+    activeDocumentCount: data.documentCount ?? data.activeDocumentCount ?? 0,
+    archivedCount: data.archivedCount ?? data.archivedDocumentCount ?? 0,
+    archivedDocumentCount: data.archivedCount ?? data.archivedDocumentCount ?? 0,
+  };
 };
 
 /**
@@ -721,7 +739,17 @@ export const createSpace = async (payload) => {
   }
 
   const response = await realApiClient.post("/doc/spaces", payload);
-  return response.data;
+  const data = response.data;
+  return {
+    ...data,
+    canManage: true,
+    isManager: true,
+    canUpdate: true,
+    documentCount: 0,
+    activeDocumentCount: 0,
+    archivedCount: 0,
+    archivedDocumentCount: 0,
+  };
 };
 
 /**
@@ -772,7 +800,14 @@ export const updateSpace = async (spaceId, payload) => {
   }
 
   const response = await realApiClient.patch(`/doc/spaces/${spaceId}`, payload);
-  return response.data;
+  const data = response.data;
+  return {
+    ...data,
+    canManage: Boolean(data.canManage ?? data.isManager ?? true),
+    isManager: Boolean(data.canManage ?? data.isManager ?? true),
+    documentCount: data.documentCount ?? data.activeDocumentCount ?? 0,
+    activeDocumentCount: data.documentCount ?? data.activeDocumentCount ?? 0,
+  };
 };
 
 /**
@@ -839,10 +874,14 @@ export const listDocuments = async (spaceId, { area, includeArchived = false } =
 
   const params = {};
   if (area) params.area = area;
-  if (includeArchived) params.includeArchived = "true";
+  if (includeArchived) {
+    params.includeArchived = "true";
+    params.archivedOnly = "true";
+  }
 
   const response = await realApiClient.get(`/doc/spaces/${spaceId}/documents`, { params });
-  return response.data;
+  const docs = response.data || [];
+  return docs.filter((d) => (includeArchived ? Boolean(d.archived) : !d.archived));
 };
 
 /**
@@ -1034,7 +1073,10 @@ export const listProjects = async () => {
 
   try {
     const res = await realApiClient.get("/projects");
-    return res.data;
+    return (res.data || []).map((p) => ({
+      _id: p._id,
+      title: p.title || p.name || `Project ${p.projectId || ""}`,
+    }));
   } catch (err) {
     return [...SEED_PROJECTS];
   }
@@ -1052,7 +1094,14 @@ export const listMembers = async () => {
 
   try {
     const res = await realApiClient.get("/admin/users");
-    return res.data;
+    if (Array.isArray(res.data) && res.data.length > 0) {
+      return res.data.map((u, idx) => ({
+        _id: u._id || u.id || `user-${idx}`,
+        name: u.name || u.email || "Member",
+        email: u.email,
+      }));
+    }
+    return [...SEED_USERS];
   } catch (err) {
     return [...SEED_USERS];
   }

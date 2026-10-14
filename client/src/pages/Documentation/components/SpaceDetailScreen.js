@@ -36,13 +36,13 @@ const SpaceDetailScreen = ({
   if (!space) return null;
 
   const canUpdate = Boolean(space.canUpdate);
-  const canManage = Boolean(space.isManager);
+  const canManage = Boolean(space.canManage ?? space.isManager);
   const isProjectLinked = Boolean(space.projectId && space.projectId.title);
 
   // Filter non-archived documents for the selected area
   const areaDocs = documents.filter((d) => !d.archived && d.area === activeArea);
   const areaCount = areaDocs.length;
-  const archivedCount = space.archivedDocumentCount || 0;
+  const archivedCount = space.archivedCount ?? space.archivedDocumentCount ?? 0;
 
   // Empty area descriptions per Screen 10 / SCREEN_SPEC.md
   const getEmptyAreaDescription = (area) => {
@@ -77,13 +77,17 @@ const SpaceDetailScreen = ({
               <>
                 <span className="text-[#171717]">Project: {space.projectId.title}</span>
                 <span className="text-[#686868]">·</span>
-                <span className="text-[#686868]">{space.activeDocumentCount || 0} documents</span>
+                <span className="text-[#686868]">
+                  {space.activeDocumentCount ?? space.documentCount ?? 0} documents
+                </span>
               </>
             ) : (
               <>
                 <span className="text-[#171717]">No project · Standalone space</span>
                 <span className="text-[#686868]">·</span>
-                <span className="text-[#686868]">{space.activeDocumentCount || 0} documents</span>
+                <span className="text-[#686868]">
+                  {space.activeDocumentCount ?? space.documentCount ?? 0} documents
+                </span>
               </>
             )}
           </div>
