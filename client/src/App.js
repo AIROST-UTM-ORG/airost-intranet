@@ -18,6 +18,7 @@ import ProjectTracking from "./pages/ProjectTracking/ProjectTracking.js";
 import Board from "./pages/ProjectTracking/components/Board.js";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import CreateDoc from "./pages/Documentation/component/create-documentation/CreateDoc.js";
+import MemberDirectory from "./pages/MemberDirectory/MemberDirectory.js";
 
 const queryClient = new QueryClient();
 
@@ -55,6 +56,7 @@ function AppRoutes() {
         {/* Accessible routes by all members */}
         <Route element={<RequireAuth allowedPosition={["member", "admin"]} />}>
           <Route path="/" element={<Dashboard />} />
+          <Route path="/members" element={<MemberDirectory />} />
           <Route path="/projects" element={<Projects />} />
           <Route path="/projects/:id" element={<ProjectDetails />} />
           <Route path="/events" element={<Events />} />

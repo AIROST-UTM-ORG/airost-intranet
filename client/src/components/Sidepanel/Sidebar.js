@@ -2,11 +2,20 @@ import React from 'react';
 import * as faicon from 'react-icons/fa';
 import * as aiicon from 'react-icons/ai';
 import * as cgicon from "react-icons/cg";
+import { MdSpaceDashboard } from "react-icons/md";
+
 
 export const Sidebar = [
   {
     title: 'Dashboard',
     path: '/',
+    icon: <MdSpaceDashboard />,
+    cName: 'side-text',
+    hideNavItem: false,
+  },
+   {
+    title: 'Members',
+    path: '/members',
     icon: <cgicon.CgProfile />,
     cName: 'side-text',
     hideNavItem: false,
