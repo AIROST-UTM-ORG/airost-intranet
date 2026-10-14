@@ -49,6 +49,24 @@ const Documentation = ({ initialView = ViewModes.SPACES_LIST, initialSpaceId = n
   const [serverError, setServerError] = useState(null);
   const [restoringId, setRestoringId] = useState(null);
 
+  // Handlers
+  const handleAuthError = (err) => {
+    if (err.response?.status === 401 || err.response?.data?.error?.code === "UNAUTHENTICATED") {
+      window.location.href = "/login";
+      return true;
+    }
+    return false;
+  };
+
+  const extractError = (err, defaultMsg = "Operation failed") => {
+    const errData = err.response?.data?.error;
+    return {
+      message: errData?.message || err.message || defaultMsg,
+      code: errData?.code,
+      details: errData?.details || [],
+    };
+  };
+
   // Load spaces & aux data
   const loadInitialData = useCallback(async () => {
     setLoading(true);
@@ -63,6 +81,7 @@ const Documentation = ({ initialView = ViewModes.SPACES_LIST, initialSpaceId = n
       setProjects(projData);
       setMembers(memberData);
     } catch (err) {
+      if (handleAuthError(err)) return;
       const msg = err.response?.data?.error?.message || err.message || "Failed to load spaces";
       setError(msg);
     } finally {
@@ -86,6 +105,7 @@ const Documentation = ({ initialView = ViewModes.SPACES_LIST, initialSpaceId = n
       setSelectedSpace(spData);
       setDocuments(docData);
     } catch (err) {
+      if (handleAuthError(err)) return;
       const msg = err.response?.data?.error?.message || err.message || "Failed to load space";
       setError(msg);
     } finally {
@@ -100,6 +120,7 @@ const Documentation = ({ initialView = ViewModes.SPACES_LIST, initialSpaceId = n
       const docs = await listDocuments(spaceId, { includeArchived: true });
       setArchivedDocuments(docs);
     } catch (err) {
+      if (handleAuthError(err)) return;
       const msg =
         err.response?.data?.error?.message || err.message || "Failed to load archived documents";
       setError(msg);
@@ -121,9 +142,14 @@ const Documentation = ({ initialView = ViewModes.SPACES_LIST, initialSpaceId = n
     setViewMode(ViewModes.CREATE_SPACE);
   };
 
-  const handleStartEditSpace = (space) => {
+  const handleStartEditSpace = async (space) => {
     setServerError(null);
-    setSelectedSpace(space);
+    try {
+      const fullSpace = await getSpace(space._id);
+      setSelectedSpace(fullSpace);
+    } catch {
+      setSelectedSpace(space);
+    }
     setViewMode(ViewModes.EDIT_SPACE);
   };
 
@@ -136,9 +162,8 @@ const Documentation = ({ initialView = ViewModes.SPACES_LIST, initialSpaceId = n
       await loadSpaceDetail(created._id);
       setViewMode(ViewModes.SPACE_DETAIL);
     } catch (err) {
-      const msg =
-        err.response?.data?.error?.message || err.message || "Failed to create space";
-      setServerError(msg);
+      if (handleAuthError(err)) return;
+      setServerError(extractError(err, "Failed to create space"));
     } finally {
       setSubmitting(false);
     }
@@ -154,9 +179,8 @@ const Documentation = ({ initialView = ViewModes.SPACES_LIST, initialSpaceId = n
       await loadSpaceDetail(updated._id);
       setViewMode(ViewModes.SPACE_DETAIL);
     } catch (err) {
-      const msg =
-        err.response?.data?.error?.message || err.message || "Failed to update space";
-      setServerError(msg);
+      if (handleAuthError(err)) return;
+      setServerError(extractError(err, "Failed to update space"));
     } finally {
       setSubmitting(false);
     }
@@ -185,9 +209,8 @@ const Documentation = ({ initialView = ViewModes.SPACES_LIST, initialSpaceId = n
       setActiveArea(payload.area || "general");
       setViewMode(ViewModes.SPACE_DETAIL);
     } catch (err) {
-      const msg =
-        err.response?.data?.error?.message || err.message || "Failed to add document";
-      setServerError(msg);
+      if (handleAuthError(err)) return;
+      setServerError(extractError(err, "Failed to add document"));
     } finally {
       setSubmitting(false);
     }
@@ -203,9 +226,8 @@ const Documentation = ({ initialView = ViewModes.SPACES_LIST, initialSpaceId = n
       setActiveArea(payload.area || selectedDocument.area || "general");
       setViewMode(ViewModes.SPACE_DETAIL);
     } catch (err) {
-      const msg =
-        err.response?.data?.error?.message || err.message || "Failed to update document";
-      setServerError(msg);
+      if (handleAuthError(err)) return;
+      setServerError(extractError(err, "Failed to update document"));
     } finally {
       setSubmitting(false);
     }
@@ -217,6 +239,7 @@ const Documentation = ({ initialView = ViewModes.SPACES_LIST, initialSpaceId = n
       await archiveDocument(doc._id);
       await loadSpaceDetail(selectedSpace._id);
     } catch (err) {
+      if (handleAuthError(err)) return;
       const msg =
         err.response?.data?.error?.message || err.message || "Failed to archive document";
       setError(msg);
@@ -239,6 +262,7 @@ const Documentation = ({ initialView = ViewModes.SPACES_LIST, initialSpaceId = n
         getSpace(selectedSpace._id).then((sp) => setSelectedSpace(sp)),
       ]);
     } catch (err) {
+      if (handleAuthError(err)) return;
       const msg =
         err.response?.data?.error?.message || err.message || "Failed to restore document";
       setError(msg);
