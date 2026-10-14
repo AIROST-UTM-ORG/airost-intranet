@@ -79,6 +79,22 @@ const createApp = () => {
   app.use('/auth', authRoutes);
   app.use('/api/auth', authRoutes);
 
+  if (process.env.NODE_ENV === 'test') {
+    app.post('/test/auth/login', async (req, res) => {
+      try {
+        const User = require('./models/User');
+        const user = await User.findById(req.body.userId);
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        req.login(user, (err) => {
+          if (err) return res.status(500).json({ error: err.message });
+          res.status(200).json({ success: true, user });
+        });
+      } catch (err) {
+        res.status(500).json({ error: err.message });
+      }
+    });
+  }
+
   // Dedicated API namespace
   app.use('/api/airost/doc', DocRoutes);
   app.use('/api/admin', adminRoutes);
@@ -88,6 +104,7 @@ const createApp = () => {
 
   // Legacy root mounts for backward compatibility
   app.use('/airost/doc', DocRoutes);
+  app.use('/doc', DocRoutes);
   app.use('/admin', adminRoutes);
   app.use('/user', userRoutes);
   app.use('/projects', projectRoutes);
