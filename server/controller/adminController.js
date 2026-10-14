@@ -19,6 +19,10 @@ const getUsers = async (req, res) => {
             name: loggedInUser.name,
             photo: loggedInUser.photo,
             position: loggedInUser.position,
+            course: loggedInUser.course,
+            year: loggedInUser.year,
+            description: loggedInUser.description,
+            instagram: loggedInUser.instagram,
             loggedIn: true,
             verified: verified
         })
