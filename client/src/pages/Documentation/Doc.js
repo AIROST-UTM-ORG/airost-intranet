@@ -1,39 +1,14 @@
-import React, { useEffect } from 'react';
-import { Link, Route, Router } from "react-router-dom";
-import DocCard from './component/Doc-card';
-import TopBar from './component/TopBar';
-import { useState} from 'react';
-import './style/global.css';
+import React from "react";
+import Documentation from "./Documentation";
 
+/**
+ * Main Documentation Route Entry Point.
+ * Renders the full 14-screen Documentation feature.
+ * Legacy blog viewer components (Doc-card, Doc-blog, CreateDoc) remain intact
+ * and accessible in their respective files to preserve backwards compatibility.
+ */
 const Doc = () => {
-  const [articleType, setArticleType] = useState('All');
-  const changeType = (newType) => {
-    setArticleType(newType);
-    console.log(`Change to ${articleType}`);
-  };
+  return <Documentation />;
+};
 
-  //Fetch Data from backend
-  const [docs, setDocs] = useState(null)
-
-  useEffect(() => {
-    const fetchDocs = async () => {
-      const response = await fetch('/airost/doc')
-      const json = await response.json()
-
-      if (response.ok) {
-        setDocs(json)
-      }
-    }
-
-    fetchDocs()
-  }, [])
-
-  return ( 
-    <div className='doc'>
-      <TopBar changeType={changeType}/>
-      <DocCard articleType={articleType} docs={docs}/>
-    </div>
-   );
-}
- 
 export default Doc;
