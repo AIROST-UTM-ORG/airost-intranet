@@ -35,12 +35,12 @@ jobs:
 
       - name: Run server tests
         run: |
-          if [ -n "$(npm run | grep '^  test:coverage$')" ]; then
-            npm run test:coverage
-          elif [ -n "$(npm run | grep '^  test$')" ]; then
-            npm test
+          SCRIPT=$(node -p "const s = require('./package.json').scripts || {}; s['test:coverage'] ? 'test:coverage' : s['test'] ? 'test' : ''")
+          if [ -n "$SCRIPT" ]; then
+            npm run "$SCRIPT"
           else
-            echo "No test script found in server/package.json"
+            echo "::error::No test script found in server/package.json"
+            exit 1
           fi
 
   client-tests:
@@ -65,12 +65,14 @@ jobs:
 
       - name: Run client tests
         run: |
-          if [ -n "$(npm run | grep '^  test:ci$')" ]; then
+          SCRIPT=$(node -p "const s = require('./package.json').scripts || {}; s['test:ci'] ? 'test:ci' : s['test'] ? 'test' : ''")
+          if [ "$SCRIPT" = "test:ci" ]; then
             npm run test:ci
-          elif [ -n "$(npm run | grep '^  test$')" ]; then
+          elif [ "$SCRIPT" = "test" ]; then
             CI=true npm test -- --watchAll=false
           else
-            echo "No test script found in client/package.json"
+            echo "::error::No test script found in client/package.json"
+            exit 1
           fi
 
       - name: Build client production bundle
