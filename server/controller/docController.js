@@ -1,8 +1,4 @@
-const mongoose = require('mongoose');
-const DocumentationSpace = require('../models/DocumentationSpace');
-const Document = require('../models/Document');
-const Project = require('../models/Project');
-const Doc = require('../models/docModel'); // Legacy model preserved
+const docService = require('../services/docService');
 const {
   VALID_AREAS,
   isValidObjectId,
@@ -10,6 +6,9 @@ const {
   validateSpaceUpdate,
   validateDocumentCreate,
   validateDocumentUpdate,
+  validateDocSearch,
+  validateAdminSpacesQuery,
+  validateReassignOwner,
 } = require('../utils/docValidation');
 const {
   isAdmin,
@@ -20,7 +19,7 @@ const {
 } = require('../utils/docAccess');
 
 /**
- * Standard error response helper.
+ * Standard error response helper adhering to unified error envelope.
  */
 const sendError = (res, status, code, message, details = []) => {
   return res.status(status).json({
@@ -32,6 +31,17 @@ const sendError = (res, status, code, message, details = []) => {
   });
 };
 
+/**
+ * Helper to handle errors thrown by the service layer.
+ */
+const handleServiceError = (res, err, defaultMsg) => {
+  if (err instanceof docService.DocError || (err && err.status && err.code)) {
+    return sendError(res, err.status, err.code, err.message, err.details);
+  }
+  console.error(defaultMsg, err);
+  return sendError(res, 500, 'INTERNAL_ERROR', defaultMsg);
+};
+
 /* ========================================================================== */
 /*                NEW DOCUMENTATION SPACE & DOCUMENT ENDPOINTS                */
 /* ========================================================================== */
@@ -39,6 +49,7 @@ const sendError = (res, status, code, message, details = []) => {
 /**
  * GET /doc/spaces
  * List all documentation spaces the authenticated user can view.
+ * Supports optional projectId filter validated with 400 INVALID_ID.
  */
 const listSpaces = async (req, res) => {
   try {
@@ -46,49 +57,42 @@ const listSpaces = async (req, res) => {
       return sendError(res, 401, 'UNAUTHENTICATED', 'User session is not authenticated');
     }
 
-    const spaces = await DocumentationSpace.find()
-      .populate('projectId', '_id title name')
-      .sort({ createdAt: -1 });
-
-    const visibleSpaces = [];
-    for (const space of spaces) {
-      const canView = await canViewSpace(req.user, space);
-      if (canView) {
-        const canUpdate = await canUpdateSpace(req.user, space);
-        const canManage = canManageSpace(req.user, space);
-        const activeCount = await Document.countDocuments({
-          spaceId: space._id,
-          archived: false,
-        });
-
-        visibleSpaces.push({
-          _id: space._id,
-          title: space.title,
-          description: space.description,
-          projectId: space.projectId
-            ? {
-                _id: space.projectId._id,
-                title: space.projectId.title || space.projectId.name || '',
-              }
-            : null,
-          createdBy: space.createdBy,
-          accessType: space.accessType,
-          updateType: space.updateType,
-          accessMembers: space.accessMembers,
-          updateMembers: space.updateMembers,
-          documentCount: activeCount,
-          canUpdate,
-          canManage,
-          createdAt: space.createdAt,
-          updatedAt: space.updatedAt,
-        });
+    if (
+      req.query.projectId !== undefined &&
+      req.query.projectId !== null &&
+      req.query.projectId !== ''
+    ) {
+      if (!isValidObjectId(req.query.projectId)) {
+        return sendError(res, 400, 'INVALID_ID', 'Invalid projectId query parameter format');
       }
     }
 
+    const visibleSpaces = await docService.listSpaces(req.user, req.query);
     return res.status(200).json(visibleSpaces);
   } catch (err) {
-    console.error('Error in listSpaces:', err);
-    return sendError(res, 500, 'INTERNAL_ERROR', 'An unexpected error occurred while listing spaces');
+    return handleServiceError(res, err, 'An unexpected error occurred while listing spaces');
+  }
+};
+
+/**
+ * GET /doc/search
+ * Search non-archived document titles in visible spaces.
+ */
+const searchDocuments = async (req, res) => {
+  try {
+    if (!req.user) {
+      return sendError(res, 401, 'UNAUTHENTICATED', 'User session is not authenticated');
+    }
+
+    const validation = validateDocSearch(req.query);
+    if (!validation.valid) {
+      return sendError(res, 400, 'VALIDATION_ERROR', 'Validation failed for search query', validation.details);
+    }
+
+    const result = await docService.searchDocuments(req.user, validation.data);
+    return res.status(200).json(result);
+  } catch (err) {
+    return handleServiceError(res, err, 'An unexpected error occurred while searching documents');
   }
 };
 
@@ -110,16 +114,18 @@ const createSpace = async (req, res) => {
       return sendError(res, 400, 'VALIDATION_ERROR', 'Request validation failed', validation.details);
     }
 
-    // If projectId provided, ensure project exists
     if (validation.data.projectId) {
-      const project = await Project.findById(validation.data.projectId);
+      const project = await docService.findProjectById(validation.data.projectId);
       if (!project) {
         return sendError(res, 404, 'NOT_FOUND', 'Linked project not found');
       }
     }
 
-    // Permission check
-    const permitted = await canCreateSpace(req.user, validation.data.projectId);
+    const role = validation.data.projectId
+      ? await docService.getUserProjectRole(req.user._id, validation.data.projectId)
+      : null;
+
+    const permitted = await canCreateSpace(req.user, validation.data.projectId, role);
     if (!permitted) {
       return sendError(
         res,
@@ -131,15 +137,10 @@ const createSpace = async (req, res) => {
       );
     }
 
-    const space = await DocumentationSpace.create({
-      ...validation.data,
-      createdBy: req.user._id,
-    });
-
+    const space = await docService.createSpace(req.user._id, validation.data);
     return res.status(201).json(space);
   } catch (err) {
-    console.error('Error in createSpace:', err);
-    return sendError(res, 500, 'INTERNAL_ERROR', 'An unexpected error occurred while creating space');
+    return handleServiceError(res, err, 'An unexpected error occurred while creating space');
   }
 };
 
@@ -158,76 +159,25 @@ const getSpace = async (req, res) => {
       return sendError(res, 400, 'INVALID_ID', 'Invalid spaceId format');
     }
 
-    const space = await DocumentationSpace.findById(spaceId)
-      .populate('projectId', '_id title name')
-      .populate('accessMembers', '_id name')
-      .populate('updateMembers', '_id name');
-
+    const space = await docService.getSpaceById(spaceId);
     if (!space) {
       return sendError(res, 404, 'NOT_FOUND', 'Documentation space not found');
     }
 
-    const canView = await canViewSpace(req.user, space);
+    const role = space.projectId
+      ? await docService.getUserProjectRole(req.user._id, space.projectId._id || space.projectId)
+      : null;
+
+    const canView = await canViewSpace(req.user, space, role);
     if (!canView) {
       // View Stealth Rule: return 404 to avoid leaking space existence
       return sendError(res, 404, 'NOT_FOUND', 'Documentation space not found');
     }
 
-    const canUpdate = await canUpdateSpace(req.user, space);
-    const canManage = canManageSpace(req.user, space);
-
-    const activeCount = await Document.countDocuments({
-      spaceId: space._id,
-      archived: false,
-    });
-    const archivedCount = canUpdate
-      ? await Document.countDocuments({ spaceId: space._id, archived: true })
-      : 0;
-
-    // Calculate per-area breakdown for active documents
-    const activeDocs = await Document.find({ spaceId: space._id, archived: false }, 'area');
-    const areaCounts = {
-      general: 0,
-      requirements: 0,
-      design: 0,
-      development: 0,
-      testing: 0,
-      deployment: 0,
-    };
-    for (const doc of activeDocs) {
-      if (areaCounts[doc.area] !== undefined) {
-        areaCounts[doc.area] += 1;
-      }
-    }
-
-    const responseData = {
-      _id: space._id,
-      title: space.title,
-      description: space.description,
-      projectId: space.projectId
-        ? {
-            _id: space.projectId._id,
-            title: space.projectId.title || space.projectId.name || '',
-          }
-        : null,
-      createdBy: space.createdBy,
-      accessType: space.accessType,
-      updateType: space.updateType,
-      accessMembers: space.accessMembers,
-      updateMembers: space.updateMembers,
-      canUpdate,
-      canManage,
-      documentCount: activeCount,
-      archivedCount,
-      areaCounts,
-      createdAt: space.createdAt,
-      updatedAt: space.updatedAt,
-    };
-
+    const responseData = await docService.getSpaceDetail(space, req.user, role);
     return res.status(200).json(responseData);
   } catch (err) {
-    console.error('Error in getSpace:', err);
-    return sendError(res, 500, 'INTERNAL_ERROR', 'An unexpected error occurred while retrieving space');
+    return handleServiceError(res, err, 'An unexpected error occurred while retrieving space');
   }
 };
 
@@ -246,12 +196,16 @@ const updateSpace = async (req, res) => {
       return sendError(res, 400, 'INVALID_ID', 'Invalid spaceId format');
     }
 
-    const space = await DocumentationSpace.findById(spaceId);
+    const space = await docService.getSpaceById(spaceId);
     if (!space) {
       return sendError(res, 404, 'NOT_FOUND', 'Documentation space not found');
     }
 
-    const canView = await canViewSpace(req.user, space);
+    const role = space.projectId
+      ? await docService.getUserProjectRole(req.user._id, space.projectId._id || space.projectId)
+      : null;
+
+    const canView = await canViewSpace(req.user, space, role);
     if (!canView) {
       return sendError(res, 404, 'NOT_FOUND', 'Documentation space not found');
     }
@@ -270,19 +224,16 @@ const updateSpace = async (req, res) => {
     }
 
     if (validation.data.projectId) {
-      const project = await Project.findById(validation.data.projectId);
+      const project = await docService.findProjectById(validation.data.projectId);
       if (!project) {
         return sendError(res, 404, 'NOT_FOUND', 'Linked project not found');
       }
     }
 
-    Object.assign(space, validation.data);
-    await space.save();
-
-    return res.status(200).json(space);
+    const updatedSpace = await docService.updateSpace(spaceId, validation.data, req.user._id);
+    return res.status(200).json(updatedSpace);
   } catch (err) {
-    console.error('Error in updateSpace:', err);
-    return sendError(res, 500, 'INTERNAL_ERROR', 'An unexpected error occurred while updating space');
+    return handleServiceError(res, err, 'An unexpected error occurred while updating space');
   }
 };
 
@@ -305,22 +256,81 @@ const deleteSpace = async (req, res) => {
       return sendError(res, 403, 'FORBIDDEN', 'Only platform admins can delete documentation spaces');
     }
 
-    const space = await DocumentationSpace.findById(spaceId);
+    const space = await docService.getSpaceById(spaceId);
     if (!space) {
       return sendError(res, 404, 'NOT_FOUND', 'Documentation space not found');
     }
 
-    const deleteDocsResult = await Document.deleteMany({ spaceId: space._id });
-    await DocumentationSpace.findByIdAndDelete(spaceId);
-
+    const result = await docService.deleteSpaceCascade(spaceId, req.user._id);
     return res.status(200).json({
       message: 'Space and associated documents deleted successfully',
       deletedSpaceId: spaceId,
-      deletedDocumentsCount: deleteDocsResult.deletedCount,
+      deletedDocumentsCount: result.deletedDocumentsCount,
     });
   } catch (err) {
-    console.error('Error in deleteSpace:', err);
-    return sendError(res, 500, 'INTERNAL_ERROR', 'An unexpected error occurred while deleting space');
+    return handleServiceError(res, err, 'An unexpected error occurred while deleting space');
+  }
+};
+
+/**
+ * GET /doc/admin/spaces
+ * List all documentation spaces across the intranet with administrative metrics, pagination, and search filtering.
+ * Platform Admin only (no stealth rule: 401 unauthenticated, 403 non-admin).
+ */
+const adminListSpaces = async (req, res) => {
+  try {
+    if (!req.user) {
+      return sendError(res, 401, 'UNAUTHENTICATED', 'User session is not authenticated');
+    }
+
+    if (!isAdmin(req.user)) {
+      return sendError(res, 403, 'FORBIDDEN', 'Only platform admins can access administrative spaces oversight');
+    }
+
+    const validation = validateAdminSpacesQuery(req.query);
+    if (!validation.valid) {
+      return sendError(res, 400, 'VALIDATION_ERROR', 'Validation failed for admin spaces query', validation.details);
+    }
+
+    const result = await docService.adminListSpaces(validation.data);
+    return res.status(200).json(result);
+  } catch (err) {
+    return handleServiceError(res, err, 'An unexpected error occurred while fetching admin spaces');
+  }
+};
+
+/**
+ * PATCH /doc/admin/spaces/:spaceId/owner
+ * Reassign the owner (creator) of a documentation space to another active user.
+ * Platform Admin only (no stealth rule: 401 unauthenticated, 403 non-admin).
+ */
+const adminReassignSpaceOwner = async (req, res) => {
+  try {
+    if (!req.user) {
+      return sendError(res, 401, 'UNAUTHENTICATED', 'User session is not authenticated');
+    }
+
+    if (!isAdmin(req.user)) {
+      return sendError(res, 403, 'FORBIDDEN', 'Only platform admins can reassign space ownership');
+    }
+
+    const { spaceId } = req.params;
+    if (!isValidObjectId(spaceId)) {
+      return sendError(res, 400, 'INVALID_ID', 'Invalid spaceId format');
+    }
+
+    const validation = validateReassignOwner(req.body);
+    if (validation.hasInvalidId) {
+      return sendError(res, 400, 'INVALID_ID', 'Invalid userId format', validation.details);
+    }
+    if (!validation.valid) {
+      return sendError(res, 400, 'VALIDATION_ERROR', 'Request validation failed', validation.details);
+    }
+
+    const result = await docService.adminReassignSpaceOwner(spaceId, validation.data.userId, req.user._id);
+    return res.status(200).json(result);
+  } catch (err) {
+    return handleServiceError(res, err, 'An unexpected error occurred while reassigning space owner');
   }
 };
 
@@ -339,17 +349,21 @@ const listDocuments = async (req, res) => {
       return sendError(res, 400, 'INVALID_ID', 'Invalid spaceId format');
     }
 
-    const space = await DocumentationSpace.findById(spaceId);
+    const space = await docService.getSpaceById(spaceId);
     if (!space) {
       return sendError(res, 404, 'NOT_FOUND', 'Documentation space not found');
     }
 
-    const canView = await canViewSpace(req.user, space);
+    const role = space.projectId
+      ? await docService.getUserProjectRole(req.user._id, space.projectId._id || space.projectId)
+      : null;
+
+    const canView = await canViewSpace(req.user, space, role);
     if (!canView) {
       return sendError(res, 404, 'NOT_FOUND', 'Documentation space not found');
     }
 
-    const canUpdate = await canUpdateSpace(req.user, space);
+    const canUpdate = await canUpdateSpace(req.user, space, role);
     const { area, includeArchived, archivedOnly } = req.query;
 
     if (area && !VALID_AREAS.includes(area)) {
@@ -365,25 +379,10 @@ const listDocuments = async (req, res) => {
       );
     }
 
-    const query = { spaceId: space._id };
-    if (area) {
-      query.area = area;
-    }
-
-    if (includeArchived === 'true') {
-      if (archivedOnly === 'true') {
-        query.archived = true;
-      }
-      // If includeArchived=true without archivedOnly, return both active and archived
-    } else {
-      query.archived = false;
-    }
-
-    const documents = await Document.find(query).sort({ createdAt: -1 });
+    const documents = await docService.listDocuments(spaceId, { area, includeArchived, archivedOnly });
     return res.status(200).json(documents);
   } catch (err) {
-    console.error('Error in listDocuments:', err);
-    return sendError(res, 500, 'INTERNAL_ERROR', 'An unexpected error occurred while listing documents');
+    return handleServiceError(res, err, 'An unexpected error occurred while listing documents');
   }
 };
 
@@ -402,17 +401,21 @@ const createDocument = async (req, res) => {
       return sendError(res, 400, 'INVALID_ID', 'Invalid spaceId format');
     }
 
-    const space = await DocumentationSpace.findById(spaceId);
+    const space = await docService.getSpaceById(spaceId);
     if (!space) {
       return sendError(res, 404, 'NOT_FOUND', 'Documentation space not found');
     }
 
-    const canView = await canViewSpace(req.user, space);
+    const role = space.projectId
+      ? await docService.getUserProjectRole(req.user._id, space.projectId._id || space.projectId)
+      : null;
+
+    const canView = await canViewSpace(req.user, space, role);
     if (!canView) {
       return sendError(res, 404, 'NOT_FOUND', 'Documentation space not found');
     }
 
-    const canUpdate = await canUpdateSpace(req.user, space);
+    const canUpdate = await canUpdateSpace(req.user, space, role);
     if (!canUpdate) {
       return sendError(res, 403, 'FORBIDDEN', 'You do not have permission to add documents to this space');
     }
@@ -422,17 +425,10 @@ const createDocument = async (req, res) => {
       return sendError(res, 400, 'VALIDATION_ERROR', 'Request validation failed', validation.details);
     }
 
-    const doc = await Document.create({
-      spaceId: space._id,
-      ...validation.data,
-      createdBy: req.user._id,
-      archived: false,
-    });
-
+    const doc = await docService.createDocument(spaceId, req.user._id, validation.data);
     return res.status(201).json(doc);
   } catch (err) {
-    console.error('Error in createDocument:', err);
-    return sendError(res, 500, 'INTERNAL_ERROR', 'An unexpected error occurred while adding document');
+    return handleServiceError(res, err, 'An unexpected error occurred while adding document');
   }
 };
 
@@ -451,22 +447,26 @@ const updateDocument = async (req, res) => {
       return sendError(res, 400, 'INVALID_ID', 'Invalid documentId format');
     }
 
-    const doc = await Document.findById(documentId);
+    const doc = await docService.getDocumentById(documentId);
     if (!doc) {
       return sendError(res, 404, 'NOT_FOUND', 'Document not found');
     }
 
-    const space = await DocumentationSpace.findById(doc.spaceId);
+    const space = await docService.getSpaceById(doc.spaceId);
     if (!space) {
       return sendError(res, 404, 'NOT_FOUND', 'Parent documentation space not found');
     }
 
-    const canView = await canViewSpace(req.user, space);
+    const role = space.projectId
+      ? await docService.getUserProjectRole(req.user._id, space.projectId._id || space.projectId)
+      : null;
+
+    const canView = await canViewSpace(req.user, space, role);
     if (!canView) {
       return sendError(res, 404, 'NOT_FOUND', 'Document not found');
     }
 
-    const canUpdate = await canUpdateSpace(req.user, space);
+    const canUpdate = await canUpdateSpace(req.user, space, role);
     if (!canUpdate) {
       return sendError(res, 403, 'FORBIDDEN', 'You do not have permission to edit documents in this space');
     }
@@ -476,13 +476,10 @@ const updateDocument = async (req, res) => {
       return sendError(res, 400, 'VALIDATION_ERROR', 'Request validation failed', validation.details);
     }
 
-    Object.assign(doc, validation.data);
-    await doc.save();
-
-    return res.status(200).json(doc);
+    const updatedDoc = await docService.updateDocument(documentId, validation.data, req.user._id);
+    return res.status(200).json(updatedDoc);
   } catch (err) {
-    console.error('Error in updateDocument:', err);
-    return sendError(res, 500, 'INTERNAL_ERROR', 'An unexpected error occurred while updating document');
+    return handleServiceError(res, err, 'An unexpected error occurred while updating document');
   }
 };
 
@@ -501,36 +498,34 @@ const archiveDocument = async (req, res) => {
       return sendError(res, 400, 'INVALID_ID', 'Invalid documentId format');
     }
 
-    const doc = await Document.findById(documentId);
+    const doc = await docService.getDocumentById(documentId);
     if (!doc) {
       return sendError(res, 404, 'NOT_FOUND', 'Document not found');
     }
 
-    const space = await DocumentationSpace.findById(doc.spaceId);
+    const space = await docService.getSpaceById(doc.spaceId);
     if (!space) {
       return sendError(res, 404, 'NOT_FOUND', 'Parent documentation space not found');
     }
 
-    const canView = await canViewSpace(req.user, space);
+    const role = space.projectId
+      ? await docService.getUserProjectRole(req.user._id, space.projectId._id || space.projectId)
+      : null;
+
+    const canView = await canViewSpace(req.user, space, role);
     if (!canView) {
       return sendError(res, 404, 'NOT_FOUND', 'Document not found');
     }
 
-    const canUpdate = await canUpdateSpace(req.user, space);
+    const canUpdate = await canUpdateSpace(req.user, space, role);
     if (!canUpdate) {
       return sendError(res, 403, 'FORBIDDEN', 'You do not have permission to archive documents in this space');
     }
 
-    doc.archived = true;
-    await doc.save();
-
-    return res.status(200).json({
-      message: 'Document archived successfully',
-      document: doc,
-    });
+    const result = await docService.archiveDocument(documentId, req.user._id);
+    return res.status(200).json(result);
   } catch (err) {
-    console.error('Error in archiveDocument:', err);
-    return sendError(res, 500, 'INTERNAL_ERROR', 'An unexpected error occurred while archiving document');
+    return handleServiceError(res, err, 'An unexpected error occurred while archiving document');
   }
 };
 
@@ -553,20 +548,15 @@ const deleteDocumentPermanent = async (req, res) => {
       return sendError(res, 403, 'FORBIDDEN', 'Only platform admins can permanently delete documents');
     }
 
-    const doc = await Document.findById(documentId);
+    const doc = await docService.getDocumentById(documentId);
     if (!doc) {
       return sendError(res, 404, 'NOT_FOUND', 'Document not found');
     }
 
-    await Document.findByIdAndDelete(documentId);
-
-    return res.status(200).json({
-      message: 'Document permanently deleted',
-      deletedDocumentId: documentId,
-    });
+    const result = await docService.deleteDocumentPermanent(documentId, req.user._id);
+    return res.status(200).json(result);
   } catch (err) {
-    console.error('Error in deleteDocumentPermanent:', err);
-    return sendError(res, 500, 'INTERNAL_ERROR', 'An unexpected error occurred while deleting document');
+    return handleServiceError(res, err, 'An unexpected error occurred while deleting document');
   }
 };
 
@@ -577,7 +567,7 @@ const deleteDocumentPermanent = async (req, res) => {
 // get all Docs (legacy)
 const getDocs = async (req, res) => {
   try {
-    const Docs = await Doc.find({}).sort({ createdAt: -1 });
+    const Docs = await docService.getLegacyDocs();
     res.status(200).json(Docs);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -588,12 +578,12 @@ const getDocs = async (req, res) => {
 const getDoc = async (req, res) => {
   const { id } = req.params;
 
-  if (!mongoose.Types.ObjectId.isValid(id)) {
+  if (!isValidObjectId(id)) {
     return res.status(404).json({ error: 'No Doc' });
   }
 
   try {
-    const DOC = await Doc.findById(id);
+    const DOC = await docService.getLegacyDocById(id);
     if (!DOC) {
       return res.status(404).json({ error: 'Not found' });
     }
@@ -622,7 +612,7 @@ const createDoc = async (req, res) => {
   }
 
   try {
-    const DOC = await Doc.create({ image, title, profile, author, date, type, description, content });
+    const DOC = await docService.createLegacyDoc({ image, title, profile, author, date, type, description, content });
     res.status(200).json(DOC);
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -633,12 +623,12 @@ const createDoc = async (req, res) => {
 const deleteDoc = async (req, res) => {
   const { id } = req.params;
 
-  if (!mongoose.Types.ObjectId.isValid(id)) {
+  if (!isValidObjectId(id)) {
     return res.status(404).json({ error: 'No Doc' });
   }
 
   try {
-    const deleted = await Doc.findOneAndDelete({ _id: id });
+    const deleted = await docService.deleteLegacyDoc(id);
     if (!deleted) {
       return res.status(404).json({ error: 'Not found' });
     }
@@ -652,12 +642,12 @@ const deleteDoc = async (req, res) => {
 const updateDoc = async (req, res) => {
   const { id } = req.params;
 
-  if (!mongoose.Types.ObjectId.isValid(id)) {
+  if (!isValidObjectId(id)) {
     return res.status(404).json({ error: 'No Doc' });
   }
 
   try {
-    const updated = await Doc.findByIdAndUpdate({ _id: id }, { ...req.body }, { new: true });
+    const updated = await docService.updateLegacyDoc(id, { ...req.body });
     if (!updated) {
       return res.status(404).json({ error: 'Not found' });
     }
@@ -670,10 +660,13 @@ const updateDoc = async (req, res) => {
 module.exports = {
   // New Documentation Space & Document Handlers
   listSpaces,
+  searchDocuments,
   createSpace,
   getSpace,
   updateSpace,
   deleteSpace,
+  adminListSpaces,
+  adminReassignSpaceOwner,
   listDocuments,
   createDocument,
   updateDocument,

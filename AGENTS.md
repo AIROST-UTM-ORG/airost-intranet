@@ -96,8 +96,7 @@ Rules:
 - **Projects:** project people live in the join entity (`PROJECT_MEMBER`), not as fields on the project.
 - **Events:** categories `meeting` / `workshop` / `competition`; statuses `draft` / `published` / `cancelled` / `completed`. Capacity and registration status are enforced server-side.
 - **Event attendance statuses:** `registered` / `attended` / `cancelled` / `no_show`.
-- **Documents:** the current schema stores external links (Google Docs/Drive) with metadata only. File upload/download is a roadmap item, not yet the schema; confirm with the issue before implementing uploads. Space access uses `accessType` (`public` / `members` / `selected`) and `updateType` (`admins_only` / `project_members` / `selected`).
-- **Known open schema questions** (ask, do not guess): where to store the user list for `selected` access/update; whether documents are embedded or a separate collection; final `area` enum values. See `database_schema.md`.
+- **Documents:** link-only architecture (Locked Decision 4): stores titles, external URLs (Google Docs/Drive, HTTPS), and metadata only. No file upload/download, no content storage, no file size metadata, no version history. Soft delete archives; hard delete of document & space deletion are admin only. Space access uses `accessType` and `updateType` (`all` / `project_members` / `selected`), with member lists stored directly on the space (`accessMembers[]`, `updateMembers[]`). 6 workflow areas: `general`, `requirements`, `design`, `development`, `testing`, `deployment`. See `docs/api/documentation.md`.
 - **Task changes** must be recorded in task history (see `server/utils/historyHelper.js`). Do not bypass it.
 - Source-of-truth docs: `features.md` (scope and priorities), `database_schema.md` (data model), `techstack.md` (stack), `dev_rule.md` (team workflow). If code and docs disagree, point it out instead of silently picking one.
 
@@ -130,6 +129,8 @@ Only address these when an issue explicitly asks:
 - `@tanstack/react-query` and `git-filter-repo` are wrongly listed in `server/package.json`.
 - Three UI libraries coexist (DaisyUI, Ant Design, MDB); `moment` and `date-fns` both installed.
 - Node version mismatch between local development and the Docker image (Node 18).
+- Project lead is stored as a plain name string in `server/models/Project.js`; name-based matching is unsafe if names are not unique (addressed in a later fix).
+- Documentation backend currently uses Mongoose directly in the controller (addressed by the service layer refactor).
 
 ## Agent Guardrails & Constraints
 - **Do not touch:** `.env` files, production credentials, deployment config (`server/Dockerfile`, Cloud Run settings), CI settings, or lockfiles by hand, without explicit user approval.
