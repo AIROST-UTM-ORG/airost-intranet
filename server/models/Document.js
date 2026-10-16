@@ -44,6 +44,8 @@ const documentSchema = new mongoose.Schema({
 documentSchema.index({ spaceId: 1 });
 documentSchema.index({ archived: 1 });
 documentSchema.index({ area: 1 });
+documentSchema.index({ title: 1 });
 documentSchema.index({ spaceId: 1, archived: 1, area: 1 });
+documentSchema.index({ spaceId: 1, archived: 1, title: 1 });
 
 module.exports = mongoose.model('Document', documentSchema);
