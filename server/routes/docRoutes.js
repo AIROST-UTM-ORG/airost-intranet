@@ -2,10 +2,13 @@ const express = require('express');
 const {
   // New Documentation Space & Document Handlers
   listSpaces,
+  searchDocuments,
   createSpace,
   getSpace,
   updateSpace,
   deleteSpace,
+  adminListSpaces,
+  adminReassignSpaceOwner,
   listDocuments,
   createDocument,
   updateDocument,
@@ -24,6 +27,13 @@ const router = express.Router();
 /* ========================================================================== */
 /*                NEW DOCUMENTATION SPACE & DOCUMENT ROUTES                  */
 /* ========================================================================== */
+
+// Search
+router.get('/search', searchDocuments);
+
+// Admin oversight routes (Admin only, no stealth rule)
+router.get('/admin/spaces', adminListSpaces);
+router.patch('/admin/spaces/:spaceId/owner', adminReassignSpaceOwner);
 
 // Spaces CRUD
 router.get('/spaces', listSpaces);

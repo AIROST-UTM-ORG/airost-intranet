@@ -191,7 +191,7 @@ Governs `POST /doc/spaces/:spaceId/documents`, `PATCH /doc/documents/:documentId
 All endpoints are mounted under the `/doc` router and require an authenticated session (`401 UNAUTHENTICATED` if unauthenticated).
 
 ```
-GET    /doc/spaces                              List spaces the user can view
+GET    /doc/spaces                              List spaces the user can view (optional ?projectId=)
 POST   /doc/spaces                              Create a documentation space
 GET    /doc/spaces/:spaceId                     Read one space with permissions and counts
 PATCH  /doc/spaces/:spaceId                     Update space fields and settings (Manager/Admin)
@@ -201,18 +201,24 @@ POST   /doc/spaces/:spaceId/documents           Add a document link to a space
 PATCH  /doc/documents/:documentId               Edit document metadata or restore
 DELETE /doc/documents/:documentId               Archive document (soft delete)
 DELETE /doc/documents/:documentId/permanent     Hard delete document (Admin only)
+GET    /doc/search                              Search non-archived document titles in visible spaces
+GET    /doc/admin/spaces                        Admin paginated list of all spaces with metrics
+PATCH  /doc/admin/spaces/:spaceId/owner         Admin reassign space ownership
 ```
 
 ---
 
 ### 5.1 `GET /doc/spaces`
-List all documentation spaces the authenticated user is permitted to view.
+List all documentation spaces the authenticated user is permitted to view, optionally filtered by project ID.
 
 - **Who may call**: Any authenticated user.
-- **Query Parameters**: None.
+- **Query Parameters**:
+  - `projectId` (optional): 24-character hex MongoDB `ObjectId`. If supplied, must be a valid `ObjectId` (returns `400 INVALID_ID` otherwise). When present, restricts the result set to only those spaces whose `projectId` matches the query value.
 - **Behavior**:
+  - Validates `projectId` syntax if present; rejects malformed hex strings with `400 INVALID_ID`.
   - Filters spaces according to the VIEW permission matrix.
-  - Aggregates the count of active (non-archived) documents for each space.
+  - When `projectId` is provided, further filters spaces where `space.projectId` matches the given `projectId`.
+  - Aggregates the count of active (non-archived) documents for each space (`activeDocumentCount`).
   - Computes `canUpdate` (whether caller has update rights) and `isManager` (whether caller is Admin or space creator) for each space.
   - Populates `projectId` with `{ _id, title }` when linked, or `null` for standalone spaces.
 - **Success Response (`200 OK`)**:
@@ -256,6 +262,7 @@ List all documentation spaces the authenticated user is permitted to view.
 ]
 ```
 - **Error Responses**:
+  - `400 INVALID_ID`: Provided `projectId` query parameter is not a valid 24-character hex ObjectId.
   - `401 UNAUTHENTICATED`: Session missing or expired.
   - `500 INTERNAL_ERROR`: Internal server error.
 
@@ -641,6 +648,187 @@ Permanently delete a document record from the database (Hard delete).
 
 ---
 
+### 5.11 `GET /doc/search`
+Search active (non-archived) document titles across all documentation spaces the authenticated user is permitted to view.
+
+- **Who may call**: Any authenticated user.
+- **Query Parameters**:
+  - `q` (required): String search query. Must be trimmed, between 2 and 100 characters in length. If missing, whitespace-only, shorter than 2 characters, or longer than 100 characters, returns `400 VALIDATION_ERROR`.
+  - `limit` (optional): Integer number of matching documents to return. Valid range is 1 to 20, default is `10`. If non-integer or outside 1..20, returns `400 VALIDATION_ERROR`.
+- **Behavior & Security Rules**:
+  - Searches non-archived document TITLES only (`archived: false`). Archived documents are **never** returned in search results.
+  - Case-insensitive search.
+  - User input in `q` must be strictly escaped (regex metacharacters escaped) and **never** used as a raw regular expression, eliminating RegExp injection and ReDoS vulnerabilities.
+  - Scoped strictly to spaces that the caller has permission to VIEW per the VIEW permission matrix. Restricted spaces invisible to the user are completely excluded from the search scope.
+  - Each matching document object includes its parent space metadata populated as `space: { _id, title }`.
+  - **Sorting Order**:
+    1. Documents whose titles start with the query string `q` (case-insensitive prefix match) appear first.
+    2. Remaining matching documents are sorted alphabetically (case-insensitive ascending by title).
+- **Success Response (`200 OK`)**:
+```json
+{
+  "documents": [
+    {
+      "_id": "65f29d20c571c48201a55551",
+      "title": "Database Schema",
+      "url": "https://docs.google.com/document/d/1exampleDocId/edit",
+      "provider": "google_doc",
+      "area": "development",
+      "spaceId": "65f29d20c571c48201a00001",
+      "space": {
+        "_id": "65f29d20c571c48201a00001",
+        "title": "Engineering Handbook"
+      }
+    },
+    {
+      "_id": "65f29d20c571c48201a55553",
+      "title": "Database Migration Guide",
+      "url": "https://docs.google.com/document/d/1migrationDocId/edit",
+      "provider": "google_doc",
+      "area": "development",
+      "spaceId": "65f29d20c571c48201a00001",
+      "space": {
+        "_id": "65f29d20c571c48201a00001",
+        "title": "Engineering Handbook"
+      }
+    }
+  ]
+}
+```
+- **Error Responses**:
+  - `400 VALIDATION_ERROR`: Missing `q`, trimmed `q` length < 2 or > 100 characters, or `limit` not an integer between 1 and 20.
+  - `401 UNAUTHENTICATED`: Session missing or expired.
+  - `500 INTERNAL_ERROR`: Internal server error.
+
+---
+
+### 5.12 `GET /doc/admin/spaces`
+List all documentation spaces across the intranet with administrative metrics, pagination, and search filtering.
+
+- **Who may call**: Platform Admin only (`isAdmin(req.user)`).
+- **Stealth Rule Exception**: The View Stealth Rule does **not** apply to administrative endpoints. Unauthenticated requests receive `401 UNAUTHENTICATED`; authenticated non-admin callers receive `403 FORBIDDEN`.
+- **Query Parameters**:
+  - `page` (optional): Positive integer page number. Default: `1`, minimum: `1`.
+  - `limit` (optional): Integer items per page. Default: `25`, maximum: `100`, minimum: `1`.
+  - `q` (optional): String search filter. Matches case-insensitively as a substring against space title, linked project title, or space owner (creator) user name. If omitted or empty, matches all spaces.
+- **Behavior**:
+  - Returns spaces across all projects and standalone spaces without access restrictions.
+  - Aggregates document counts:
+    - `documentCount`: Total active (non-archived) documents in the space.
+    - `archivedCount`: Total archived documents in the space.
+    - `accessMembersCount`: Number of users in `space.accessMembers` (`accessMembers.length`).
+    - `updateMembersCount`: Number of users in `space.updateMembers` (`updateMembers.length`).
+  - Populates linked project as `project: { _id, title }` or `null` for standalone spaces.
+  - Populates owner (creator `createdBy`) as `owner: { _id, name, email }`.
+  - Returns pagination metadata: `page`, `limit`, and `total` matching spaces.
+- **Success Response (`200 OK`)**:
+```json
+{
+  "spaces": [
+    {
+      "_id": "65f29d20c571c48201a00001",
+      "title": "Engineering Handbook",
+      "description": "Technical references and delivery guides for the Airost Intranet team.",
+      "project": {
+        "_id": "65f29d20c571c48201a11111",
+        "title": "Airost Intranet"
+      },
+      "owner": {
+        "_id": "65f29d20c571c48201a22222",
+        "name": "Tony Stark",
+        "email": "tony@airost.org"
+      },
+      "accessType": "project_members",
+      "updateType": "selected",
+      "accessMembersCount": 0,
+      "updateMembersCount": 2,
+      "documentCount": 8,
+      "archivedCount": 2,
+      "createdAt": "2026-10-14T08:00:00.000Z",
+      "updatedAt": "2026-10-14T08:00:00.000Z"
+    },
+    {
+      "_id": "65f29d20c571c48201a00004",
+      "title": "Club General Guidelines",
+      "description": "General club onboarding and constitution documents.",
+      "project": null,
+      "owner": {
+        "_id": "65f29d20c571c48201a22222",
+        "name": "Tony Stark",
+        "email": "tony@airost.org"
+      },
+      "accessType": "all",
+      "updateType": "selected",
+      "accessMembersCount": 0,
+      "updateMembersCount": 1,
+      "documentCount": 3,
+      "archivedCount": 0,
+      "createdAt": "2026-10-14T09:00:00.000Z",
+      "updatedAt": "2026-10-14T09:00:00.000Z"
+    }
+  ],
+  "page": 1,
+  "limit": 25,
+  "total": 2
+}
+```
+- **Error Responses**:
+  - `400 VALIDATION_ERROR`: `page` < 1, `limit` < 1, or `limit` > 100.
+  - `401 UNAUTHENTICATED`: Session missing.
+  - `403 FORBIDDEN`: Caller is not a Platform Admin.
+  - `500 INTERNAL_ERROR`: Internal server error.
+
+---
+
+### 5.13 `PATCH /doc/admin/spaces/:spaceId/owner`
+Reassign the owner (creator) of a documentation space to another active user.
+
+- **Who may call**: Platform Admin only (`isAdmin(req.user)`).
+- **Stealth Rule Exception**: Unauthenticated requests receive `401 UNAUTHENTICATED`; non-admin callers receive `403 FORBIDDEN`.
+- **URL Parameters**:
+  - `spaceId`: 24-character hex `ObjectId`. Must exist.
+- **Request Body**:
+```json
+{
+  "userId": "65f29d20c571c48201a33333"
+}
+```
+- **Validation Rules & Behavior**:
+  - `spaceId` must be a valid 24-character hex `ObjectId` (`400 INVALID_ID` if invalid hex).
+  - `userId` must be a valid 24-character hex `ObjectId` (`400 INVALID_ID` if invalid hex).
+  - `userId` must correspond to an existing, active user in the `User` database (`400 VALIDATION_ERROR` if user not found or inactive).
+  - Reject unknown payload fields with `400 VALIDATION_ERROR`.
+  - If target space does not exist: returns `404 NOT_FOUND`.
+  - Reassigns `space.createdBy` to `userId`. Space manager rights transfer to the new owner.
+  - Triggers internal server event `space.owner_reassigned`.
+- **Success Response (`200 OK`)**:
+```json
+{
+  "space": {
+    "_id": "65f29d20c571c48201a00001",
+    "title": "Engineering Handbook",
+    "description": "Technical references and delivery guides for the Airost Intranet team.",
+    "projectId": "65f29d20c571c48201a11111",
+    "createdBy": "65f29d20c571c48201a33333",
+    "accessType": "project_members",
+    "updateType": "selected",
+    "accessMembers": [],
+    "updateMembers": ["65f29d20c571c48201a33333"],
+    "createdAt": "2026-10-14T08:00:00.000Z",
+    "updatedAt": "2026-10-16T04:00:00.000Z"
+  }
+}
+```
+- **Error Responses**:
+  - `400 INVALID_ID`: Malformed `spaceId` or `userId`.
+  - `400 VALIDATION_ERROR`: Missing `userId`, unknown fields, or specified user is not found/inactive.
+  - `401 UNAUTHENTICATED`: Session missing.
+  - `403 FORBIDDEN`: Caller is not a Platform Admin.
+  - `404 NOT_FOUND`: Space does not exist.
+  - `500 INTERNAL_ERROR`: Internal server error.
+
+---
+
 ## 6. Document Opening Behaviour & Link Security
 
 ### 6.1 Frontend Opening Behaviour
@@ -688,66 +876,151 @@ The server derives the `provider` attribute automatically from `parsedUrl.hostna
 
 ---
 
-## 7. Open Questions & Codebase Observations
+## 7. Server Event Hook (Internal Notification Integration)
 
-During inspection of the active codebase against `database_schema.md`, `features.md`, `DESIGN.md`, and `SCREEN_SPEC.md`, several key architectural discrepancies and legacy states were observed:
+The documentation module implements an internal pub/sub event hook system. This is an internal server mechanism, **not** an HTTP API. It serves as the decoupled integration boundary for audit logging, activity tracking, and future notification dispatch (e.g., email alerts, in-app notifications).
 
-### 1. Project Membership Model (`server/models/Project.js` vs `PROJECT_MEMBER`)
-- **Current State in Codebase:**
-  - `server/models/Project.js` currently stores:
-    ```javascript
-    {
-      projectId: { type: Number, required: true },
-      title: String,
-      description: String,
-      lead: String,
-    }
-    ```
-  - `projectId` is stored as a `Number` (e.g. 1, 2, 3) alongside Mongoose's default `_id: ObjectId`.
-  - `lead` is stored as a plain `String` (name or handle), not an `ObjectId` ref to `User`.
-  - There is currently **no** `PROJECT_MEMBER` Mongoose model in `server/models/`, nor are `advisor` or `member` lists present on `Project`.
-- **Discrepancy with `database_schema.md`:**
-  - `database_schema.md` defines a separate `PROJECT_MEMBER` collection with `projectId: ObjectId`, `userId: ObjectId`, and `role: enum ['lead', 'advisor', 'member']`.
-- **Open Questions & Recommendation for Team:**
-  1. *How should project membership and lead checks be verified right now in Mongoose?*
-     - Option A: Implement the `PROJECT_MEMBER` Mongoose model as specified in `database_schema.md` during the current sprint.
-     - Option B: Temporarily verify `lead` by matching `Project.lead` against `req.user.name` until `PROJECT_MEMBER` is introduced.
-  2. *Space Project Reference:* In `DOCUMENTATION_SPACE`, `projectId` should reference `Project._id` (`ObjectId`). When querying spaces, the API should populate `{ _id, title }` so the frontend can display `"Project: <title>"` (Screen 1).
+### 7.1 Event Types
+The following event types are emitted across space and document lifecycles:
 
-### 2. Legacy `/airost/doc` Routes & `docModel.js` Transition
-- **Current State in Codebase:**
-  - `server/server.js` currently mounts routes at `app.use("/airost/doc", DocRoutes)` rather than `/doc`.
-  - `server/models/docModel.js` defines an article/blog schema with fields: `image`, `title`, `profile`, `author`, `date`, `type`, `description`, `content` (all required Strings).
-  - `server/controller/docController.js` handles CRUD for these blog posts.
-  - `client/src/pages/Documentation/` (`Doc.js`, `Doc-card.js`, `CreateDoc.js`) is an article blog viewer and editor that uses `ReactQuill` and iframe embeds, fetching from `/airost/doc`.
-- **Open Questions for Team:**
-  1. *Route Mount:* To avoid breaking ongoing parallel work, should `server.js` mount the new Documentation Space API at `app.use("/doc", newDocRoutes)` concurrently with the legacy `app.use("/airost/doc", legacyDocRoutes)` until client migration is complete?
-  2. *Legacy Data:* Should existing article records in `Doc` be archived, migrated into a default *"Club General"* documentation space, or cleanly retired once the 14 new screens are connected?
+| Event Name | Trigger Condition |
+| :--- | :--- |
+| `space.created` | Emitted when a new space is successfully created (`POST /doc/spaces`). |
+| `space.updated` | Emitted when space metadata or permissions are updated (`PATCH /doc/spaces/:spaceId`). |
+| `space.deleted` | Emitted when a space and its documents are hard deleted by an Admin (`DELETE /doc/spaces/:spaceId`). |
+| `space.owner_reassigned` | Emitted when space ownership is transferred by an Admin (`PATCH /doc/admin/spaces/:spaceId/owner`). |
+| `document.created` | Emitted when a new document link is added to a space (`POST /doc/spaces/:spaceId/documents`). |
+| `document.updated` | Emitted when document metadata or URL is modified (`PATCH /doc/documents/:documentId`). |
+| `document.archived` | Emitted when a document is soft-deleted / archived (`DELETE /doc/documents/:documentId` or `PATCH` with `archived: true`). |
+| `document.restored` | Emitted when an archived document is restored (`PATCH /doc/documents/:documentId` with `archived: false`). |
+| `document.deleted` | Emitted when a document is permanently deleted from the database (`DELETE /doc/documents/:documentId/permanent`). |
 
-### 3. Platform Admin Role Consistency
-- **Current State in Codebase:**
-  - In `server/models/User.js`, `position` is defined as `Array`.
-  - In `server/models/VerifiedUser.js`, `position` is defined as `Array`.
-  - In `server/passport.js`, `userPosition = verifiedUser ? verifiedUser.position[0] : " "` (storing a single String).
-  - In `server/controller/adminController.js`, `position: [req.body.position]`.
-  - In `client/src/components/Sidepanel/Sidepanel.js`, the check handles both:
-    ```javascript
-    Array.isArray(user.position) ? user.position.includes("admin") : user.position === "admin"
-    ```
-- **Recommendation:** Implement a server-side helper `isAdmin(user)` in `server/utils/authHelper.js` that checks both array and string variants case-insensitively (`(Array.isArray(user.position) ? user.position : [user.position]).some(p => typeof p === 'string' && p.toLowerCase().includes('admin'))`), ensuring uniform authorization logic across all route guards.
+### 7.2 Event Payload Specification
+Every event carries a standardized payload object:
 
-### 4. `area` Enum & Workflow Alignment
-- **Discrepancy:**
-  - `database_schema.md` Section 4 listed `['general', 'meeting', 'technical', 'resource', 'other']`.
-  - `SCREEN_SPEC.md` and `DESIGN.md` explicitly specify 6 project delivery workflow areas across all screens (Screens 8, 11, 12, 13):
-    1. `general` (UI: *"General"*)
-    2. `requirements` (UI: *"Requirements"*)
-    3. `design` (UI: *"Design"*)
-    4. `development` (UI: *"Development"*)
-    5. `testing` (UI: *"Testing"*)
-    6. `deployment` (UI: *"Deployment"*)
-- **Resolution:** This contract follows the prompt rule (*"Where database_schema.md or features.md differ from DESIGN.md and SCREEN_SPEC.md, DESIGN.md and SCREEN_SPEC.md take precedence"*), locking the 6 workflow areas defined in `SCREEN_SPEC.md`.
+```typescript
+interface DocEventPayload {
+  actorId: string;            // ObjectId string of the user who performed the action (from req.user._id)
+  spaceId: string;            // ObjectId string of the affected documentation space
+  projectId: string | null;   // ObjectId string of linked project, or null for standalone spaces
+  documentId?: string;        // ObjectId string of the affected document (for document.* events)
+  title?: string;             // Human-readable title of the affected space or document
+}
+```
 
-### 5. Supabase & PostgreSQL Migration (Phase 1 / Phase 4)
-- **Context:** [AGENTS.md](file:///c:/Users/ganru/Documents/airost-intranet/AGENTS.md) outlines an upcoming migration from MongoDB to Supabase (PostgreSQL + RLS).
-- **Recommendation:** When implementing this API in Node/Express/Mongoose, encapsulate all database access and permission evaluations inside a dedicated service layer (`server/services/docService.js`) rather than inlining queries in `docController.js`. This will allow seamless substitution with Supabase client calls and PostgreSQL queries when Phase 4 is executed.
+### 7.3 Operational Invariants
+1. **Post-Write Execution**: Events are dispatched **strictly after** the database write operation has successfully completed and committed. If a database transaction or operation fails, no event is emitted.
+2. **Failure Isolation**: Listener execution errors **must never break or delay the HTTP request**. Event dispatchers must execute listeners asynchronously or wrap listener execution in protective try/catch blocks so that notification, caching, or logging failures never return an error to the client.
+3. **Future Notification Integration**: This hook architecture allows notification handlers (Phase 4 / Phase 5) to subscribe to space and document updates without modifying core controller or data-access logic.
+
+---
+
+## 8. Client Routes & Legacy Coexistence
+
+The documentation feature is accessed on the client under the base path `/doc`.
+
+### 8.1 Client Route Definitions
+The following table defines the official client URL routes, corresponding screen representations, and query parameter specifications:
+
+| View / Action | Route Pattern | Query Parameters | Screen Spec Ref | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| **Spaces List** | `/doc` | None | Screen 1, 2, 3, 4 | Main documentation landing page. Displays all visible spaces with search and filters. |
+| **Create Space** | `/doc/spaces/new` | None | Screen 5, 6 | Creation form for project-linked or standalone spaces. |
+| **Space Detail** | `/doc/spaces/:spaceId` | `?area=<area>` (optional)<br>`?q=<searchText>` (optional) | Screen 8, 9, 10, 11 | Space overview showing categorized document links by workflow area tab (default `'general'`), area counts, read-only badges, and in-space document filtering. |
+| **Edit Space** | `/doc/spaces/:spaceId/edit` | None | Screen 7 | Space settings, project linkage, and permission management for Space Managers / Admins. |
+| **Add Document** | `/doc/spaces/:spaceId/documents/new` | `?area=<area>` (optional) | Screen 12 | Modal/form to add a new document link. Preselects target workflow area if `?area=` is supplied. |
+| **Edit Document** | `/doc/spaces/:spaceId/documents/:documentId/edit` | None | Screen 13 | Modal/form to edit document title, area, or optionally replace the external URL. |
+| **Archived Documents** | `/doc/spaces/:spaceId/archived` | None | Screen 14 | View soft-deleted documents within a space with one-click restore functionality. |
+
+### 8.2 Legacy Route Coexistence (`/doc/:id`, `/doc/create/:id`)
+The codebase currently contains legacy routes in `client/src/App.js`:
+- `/doc/:id` $\rightarrow$ `DocBlog` (legacy article blog viewer)
+- `/doc/create/:id` $\rightarrow$ `CreateDoc` (legacy Google Doc embedded editor)
+
+**Coexistence Strategy**:
+1. **Explicit Segment Isolation**: All new documentation screens use explicit nested sub-routes under `/doc/spaces/...` (e.g., `/doc/spaces/:spaceId`, `/doc/spaces/new`). In React Router v6, static path segments (`/doc/spaces/...`) are evaluated with higher specificity than dynamic parameter routes (`/doc/:id`), completely avoiding URL conflicts.
+2. **Preservation of Legacy Articles**: Existing blog articles remain fully functional under `/doc/:id` during the transition period without interfering with space navigation.
+3. **Legacy Creation Isolation**: The legacy creator route `/doc/create/:id` uses the `create/:id` subpath, which is distinct from `/doc/spaces/new` and `/doc/spaces/:spaceId/documents/new`.
+
+### 8.3 Required Client Link Updates
+When transitioning from the legacy views to the new documentation system, the following existing client links must be updated:
+1. `client/src/pages/Projects/ProjectDetails.js`:
+   - *Current*: Displays a hardcoded static presentation URL in project details (`Project handbook: https://docs.google.com/...`).
+   - *Target*: Update to link to the project's documentation spaces via `/doc/spaces?projectId=${project._id}` or directly to the linked space `/doc/spaces/${space._id}`.
+2. `client/src/pages/Documentation/component/Doc-card.js`:
+   - *Current*: Links directly to `/doc/${doc._id}` for legacy article cards.
+   - *Target*: Retained for legacy blog cards; new documentation space cards in `SpaceListScreen.js` navigate to `/doc/spaces/${space._id}`.
+3. `client/src/components/Sidepanel/Sidepanel.js`:
+   - *Current*: Points to `/doc` (`<Link to="/doc">Documentation</Link>`).
+   - *Target*: No change required; it serves as the entry point to the documentation spaces list.
+
+---
+
+## 9. Screen / Feature to Endpoint Map
+
+This matrix maps UI screens and integration points to the corresponding backend API endpoints:
+
+| Feature / Screen | UI Context & Trigger | HTTP Method & Endpoint | Caller Permission | Purpose & Response Summary |
+| :--- | :--- | :--- | :--- | :--- |
+| **Project Page Link** | Project Details screen (`/projects/:id`) "Documentation" tab/link | `GET /doc/spaces?projectId=:projectId` | Authenticated member with VIEW rights | Fetches documentation spaces associated with the current project. Returns array of matching spaces. |
+| **Document Search** | Global header search modal or quick navigation bar | `GET /doc/search?q=:text&limit=:n` | Any authenticated user | Fast case-insensitive title search across non-archived documents in spaces the user can view. Returns `{ documents: [...] }`. |
+| **Admin Panel (Spaces List & Filter)** | Platform Admin panel (`/admin/documentation`) | `GET /doc/admin/spaces?page=:p&limit=:l&q=:query` | Platform Admin only (`403` if not admin) | Paginated list of all spaces with metrics (`documentCount`, `archivedCount`, member counts) and owner info. Returns `{ spaces, page, limit, total }`. |
+| **Admin Panel (Reassign Owner)** | Admin space actions modal / dropdown | `PATCH /doc/admin/spaces/:spaceId/owner` | Platform Admin only (`403` if not admin) | Reassigns space creator/owner to a designated active user. Body `{ userId }`. Returns `{ space }`. |
+| **Admin Delete (Space Cascade)** | Admin space management "Delete Space" danger action | `DELETE /doc/spaces/:spaceId` | Platform Admin only (`403` if not admin) | Permanently hard-deletes space and cascades deletion to all child documents. Returns `{ deletedSpaceId, deletedDocumentsCount }`. |
+| **Admin Delete (Permanent Document Delete)** | Admin archived documents / cleanup screen | `DELETE /doc/documents/:documentId/permanent` | Platform Admin only (`403` if not admin) | Permanently hard-deletes a single document record from the database. Returns `{ deletedDocumentId }`. |
+
+---
+
+## 10. Out-of-Scope Register (Link-Only Architecture)
+
+In adherence to **Locked Decision 4**, the documentation module operates strictly as a metadata and link catalog. The following capabilities are explicitly excluded from the feature scope:
+
+1. **File Upload and Download**:
+   - File storage, binary asset serving, and download bandwidth are delegated entirely to external cloud providers (such as Google Drive and Docs), keeping the intranet backend lightweight, stateless, and free from binary storage maintenance.
+2. **File Size Metadata**:
+   - External URLs and web-native collaboration assets (such as Google Docs, Sheets, and Slides) do not have fixed binary byte counts or expose reliable size metrics, rendering static file size indicators inapplicable and misleading.
+3. **Document Version History**:
+   - Collaborative document platforms (e.g., Google Workspace) natively maintain robust version history, granular diffs, and editor attribution, making intranet-level document version tracking redundant and prone to synchronization drift.
+4. **Storing Document Content**:
+   - Storing raw document text, HTML bodies, or Markdown strings in the intranet database introduces data synchronization hazards, content-parsing vulnerabilities, and complex formatting discrepancies.
+
+> [!NOTE]
+> Revisit only if the team changes Locked Decision 4; this would require a storage solution such as Supabase Storage.
+
+---
+
+## 11. Known Risks & Codebase Observations
+
+### 11.1 Known Technical & Architectural Risks
+
+1. **Project Lead Plain Name String (`server/models/Project.js`)**:
+   - *Risk*: `server/models/Project.js` currently stores `lead` as a plain `String` (e.g. `"John Doe"`), rather than an `ObjectId` referencing the `User` collection.
+   - *Impact*: Authorizing project-level space creation or manager rights via string matching (`Project.lead === req.user.name`) is inherently unsafe if user names are not strictly unique, contain whitespace discrepancies, or are updated.
+   - *Mitigation (Implemented in Documentation Service)*: In `server/services/docService.js` (`getUserProjectRole`), project role resolution prioritizes the explicit `ProjectMember` join collection. When falling back to `Project.lead`, it matches against the strongest unique identifier available in strict priority order:
+     1. User `ObjectId` (exact 24-character hexadecimal match)
+     2. User email (case-insensitive exact match)
+     3. User display name (trimmed, case-insensitive exact match). Crucially, a display-name match counts **only if exactly ONE active user** in the system possesses that name. If the name is ambiguous (two or more users), lead access is denied for all candidates and a server-side warning is logged with the project ID and count (never exposing user details). Partial and substring matching are strictly prohibited.
+   - *Recommendation for Projects Owner*: Migrate `Project.lead` to store a direct `ObjectId` reference to the `User` collection (e.g. `lead: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }`), or standardize all project membership, advisory, and lead assignments exclusively through the `ProjectMember` join collection (`{ projectId, userId, role: 'lead' | 'advisor' | 'member' }`).
+
+2. **Direct Mongoose Model Invocation in Controller**:
+   - *Risk*: Historical controllers executed database operations directly in `server/controller/docController.js` using Mongoose model methods.
+   - *Impact*: Tightly couples HTTP request handling to MongoDB, increasing regression risks and complicating the upcoming migration to Supabase/PostgreSQL (Phase 1 & Phase 4).
+   - *Mitigation (Implemented)*: Addressed by the Documentation service layer (`server/services/docService.js`), which encapsulates all database queries and aggregations behind clean repository interfaces and pure authorization guards (`server/utils/docAccess.js`). The controller imports zero models.
+
+### 11.2 Codebase Observations & Transition Items
+
+1. **Legacy `/airost/doc` Routes & `docModel.js`**:
+   - `server/server.js` currently mounts routes at `app.use("/airost/doc", DocRoutes)` and `app.use("/doc", docRoutes)`.
+   - Legacy article blog records (`docModel.js`) and editor (`CreateDoc.js`) coexist with the new link-only documentation space system.
+   - Legacy blog endpoints and new documentation space endpoints are completely isolated under separate router paths (`/airost/doc` vs `/doc`).
+
+2. **Platform Admin Role Consistency**:
+   - In `User` and `VerifiedUser` schemas, `position` can appear as an Array or String.
+   - Centralized server helper `isAdmin(user)` inspects both representations case-insensitively (`(Array.isArray(user.position) ? user.position : [user.position]).some(p => typeof p === 'string' && p.toLowerCase().includes('admin'))`), ensuring uniform authorization logic across all route guards.
+
+3. **Workflow Area Alignment**:
+   - The 6 delivery workflow areas defined in `SCREEN_SPEC.md` (`general`, `requirements`, `design`, `development`, `testing`, `deployment`) remain locked across all document operations.
+
+4. **Upcoming Supabase & PostgreSQL Migration (Phase 1 / Phase 4)**:
+   - All schema designs, foreign keys, and permission boundaries in this contract are structured to map cleanly to PostgreSQL tables (`documentation_spaces`, `documents`, `space_access_members`, `space_update_members`) and Supabase Row Level Security (RLS) policies.
+
