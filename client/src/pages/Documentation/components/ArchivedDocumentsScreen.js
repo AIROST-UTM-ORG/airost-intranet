@@ -1,6 +1,10 @@
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { DocLink, useDocNavigate } from "../DocLink";
 import InfoBanner from "./InfoBanner";
-import { getProviderDisplayName, AREA_LABELS } from "../documentationApi";
+import DeleteConfirmModal from "./DeleteConfirmModal";
+import { getProviderDisplayName, AREA_LABELS, permanentlyDeleteDocument } from "../documentationApi";
+import useAuth from "../../../hooks/useAuth";
+import { isUserAdmin } from "./SpaceListScreen";
 
 /**
  * ArchivedDocumentsScreen - Covers Screen 14
@@ -12,8 +16,30 @@ const ArchivedDocumentsScreen = ({
   error = null,
   onBack,
   onRestore,
+  onDeletePermanently,
+  onRefresh,
   restoringId = null,
+  isAdmin: propIsAdmin,
 }) => {
+  const navigate = useDocNavigate();
+  const auth = useAuth ? useAuth() : null;
+  const user = auth?.user;
+  const userIsAdmin = isUserAdmin(user);
+  const isAdmin = propIsAdmin !== undefined ? propIsAdmin : userIsAdmin;
+
+  const [docToDelete, setDocToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState(null);
+  const [toastMessage, setToastMessage] = useState("");
+  const triggerRefs = useRef({});
+
+  useEffect(() => {
+    if (toastMessage) {
+      const timer = setTimeout(() => setToastMessage(""), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [toastMessage]);
+
   if (!space) return null;
 
   const isProjectLinked = Boolean(space.projectId && space.projectId.title);
@@ -21,21 +47,60 @@ const ArchivedDocumentsScreen = ({
     ? `${space.title} · Project: ${space.projectId.title}`
     : `${space.title} · Standalone space`;
 
+  const handleBack = (e) => {
+    if (onBack) {
+      onBack(e);
+      return;
+    }
+    if (window.history.state && window.history.state.idx > 0) {
+      e.preventDefault();
+      navigate(-1);
+    }
+  };
+
+  const handleConfirmDeletePermanent = async () => {
+    if (!docToDelete) return;
+    setIsDeleting(true);
+    setDeleteError(null);
+    try {
+      if (onDeletePermanently) {
+        await onDeletePermanently(docToDelete);
+      } else {
+        await permanentlyDeleteDocument(docToDelete._id);
+      }
+      const title = docToDelete.title;
+      setDocToDelete(null);
+      setToastMessage(`"${title}" was permanently deleted.`);
+      if (onRefresh) {
+        await onRefresh();
+      }
+    } catch (err) {
+      setDeleteError(err);
+      const status = err?.response?.status || err?.status;
+      const code = err?.response?.data?.error?.code || err?.code;
+      if (status === 404 || code === "NOT_FOUND") {
+        if (onRefresh) onRefresh();
+      }
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <div
       className="w-full max-w-[959px] mx-auto pb-12 font-varela"
       data-testid="archived-documents-screen"
     >
       {/* Top Back Navigation Link */}
-      <button
-        type="button"
-        onClick={onBack}
-        className="flex items-center gap-[8px] text-[#686868] hover:text-[#171717] font-varela text-[14px] mb-[12px] focus:outline-none transition-colors"
+      <DocLink
+        to={`/doc/spaces/${space._id}`}
+        onClick={handleBack}
+        className="flex items-center gap-[8px] text-[#686868] hover:text-[#171717] font-varela text-[14px] mb-[12px] no-underline focus:outline-none transition-colors"
         data-testid="back-to-space-btn"
       >
         <span className="text-[14px]">←</span>
         <span>Back to {space.title}</span>
-      </button>
+      </DocLink>
 
       {/* Page Header */}
       <div className="mb-[24px]">
@@ -88,6 +153,7 @@ const ArchivedDocumentsScreen = ({
             <div className="flex flex-col gap-[20px] mb-[24px]" data-testid="archived-list">
               {archivedDocuments.map((doc) => {
                 const isRestoring = restoringId === doc._id;
+                const isThisDocDeleting = isDeleting && docToDelete?._id === doc._id;
 
                 return (
                   <div
@@ -127,30 +193,64 @@ const ArchivedDocumentsScreen = ({
                       </div>
                     </div>
 
-                    {/* Right Control: Restore Button */}
-                    <button
-                      type="button"
-                      disabled={isRestoring}
-                      onClick={() => onRestore(doc)}
-                      className="doc-btn-secondary w-[100px] h-[38px] text-[14px] gap-[8px]"
-                      data-testid={`restore-doc-btn-${doc._id}`}
-                    >
-                      <svg
-                        className="w-[15px] h-[15px] text-[#171717]"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
+                    {/* Right Controls: Restore Button + Admin-only Permanent Delete */}
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                      <button
+                        type="button"
+                        disabled={isRestoring || isDeleting}
+                        onClick={() => onRestore(doc)}
+                        className="doc-btn-secondary w-[100px] h-[38px] text-[14px] gap-[8px]"
+                        data-testid={`restore-doc-btn-${doc._id}`}
                       >
-                        <polyline points="21 8 21 21 3 21 3 8" />
-                        <rect x="1" y="3" width="22" height="5" />
-                        <line x1="12" y1="17" x2="12" y2="11" />
-                        <polyline points="9 14 12 11 15 14" />
-                      </svg>
-                      <span>{isRestoring ? "Restoring..." : "Restore"}</span>
-                    </button>
+                        <svg
+                          className="w-[15px] h-[15px] text-[#171717]"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <polyline points="21 8 21 21 3 21 3 8" />
+                          <rect x="1" y="3" width="22" height="5" />
+                          <line x1="12" y1="17" x2="12" y2="11" />
+                          <polyline points="9 14 12 11 15 14" />
+                        </svg>
+                        <span>{isRestoring ? "Restoring..." : "Restore"}</span>
+                      </button>
+
+                      {isAdmin && (
+                        <button
+                          type="button"
+                          ref={(el) => {
+                            triggerRefs.current[doc._id] = el;
+                          }}
+                          disabled={isRestoring || isDeleting}
+                          onClick={() => {
+                            setDocToDelete(doc);
+                            setDeleteError(null);
+                          }}
+                          className="doc-btn-danger h-[38px] px-3 text-[14px] gap-[6px]"
+                          data-testid={`delete-permanent-doc-btn-${doc._id}`}
+                        >
+                          <svg
+                            className="w-[14px] h-[14px]"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <polyline points="3 6 5 6 21 6" />
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                            <line x1="10" y1="11" x2="10" y2="17" />
+                            <line x1="14" y1="11" x2="14" y2="17" />
+                          </svg>
+                          <span>{isThisDocDeleting ? "Deleting..." : "Delete permanently"}</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 );
               })}
@@ -161,8 +261,67 @@ const ArchivedDocumentsScreen = ({
           <InfoBanner />
         </>
       )}
+
+      {/* Confirmation Modal for Permanent Delete */}
+      {docToDelete && (
+        <DeleteConfirmModal
+          isOpen={Boolean(docToDelete)}
+          title={`Delete "${docToDelete.title}" permanently?`}
+          description="This removes the link record only; the external document is not changed. This cannot be undone."
+          confirmButtonText="Delete permanently"
+          cancelButtonText="Cancel"
+          onConfirm={handleConfirmDeletePermanent}
+          onCancel={() => {
+            setDocToDelete(null);
+            setDeleteError(null);
+          }}
+          isSubmitting={isDeleting}
+          error={deleteError}
+          onRetry={handleConfirmDeletePermanent}
+          onItemAlreadyDeleted={() => {
+            setDocToDelete(null);
+            setDeleteError(null);
+            if (onRefresh) onRefresh();
+          }}
+          triggerRef={{ current: triggerRefs.current[docToDelete._id] }}
+          dataTestId="delete-permanent-modal"
+        />
+      )}
+
+      {/* Accessible Toast Notification */}
+      {toastMessage && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="doc-toast"
+          data-testid="documentation-toast"
+        >
+          <svg
+            className="w-5 h-5 text-green-400"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+            <polyline points="22 4 12 14.01 9 11.01" />
+          </svg>
+          <span>{toastMessage}</span>
+          <button
+            type="button"
+            onClick={() => setToastMessage("")}
+            className="text-gray-400 hover:text-white ml-2 text-sm focus:outline-none"
+            aria-label="Dismiss notification"
+          >
+            ✕
+          </button>
+        </div>
+      )}
     </div>
   );
 };
 
 export default ArchivedDocumentsScreen;
+

@@ -1,4 +1,29 @@
 import React, { useState, useRef, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { DocLink } from "../DocLink";
+import useAuth from "../../../hooks/useAuth";
+import DeleteConfirmModal from "./DeleteConfirmModal";
+import { deleteSpace, searchDocuments } from "../documentationApi";
+
+const getProviderDisplayName = (provider) => {
+  switch (provider) {
+    case "google_doc":
+      return "Google Docs";
+    case "google_drive":
+      return "Google Drive";
+    default:
+      return "External Link";
+  }
+};
+
+export const isUserAdmin = (user) => {
+  if (!user || !user.position) return false;
+  if (Array.isArray(user.position)) {
+    return user.position.some((p) => typeof p === "string" && p.toLowerCase().includes("admin"));
+  }
+  return typeof user.position === "string" && user.position.toLowerCase().includes("admin");
+};
 
 /**
  * SpaceListScreen - Covers Screens 1, 2, 3, and 4
@@ -11,11 +36,93 @@ const SpaceListScreen = ({
   onCreateSpace,
   onEditSpace,
   onManagePermissions,
+  onDeleteSpace,
   onRetry,
+  isAdmin: propIsAdmin,
 }) => {
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const qFromUrl = searchParams.get("q") || "";
+  const [searchQuery, setSearchQuery] = useState(qFromUrl);
   const [activeMenuSpaceId, setActiveMenuSpaceId] = useState(null);
   const menuRef = useRef(null);
+  const triggerRefs = useRef({});
+
+  // Role resolution
+  const auth = useAuth ? useAuth() : null;
+  const user = auth?.user;
+  const userIsAdmin = isUserAdmin(user);
+  const isAdmin = propIsAdmin !== undefined ? propIsAdmin : userIsAdmin;
+
+  // Delete Space Modal State
+  const [spaceToDelete, setSpaceToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState(null);
+  const [toastMessage, setToastMessage] = useState("");
+
+  useEffect(() => {
+    if (toastMessage) {
+      const timer = setTimeout(() => setToastMessage(""), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [toastMessage]);
+
+  const handleOpenDeleteModal = (space) => {
+    setSpaceToDelete(space);
+    setDeleteError(null);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!spaceToDelete) return;
+    setIsDeleting(true);
+    setDeleteError(null);
+    try {
+      if (onDeleteSpace) {
+        await onDeleteSpace(spaceToDelete);
+      } else {
+        await deleteSpace(spaceToDelete._id);
+      }
+      const deletedTitle = spaceToDelete.title;
+      setSpaceToDelete(null);
+      setToastMessage(`"${deletedTitle}" and its document links were deleted.`);
+      if (onRetry) {
+        await onRetry();
+      }
+    } catch (err) {
+      setDeleteError(err);
+      const status = err?.response?.status || err?.status;
+      const code = err?.response?.data?.error?.code || err?.code;
+      if (status === 404 || code === "NOT_FOUND") {
+        if (onRetry) onRetry();
+      }
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // Sync searchQuery to URL query ?q= with 250ms debounce and replace: true
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const currentQ = searchParams.get("q") || "";
+      if (searchQuery !== currentQ) {
+        const nextParams = new URLSearchParams(searchParams);
+        if (searchQuery.trim()) {
+          nextParams.set("q", searchQuery);
+        } else {
+          nextParams.delete("q");
+        }
+        setSearchParams(nextParams, { replace: true });
+      }
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [searchQuery, searchParams, setSearchParams]);
+
+  // Sync from URL changes (Back/Forward) to state
+  useEffect(() => {
+    const qFromUrl = searchParams.get("q") || "";
+    if (qFromUrl !== searchQuery) {
+      setSearchQuery(qFromUrl);
+    }
+  }, [searchParams]);
 
   // Close overflow menu on click outside
   useEffect(() => {
@@ -27,6 +134,36 @@ const SpaceListScreen = ({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  const [debouncedQuery, setDebouncedQuery] = useState(searchQuery.trim());
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(searchQuery.trim());
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const isSearchActive = searchQuery.trim().length > 0;
+  const isDocSearchEnabled = debouncedQuery.length >= 2;
+
+  const {
+    data: searchData,
+    isLoading: isSearchLoading,
+    isError: isSearchError,
+    error: searchErrorObj,
+    refetch: refetchSearch,
+  } = useQuery({
+    queryKey: ["docSearch", debouncedQuery],
+    queryFn: async ({ signal }) => {
+      return await searchDocuments({ q: debouncedQuery, signal });
+    },
+    enabled: isDocSearchEnabled,
+    staleTime: 60 * 1000,
+  });
+
+  const matchingDocuments =
+    isDocSearchEnabled && searchData?.documents ? searchData.documents : [];
 
   const totalDocuments = spaces.reduce(
     (acc, s) => acc + (s.activeDocumentCount ?? s.documentCount ?? 0),
@@ -44,8 +181,30 @@ const SpaceListScreen = ({
     return titleMatch || descMatch || projectMatch;
   });
 
+  const spaceCount = filteredSpaces.length;
+  const docCount = isDocSearchEnabled ? matchingDocuments.length : 0;
+  const spaceCountStr = `${spaceCount} ${spaceCount === 1 ? "space" : "spaces"}`;
+  const docCountStr = `${docCount} ${docCount === 1 ? "document" : "documents"}`;
+  const searchResultsCountText = isDocSearchEnabled
+    ? `${spaceCountStr} · ${docCountStr} found`
+    : `${spaceCountStr} found`;
+
   const isFirstUse = !loading && spaces.length === 0;
-  const isNoSearchResults = !loading && spaces.length > 0 && filteredSpaces.length === 0;
+
+  // Screen 3 condition: appears only when BOTH spaces and documents have no matches
+  const isNoSearchResults =
+    !loading &&
+    spaces.length > 0 &&
+    isSearchActive &&
+    (isDocSearchEnabled
+      ? !isSearchLoading &&
+        !isSearchError &&
+        filteredSpaces.length === 0 &&
+        matchingDocuments.length === 0
+      : filteredSpaces.length === 0);
+
+  const displayQuery =
+    searchQuery.length > 40 ? searchQuery.slice(0, 40) + "…" : searchQuery;
 
   return (
     <div className="w-full max-w-[959px] mx-auto pb-12 font-varela" data-testid="spaces-list-screen">
@@ -59,10 +218,12 @@ const SpaceListScreen = ({
             Keep project knowledge together. Store and open links to Google Docs and Drive.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={onCreateSpace}
-          className="doc-btn-primary w-[106px] h-[46px] gap-[8px]"
+        <DocLink
+          to="/doc/spaces/new"
+          onClick={(e) => {
+            if (onCreateSpace) onCreateSpace(e);
+          }}
+          className="doc-btn-primary w-[106px] h-[46px] gap-[8px] no-underline inline-flex items-center justify-center"
           data-testid="add-space-btn"
         >
           <svg
@@ -78,7 +239,7 @@ const SpaceListScreen = ({
             <line x1="5" y1="12" x2="19" y2="12" />
           </svg>
           <span className="doc-font-outfit text-[15px] tracking-[0.6px]">ADD</span>
-        </button>
+        </DocLink>
       </div>
 
       {/* Search Field */}
@@ -108,7 +269,13 @@ const SpaceListScreen = ({
         {searchQuery && (
           <button
             type="button"
-            onClick={() => setSearchQuery("")}
+            onClick={() => {
+              setSearchQuery("");
+              setDebouncedQuery("");
+              const nextParams = new URLSearchParams(searchParams);
+              nextParams.delete("q");
+              setSearchParams(nextParams, { replace: true });
+            }}
             className="absolute right-[16px] top-[16px] text-[#686868] hover:text-[#171717] focus:outline-none"
             aria-label="Clear search"
             data-testid="clear-search-btn"
@@ -173,13 +340,16 @@ const SpaceListScreen = ({
         <>
           {/* List Heading Row */}
           <div className="flex items-center justify-between mb-[24px]">
-            {isNoSearchResults ? (
+            {isSearchActive ? (
               <>
                 <h2 className="font-varela text-[20px] text-[#171717] font-normal">
                   Search results
                 </h2>
-                <span className="font-varela text-[14px] text-[#686868]" data-testid="search-results-summary">
-                  0 spaces found
+                <span
+                  className="font-varela text-[14px] text-[#686868]"
+                  data-testid="search-results-summary"
+                >
+                  <span data-testid="spaces-summary">{searchResultsCountText}</span>
                 </span>
               </>
             ) : isFirstUse ? (
@@ -233,14 +403,16 @@ const SpaceListScreen = ({
                 Create your first Documentation Space, then add links to Google Docs or Drive.
                 Connect it to a project or keep it open to the team.
               </p>
-              <button
-                type="button"
-                onClick={onCreateSpace}
-                className="doc-btn-primary h-[42px] px-[24px] gap-[8px]"
+              <DocLink
+                to="/doc/spaces/new"
+                onClick={(e) => {
+                  if (onCreateSpace) onCreateSpace(e);
+                }}
+                className="doc-btn-primary h-[42px] px-[24px] gap-[8px] no-underline inline-flex items-center justify-center"
                 data-testid="create-first-space-btn"
               >
                 <span className="font-varela text-[14px] capitalize">+ Create Documentation Space</span>
-              </button>
+              </DocLink>
             </div>
           )}
 
@@ -264,8 +436,8 @@ const SpaceListScreen = ({
                   <line x1="21" y1="21" x2="16.65" y2="16.65" />
                 </svg>
               </div>
-              <h3 className="font-varela text-[22px] text-[#171717] mb-[12px] font-normal">
-                No spaces found for “{searchQuery}”
+              <h3 className="font-varela text-[22px] text-[#171717] mb-[12px] font-normal break-words" data-testid="no-search-results-heading">
+                No spaces found for “{displayQuery}”
               </h3>
               <p className="font-varela text-[14px] text-[#686868] max-w-[520px] leading-[150%] mb-[24px]">
                 Try another space title or project name, or clear your search to see all Documentation
@@ -273,7 +445,13 @@ const SpaceListScreen = ({
               </p>
               <button
                 type="button"
-                onClick={() => setSearchQuery("")}
+                onClick={() => {
+                  setSearchQuery("");
+                  setDebouncedQuery("");
+                  const nextParams = new URLSearchParams(searchParams);
+                  nextParams.delete("q");
+                  setSearchParams(nextParams, { replace: true });
+                }}
                 className="doc-btn-primary h-[42px] px-[20px] gap-[6px]"
                 data-testid="clear-search-cta"
               >
@@ -283,7 +461,7 @@ const SpaceListScreen = ({
           )}
 
           {/* Screen 1 & Screen 4: Populated Space Cards */}
-          {!isFirstUse && !isNoSearchResults && (
+          {!isFirstUse && !isNoSearchResults && filteredSpaces.length > 0 && (
             <div className="flex flex-col gap-[24px]" data-testid="spaces-grid">
               {filteredSpaces.map((space) => {
                 const isProjectLinked = Boolean(space.projectId && space.projectId.title);
@@ -328,10 +506,13 @@ const SpaceListScreen = ({
 
                     {/* Right Action Stack */}
                     <div className="flex flex-col items-end justify-between flex-shrink-0 relative">
-                      {/* Overflow Button (Shown if user has manager rights) */}
-                      {Boolean(space.isManager || space.canManage) ? (
+                      {/* Overflow Button (Shown if user has manager rights or is admin) */}
+                      {Boolean(isAdmin || space.isManager || space.canManage) ? (
                         <div className="relative">
                           <button
+                            ref={(el) => {
+                              triggerRefs.current[space._id] = el;
+                            }}
                             type="button"
                             onClick={() =>
                               setActiveMenuSpaceId(isMenuOpen ? null : space._id)
@@ -362,13 +543,13 @@ const SpaceListScreen = ({
                               className="doc-popover-menu absolute right-0 top-[30px] w-[190px] py-[8px]"
                               data-testid={`space-menu-${space._id}`}
                             >
-                              <button
-                                type="button"
-                                onClick={() => {
+                              <DocLink
+                                to={`/doc/spaces/${space._id}/edit`}
+                                onClick={(e) => {
                                   setActiveMenuSpaceId(null);
-                                  onEditSpace(space);
+                                  if (onEditSpace) onEditSpace(space);
                                 }}
-                                className="doc-menu-item"
+                                className="doc-menu-item no-underline flex items-center"
                                 data-testid="edit-space-menu-item"
                               >
                                 <svg
@@ -384,14 +565,14 @@ const SpaceListScreen = ({
                                   <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
                                 </svg>
                                 <span>Edit space</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
+                              </DocLink>
+                              <DocLink
+                                to={`/doc/spaces/${space._id}/edit`}
+                                onClick={(e) => {
                                   setActiveMenuSpaceId(null);
-                                  onManagePermissions(space);
+                                  if (onManagePermissions) onManagePermissions(space);
                                 }}
-                                className="doc-menu-item"
+                                className="doc-menu-item no-underline flex items-center"
                                 data-testid="manage-permissions-menu-item"
                               >
                                 <svg
@@ -409,7 +590,36 @@ const SpaceListScreen = ({
                                   <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                                 </svg>
                                 <span>Manage permissions</span>
-                              </button>
+                              </DocLink>
+
+                              {/* Admin Only: Delete Space Option */}
+                              {isAdmin && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setActiveMenuSpaceId(null);
+                                    handleOpenDeleteModal(space);
+                                  }}
+                                  className="doc-menu-item doc-menu-item-danger no-underline flex items-center"
+                                  data-testid="delete-space-menu-item"
+                                >
+                                  <svg
+                                    className="w-[16px] h-[16px]"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  >
+                                    <polyline points="3 6 5 6 21 6" />
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                    <line x1="10" y1="11" x2="10" y2="17" />
+                                    <line x1="14" y1="11" x2="14" y2="17" />
+                                  </svg>
+                                  <span>Delete space</span>
+                                </button>
+                              )}
                             </div>
                           )}
                         </div>
@@ -418,21 +628,264 @@ const SpaceListScreen = ({
                       )}
 
                       {/* Open Button */}
-                      <button
-                        type="button"
-                        onClick={() => onOpenSpace(space)}
-                        className="doc-btn-secondary w-[76px] h-[40px] text-[15px]"
+                      <DocLink
+                        to={`/doc/spaces/${space._id}`}
+                        onClick={(e) => {
+                          if (onOpenSpace) onOpenSpace(space);
+                        }}
+                        className="doc-btn-secondary w-[76px] h-[40px] text-[15px] no-underline inline-flex items-center justify-center"
                         data-testid={`open-space-btn-${space._id}`}
                       >
                         Open
-                      </button>
+                      </DocLink>
                     </div>
                   </div>
                 );
               })}
             </div>
           )}
+
+          {/* Documents Section when search query is at least 2 characters */}
+          {!isFirstUse && !isNoSearchResults && isDocSearchEnabled && (
+            <div className="mt-[32px]" data-testid="search-documents-section">
+              <div className="flex items-center justify-between mb-[16px]">
+                <h3 className="font-varela text-[20px] text-[#171717] font-normal">
+                  Documents
+                </h3>
+                {!isSearchLoading && !isSearchError && (
+                  <span
+                    className="font-varela text-[14px] text-[#686868]"
+                    data-testid="search-documents-count"
+                  >
+                    {docCountStr}
+                  </span>
+                )}
+              </div>
+
+              {/* Documents Section Loading Skeleton */}
+              {isSearchLoading && (
+                <div
+                  className="flex flex-col gap-[16px]"
+                  data-testid="search-documents-loading"
+                >
+                  {[1, 2].map((i) => (
+                    <div
+                      key={i}
+                      className="doc-card h-[104px] p-[24px] flex items-center justify-between animate-pulse bg-gray-50 rounded-[8px]"
+                    >
+                      <div className="flex items-center gap-[16px] flex-1">
+                        <div className="w-[44px] h-[44px] bg-gray-200 rounded-[8px]"></div>
+                        <div className="space-y-2 flex-1">
+                          <div className="h-5 bg-gray-200 rounded w-1/3"></div>
+                          <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                        </div>
+                      </div>
+                      <div className="w-[86px] h-[38px] bg-gray-200 rounded"></div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Documents Section Error State with Retry */}
+              {isSearchError && !isSearchLoading && (
+                <div
+                  className="doc-card p-4 border border-red-200 bg-red-50 text-red-700 flex items-center justify-between font-varela text-[14px]"
+                  data-testid="search-documents-error"
+                >
+                  <span>
+                    {searchErrorObj?.response?.data?.error?.message ||
+                      searchErrorObj?.message ||
+                      "Failed to load matching documents"}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => refetchSearch()}
+                    className="doc-btn-secondary px-3 py-1 text-[13px] text-red-800 border-red-300 hover:bg-red-100"
+                    data-testid="search-documents-retry-btn"
+                  >
+                    Retry
+                  </button>
+                </div>
+              )}
+
+              {/* Matching Documents List */}
+              {!isSearchLoading &&
+                !isSearchError &&
+                matchingDocuments.length > 0 && (
+                  <div
+                    className="flex flex-col gap-[16px]"
+                    data-testid="search-documents-list"
+                  >
+                    {matchingDocuments.map((doc) => {
+                      const spaceId = doc.spaceId || doc.space?._id;
+                      const spaceTitle =
+                        doc.space?.title || "Documentation Space";
+                      const providerLabel = getProviderDisplayName(doc.provider);
+                      const areaParam = doc.area || "general";
+
+                      return (
+                        <div
+                          key={doc._id}
+                          className="doc-card w-full h-[104px] p-[24px] flex items-center justify-between relative transition-shadow hover:shadow-[0_6px_12px_rgba(0,0,0,0.1)]"
+                          data-testid={`search-document-card-${doc._id}`}
+                        >
+                          {/* Left Content */}
+                          <div className="flex items-center gap-[16px] flex-1 pr-[16px] min-w-0">
+                            {/* 44x44 leading icon box */}
+                            <div className="w-[44px] h-[44px] bg-[#F5F5F5] rounded-[8px] flex items-center justify-center flex-shrink-0">
+                              <svg
+                                className="w-[20px] h-[20px] text-[#686868]"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                <polyline points="14 2 14 8 20 8" />
+                                <line x1="16" y1="13" x2="8" y2="13" />
+                                <line x1="16" y1="17" x2="8" y2="17" />
+                                <polyline points="10 9 9 9 8 9" />
+                              </svg>
+                            </div>
+
+                            {/* Text Stack */}
+                            <div className="flex flex-col justify-center min-w-0">
+                              <h4
+                                className="font-varela text-[20px] text-[#171717] font-normal leading-tight truncate"
+                                title={doc.title}
+                              >
+                                {doc.title}
+                              </h4>
+                              <div className="font-varela text-[13px] text-[#686868] mt-[4px] flex items-center gap-1.5 truncate">
+                                <span>{providerLabel}</span>
+                                <span>·</span>
+                                <DocLink
+                                  to={`/doc/spaces/${spaceId}?area=${areaParam}`}
+                                  className="text-[#2B3467] hover:underline font-medium truncate"
+                                  data-testid={`search-document-space-link-${doc._id}`}
+                                  title={spaceTitle}
+                                >
+                                  {spaceTitle}
+                                </DocLink>
+                                <span>·</span>
+                                <span className="capitalize text-gray-500">
+                                  {doc.area}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Right Controls */}
+                          <div className="flex items-center gap-[12px] flex-shrink-0">
+                            <a
+                              href={doc.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="doc-btn-secondary w-[86px] h-[38px] text-[14px] gap-[6px] no-underline"
+                              data-testid={`open-search-document-btn-${doc._id}`}
+                            >
+                              <svg
+                                className="w-[14px] h-[14px] text-[#171717]"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                                <polyline points="15 3 21 3 21 9" />
+                                <line x1="10" y1="14" x2="21" y2="3" />
+                              </svg>
+                              <span>Open</span>
+                            </a>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+            </div>
+          )}
         </>
+      )}
+
+      {/* Delete Space Confirmation Modal */}
+      {spaceToDelete && (
+        <DeleteConfirmModal
+          isOpen={Boolean(spaceToDelete)}
+          title={`Delete ${spaceToDelete.title}?`}
+          description={
+            <>
+              <p className="m-0 mb-2">
+                This space and all of its document links (
+                {spaceToDelete.activeDocumentCount ?? spaceToDelete.documentCount ?? 0} active, including{" "}
+                {spaceToDelete.archivedDocumentCount ?? spaceToDelete.archivedCount ?? 0} archived) will be
+                permanently deleted.
+              </p>
+              <p className="m-0 mb-2">
+                The external documents themselves are <strong>not affected</strong>.
+              </p>
+              <p className="m-0 text-red-600 font-medium">
+                This action cannot be undone.
+              </p>
+            </>
+          }
+          requireMatchText={spaceToDelete.title}
+          inputLabel={`Type "${spaceToDelete.title}" to confirm:`}
+          inputPlaceholder={spaceToDelete.title}
+          confirmButtonText="Delete space"
+          cancelButtonText="Cancel"
+          onConfirm={handleConfirmDelete}
+          onCancel={() => {
+            setSpaceToDelete(null);
+            setDeleteError(null);
+          }}
+          isSubmitting={isDeleting}
+          error={deleteError}
+          onRetry={handleConfirmDelete}
+          onItemAlreadyDeleted={() => {
+            setSpaceToDelete(null);
+            setDeleteError(null);
+            if (onRetry) onRetry();
+          }}
+          triggerRef={{ current: triggerRefs.current[spaceToDelete._id] }}
+          dataTestId="delete-space-modal"
+        />
+      )}
+
+      {/* Accessible Toast Notification */}
+      {toastMessage && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="doc-toast"
+          data-testid="documentation-toast"
+        >
+          <svg
+            className="w-5 h-5 text-green-400"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+            <polyline points="22 4 12 14.01 9 11.01" />
+          </svg>
+          <span>{toastMessage}</span>
+          <button
+            type="button"
+            onClick={() => setToastMessage("")}
+            className="text-gray-400 hover:text-white ml-2 text-sm focus:outline-none"
+            aria-label="Dismiss notification"
+          >
+            ✕
+          </button>
+        </div>
       )}
     </div>
   );

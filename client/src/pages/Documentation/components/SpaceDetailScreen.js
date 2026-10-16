@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
+import { DocLink, useDocNavigate } from "../DocLink";
 import InfoBanner from "./InfoBanner";
 import { getProviderDisplayName, VALID_AREAS, AREA_LABELS } from "../documentationApi";
 
@@ -19,8 +21,16 @@ const SpaceDetailScreen = ({
   onArchiveDocument,
   onViewArchived,
 }) => {
+  const [searchParams] = useSearchParams();
+  const navigate = useDocNavigate();
   const [activeMenuDocId, setActiveMenuDocId] = useState(null);
   const menuRef = useRef(null);
+
+  const areaQuery = searchParams.get("area");
+  const currentActiveArea =
+    areaQuery && VALID_AREAS.includes(areaQuery)
+      ? areaQuery
+      : activeArea || "development";
 
   // Close doc overflow menu on outside click
   useEffect(() => {
@@ -40,7 +50,7 @@ const SpaceDetailScreen = ({
   const isProjectLinked = Boolean(space.projectId && space.projectId.title);
 
   // Filter non-archived documents for the selected area
-  const areaDocs = documents.filter((d) => !d.archived && d.area === activeArea);
+  const areaDocs = documents.filter((d) => !d.archived && d.area === currentActiveArea);
   const areaCount = areaDocs.length;
   const archivedCount = space.archivedCount ?? space.archivedDocumentCount ?? 0;
 
@@ -52,18 +62,29 @@ const SpaceDetailScreen = ({
     return "Add a link to a document or folder in Google Docs or Drive for this area.";
   };
 
+  const handleBack = (e) => {
+    if (onBack) {
+      onBack(e);
+      return;
+    }
+    if (window.history.state && window.history.state.idx > 0) {
+      e.preventDefault();
+      navigate(-1);
+    }
+  };
+
   return (
     <div className="w-full max-w-[959px] mx-auto pb-12 font-varela" data-testid="space-detail-screen">
       {/* Top Back Navigation Link */}
-      <button
-        type="button"
-        onClick={onBack}
-        className="flex items-center gap-[8px] text-[#686868] hover:text-[#171717] font-varela text-[14px] mb-[12px] focus:outline-none transition-colors"
+      <DocLink
+        to="/doc"
+        onClick={handleBack}
+        className="flex items-center gap-[8px] text-[#686868] hover:text-[#171717] font-varela text-[14px] mb-[12px] no-underline focus:outline-none transition-colors"
         data-testid="back-to-documentation-btn"
       >
         <span className="text-[14px]">←</span>
         <span>Back to Documentation</span>
-      </button>
+      </DocLink>
 
       {/* Space Header */}
       <div className="flex items-start justify-between mb-[24px]">
@@ -100,10 +121,12 @@ const SpaceDetailScreen = ({
         <div className="flex flex-col items-end flex-shrink-0">
           {/* Top: + Add Document button (Screen 8; HIDDEN in Read-only Screen 11) */}
           {canUpdate && (
-            <button
-              type="button"
-              onClick={() => onAddDocument(activeArea)}
-              className="doc-btn-primary h-[44px] px-[20px] gap-[8px] mb-[12px]"
+            <DocLink
+              to={`/doc/spaces/${space._id}/documents/new?area=${currentActiveArea}`}
+              onClick={(e) => {
+                if (onAddDocument) onAddDocument(currentActiveArea);
+              }}
+              className="doc-btn-primary h-[44px] px-[20px] gap-[8px] mb-[12px] no-underline inline-flex items-center justify-center"
               data-testid="add-document-btn"
             >
               <svg
@@ -119,33 +142,54 @@ const SpaceDetailScreen = ({
                 <line x1="5" y1="12" x2="19" y2="12" />
               </svg>
               <span className="font-varela text-[14px] capitalize">+ Add Document</span>
-            </button>
+            </DocLink>
           )}
 
           {/* Bottom: Access Badge Chip */}
           {canUpdate ? (
-            <button
-              type="button"
-              onClick={canManage ? onEditSpace : undefined}
-              className={`h-[30px] px-[12px] bg-[#F5F5F5] rounded-[6px] flex items-center gap-[6px] text-[#686868] font-varela text-[13px] border-none ${
-                canManage ? "cursor-pointer hover:bg-[#EBEBEB]" : "cursor-default"
-              }`}
-              data-testid="update-access-badge"
-            >
-              <svg
-                className="w-[12px] h-[12px]"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+            canManage ? (
+              <DocLink
+                to={`/doc/spaces/${space._id}/edit`}
+                onClick={(e) => {
+                  if (onEditSpace) onEditSpace();
+                }}
+                className="h-[30px] px-[12px] bg-[#F5F5F5] rounded-[6px] flex items-center gap-[6px] text-[#686868] font-varela text-[13px] border-none cursor-pointer hover:bg-[#EBEBEB] no-underline"
+                data-testid="update-access-badge"
               >
-                <path d="M12 20h9" />
-                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-              </svg>
-              <span>Update access</span>
-            </button>
+                <svg
+                  className="w-[12px] h-[12px]"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M12 20h9" />
+                  <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                </svg>
+                <span>Update access</span>
+              </DocLink>
+            ) : (
+              <div
+                className="h-[30px] px-[12px] bg-[#F5F5F5] rounded-[6px] flex items-center gap-[6px] text-[#686868] font-varela text-[13px] cursor-default"
+                data-testid="update-access-badge"
+              >
+                <svg
+                  className="w-[12px] h-[12px]"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M12 20h9" />
+                  <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                </svg>
+                <span>Update access</span>
+              </div>
+            )
           ) : (
             /* Screen 11: Read-only badge */
             <div
@@ -174,14 +218,16 @@ const SpaceDetailScreen = ({
       <div className="mb-[20px]">
         <div className="flex items-center gap-[8px] overflow-x-auto pb-[2px] doc-scrollbar">
           {VALID_AREAS.map((areaKey) => {
-            const isActive = activeArea === areaKey;
+            const isActive = currentActiveArea === areaKey;
             const count = space.areaCounts ? space.areaCounts[areaKey] || 0 : 0;
             return (
-              <button
+              <DocLink
                 key={areaKey}
-                type="button"
-                onClick={() => onSelectArea(areaKey)}
-                className={`h-[38px] px-[16px] rounded-[6px] font-varela text-[14px] flex items-center gap-[8px] transition-colors flex-shrink-0 border-none ${
+                to={`/doc/spaces/${space._id}?area=${areaKey}`}
+                onClick={(e) => {
+                  if (onSelectArea) onSelectArea(areaKey);
+                }}
+                className={`h-[38px] px-[16px] rounded-[6px] font-varela text-[14px] flex items-center gap-[8px] transition-colors flex-shrink-0 border-none no-underline ${
                   isActive
                     ? "bg-[#EBF9EC] text-[#158019] font-medium"
                     : "bg-[#F5F5F5] text-[#686868] hover:bg-[#EBEBEB]"
@@ -190,7 +236,7 @@ const SpaceDetailScreen = ({
               >
                 <span>{AREA_LABELS[areaKey]}</span>
                 <span className={isActive ? "text-[#158019]" : "text-[#686868]"}>{count}</span>
-              </button>
+              </DocLink>
             );
           })}
         </div>
@@ -202,7 +248,7 @@ const SpaceDetailScreen = ({
       <div className="flex items-center justify-between mb-[20px]">
         <div className="flex items-center gap-[12px]">
           <h2 className="font-varela text-[22px] text-[#171717] font-normal" data-testid="current-area-title">
-            {AREA_LABELS[activeArea]}
+            {AREA_LABELS[currentActiveArea]}
           </h2>
           <span className="font-varela text-[14px] text-[#686868]" data-testid="current-area-count">
             {areaCount} {areaCount === 1 ? "document" : "documents"}
@@ -211,10 +257,12 @@ const SpaceDetailScreen = ({
 
         {/* Right: Archived Documents button (Screen 8; HIDDEN in Read-only Screen 11) */}
         {canUpdate && (
-          <button
-            type="button"
-            onClick={onViewArchived}
-            className="flex items-center gap-[6px] text-[#686868] hover:text-[#171717] font-varela text-[14px] focus:outline-none transition-colors"
+          <DocLink
+            to={`/doc/spaces/${space._id}/archived`}
+            onClick={(e) => {
+              if (onViewArchived) onViewArchived();
+            }}
+            className="flex items-center gap-[6px] text-[#686868] hover:text-[#171717] font-varela text-[14px] no-underline focus:outline-none transition-colors"
             data-testid="archived-documents-link"
           >
             <svg
@@ -231,7 +279,7 @@ const SpaceDetailScreen = ({
               <line x1="10" y1="12" x2="14" y2="12" />
             </svg>
             <span>Archived Documents ({archivedCount})</span>
-          </button>
+          </DocLink>
         )}
       </div>
 
@@ -273,20 +321,22 @@ const SpaceDetailScreen = ({
                 </svg>
               </div>
               <h3 className="font-varela text-[22px] text-[#171717] mb-[12px] font-normal" data-testid="empty-area-heading">
-                No documents in {AREA_LABELS[activeArea]} yet
+                No documents in {AREA_LABELS[currentActiveArea]} yet
               </h3>
               <p className="font-varela text-[14px] text-[#686868] max-w-[520px] leading-[150%] mb-[24px]" data-testid="empty-area-desc">
-                {getEmptyAreaDescription(activeArea)}
+                {getEmptyAreaDescription(currentActiveArea)}
               </p>
               {canUpdate && (
-                <button
-                  type="button"
-                  onClick={() => onAddDocument(activeArea)}
-                  className="doc-btn-primary h-[42px] px-[24px] gap-[8px]"
+                <DocLink
+                  to={`/doc/spaces/${space._id}/documents/new?area=${currentActiveArea}`}
+                  onClick={(e) => {
+                    if (onAddDocument) onAddDocument(currentActiveArea);
+                  }}
+                  className="doc-btn-primary h-[42px] px-[24px] gap-[8px] no-underline inline-flex items-center justify-center"
                   data-testid="empty-area-add-doc-btn"
                 >
                   <span className="font-varela text-[14px] capitalize">+ Add Document</span>
-                </button>
+                </DocLink>
               )}
             </div>
           ) : (
@@ -393,13 +443,13 @@ const SpaceDetailScreen = ({
                               className="doc-popover-menu absolute right-0 top-[34px] w-[156px] py-[8px]"
                               data-testid={`doc-menu-${doc._id}`}
                             >
-                              <button
-                                type="button"
-                                onClick={() => {
+                              <DocLink
+                                to={`/doc/spaces/${space._id}/documents/${doc._id}/edit`}
+                                onClick={(e) => {
                                   setActiveMenuDocId(null);
-                                  onEditDocument(doc);
+                                  if (onEditDocument) onEditDocument(doc);
                                 }}
-                                className="doc-menu-item"
+                                className="doc-menu-item no-underline flex items-center"
                                 data-testid="edit-doc-menu-item"
                               >
                                 <svg
@@ -415,7 +465,7 @@ const SpaceDetailScreen = ({
                                   <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
                                 </svg>
                                 <span>Edit</span>
-                              </button>
+                              </DocLink>
                               <button
                                 type="button"
                                 onClick={() => {

@@ -6,12 +6,29 @@ import { API_URL } from "../../config/api";
  * Defaults to false for development/production (real backend API),
  * while defaulting to true in automated test environments.
  */
-export let USE_MOCK =
-  process.env.REACT_APP_USE_MOCK === "true" ||
-  (process.env.NODE_ENV === "test" && process.env.REACT_APP_USE_MOCK !== "false");
+const getInitialUseMock = () => {
+  if (process.env.NODE_ENV === "production") {
+    return false;
+  }
+  const mockFlag =
+    process.env.REACT_APP_DOCUMENTATION_MOCK ?? process.env.REACT_APP_USE_MOCK;
+  if (mockFlag !== undefined) {
+    return mockFlag === "true";
+  }
+  return process.env.NODE_ENV === "test";
+};
+
+export let USE_MOCK = getInitialUseMock();
+
+export const isMockMode = () => Boolean(USE_MOCK);
 
 export const setUseMock = (value) => {
+  if (process.env.NODE_ENV === "production") {
+    USE_MOCK = false;
+    return false;
+  }
   USE_MOCK = Boolean(value);
+  return USE_MOCK;
 };
 
 // ---------------------------------------------------------------------------
@@ -39,6 +56,15 @@ export const getMockScenario = () => currentScenario;
 
 export const setArtificialDelay = (ms) => {
   artificialDelayMs = ms;
+};
+
+export const extractError = (err, defaultMsg = "Operation failed") => {
+  const errData = err?.response?.data?.error;
+  return {
+    message: errData?.message || err?.message || defaultMsg,
+    code: errData?.code,
+    details: errData?.details || [],
+  };
 };
 
 // ---------------------------------------------------------------------------
@@ -538,10 +564,10 @@ const computeSpaceCounts = (spaceId) => {
 // ---------------------------------------------------------------------------
 // Real API Axios Client
 // ---------------------------------------------------------------------------
-const realApiClient = axios.create({
+export const realApiClient = axios.create({
   baseURL: API_URL,
   withCredentials: true,
-  timeout: 10000,
+  timeout: 15000,
   headers: {
     "Content-Type": "application/json",
     Accept: "application/json",
@@ -551,35 +577,51 @@ const realApiClient = axios.create({
 realApiClient.interceptors.response.use(
   (res) => res,
   (error) => {
-    // Standardize error envelope
-    if (error.response && error.response.data && error.response.data.error) {
-      return Promise.reject(error);
+    // Standardize error envelope when server already provided it
+    if (error.response?.data?.error?.code) {
+      const err = new Error(error.response.data.error.message || "Request failed");
+      err.status = error.response.status;
+      err.response = error.response;
+      err.code = error.response.data.error.code;
+      return Promise.reject(err);
     }
+
     const status = error.response?.status || 500;
-    const message =
+    let code = "INTERNAL_ERROR";
+    let message =
       error.response?.data?.message ||
       error.message ||
       "An unexpected server error occurred.";
-    const code =
-      status === 400
-        ? "VALIDATION_ERROR"
-        : status === 401
-        ? "UNAUTHENTICATED"
-        : status === 403
-        ? "FORBIDDEN"
-        : status === 404
-        ? "NOT_FOUND"
-        : "INTERNAL_ERROR";
+    let details = error.response?.data?.details || [];
+
+    // Map network errors and timeouts explicitly
+    if (error.code === "ECONNABORTED" || error.message?.toLowerCase().includes("timeout")) {
+      code = "TIMEOUT";
+      message = "Request timed out. Please check your connection and try again.";
+    } else if (!error.response) {
+      code = "NETWORK_ERROR";
+      message = "Network error. Please check your connection and try again.";
+    } else if (status === 400) {
+      code = "VALIDATION_ERROR";
+    } else if (status === 401) {
+      code = "UNAUTHENTICATED";
+      message = "Your session has expired or is invalid. Please log in again.";
+    } else if (status === 403) {
+      code = "FORBIDDEN";
+    } else if (status === 404) {
+      code = "NOT_FOUND";
+    }
 
     const customErr = new Error(message);
     customErr.status = status;
+    customErr.code = code;
     customErr.response = {
       status,
       data: {
         error: {
           code,
           message,
-          details: error.response?.data?.details || [],
+          details,
         },
       },
     };
@@ -592,9 +634,9 @@ realApiClient.interceptors.response.use(
 // ---------------------------------------------------------------------------
 
 /**
- * List all spaces the user can view.
+ * List all spaces the user can view, optionally filtered by projectId.
  */
-export const listSpaces = async () => {
+export const listSpaces = async (filter = {}) => {
   if (USE_MOCK) {
     if (artificialDelayMs > 0) await sleep(artificialDelayMs);
     checkScenario();
@@ -603,19 +645,43 @@ export const listSpaces = async () => {
       return [];
     }
 
-    return mockSpaces.map((space) => {
+    let spaces = mockSpaces;
+    if (filter && filter.projectId) {
+      const targetId = String(
+        typeof filter.projectId === "object" ? filter.projectId._id : filter.projectId
+      );
+      spaces = spaces.filter((space) => {
+        const pId = space.projectId
+          ? typeof space.projectId === "object"
+            ? space.projectId._id
+            : space.projectId
+          : null;
+        return pId && String(pId) === targetId;
+      });
+    }
+
+    return spaces.map((space) => {
       const counts = computeSpaceCounts(space._id);
       const isReadOnly = currentScenario === MockScenarios.READ_ONLY;
       return {
         ...space,
         activeDocumentCount: counts.activeDocumentCount,
+        archivedDocumentCount: counts.archivedDocumentCount,
+        documentCount: counts.activeDocumentCount,
         canUpdate: isReadOnly ? false : space.canUpdate,
         isManager: isReadOnly ? false : space.isManager,
       };
     });
   }
 
-  const response = await realApiClient.get("/doc/spaces");
+  const params = {};
+  if (filter && filter.projectId) {
+    params.projectId =
+      typeof filter.projectId === "object" ? filter.projectId._id : filter.projectId;
+  }
+  const response = await realApiClient.get("/doc/spaces", {
+    params: Object.keys(params).length > 0 ? params : undefined,
+  });
   return (response.data || []).map((space) => ({
     ...space,
     isManager: Boolean(space.canManage ?? space.isManager),
@@ -818,9 +884,13 @@ export const deleteSpace = async (spaceId) => {
     if (artificialDelayMs > 0) await sleep(artificialDelayMs);
     checkScenario();
 
+    if (currentScenario === MockScenarios.READ_ONLY) {
+      throw createError(403, "FORBIDDEN", "Only platform administrators can delete documentation spaces");
+    }
+
     const spaceIndex = mockSpaces.findIndex((s) => s._id === spaceId);
     if (spaceIndex === -1) {
-      throw createError(404, "NOT_FOUND", "Space not found");
+      throw createError(404, "NOT_FOUND", "Documentation space not found");
     }
 
     mockSpaces.splice(spaceIndex, 1);
@@ -829,7 +899,7 @@ export const deleteSpace = async (spaceId) => {
     const deletedDocs = beforeCount - mockDocuments.length;
 
     return {
-      message: "Space and associated documents deleted successfully",
+      message: "Documentation space and associated documents deleted successfully",
       deletedSpaceId: spaceId,
       deletedDocumentsCount: deletedDocs,
     };
@@ -1045,6 +1115,10 @@ export const permanentlyDeleteDocument = async (documentId) => {
     if (artificialDelayMs > 0) await sleep(artificialDelayMs);
     checkScenario();
 
+    if (currentScenario === MockScenarios.READ_ONLY) {
+      throw createError(403, "FORBIDDEN", "Only platform administrators can permanently delete documents");
+    }
+
     const index = mockDocuments.findIndex((d) => d._id === documentId);
     if (index === -1) {
       throw createError(404, "NOT_FOUND", "Document not found");
@@ -1071,15 +1145,12 @@ export const listProjects = async () => {
     return [...SEED_PROJECTS];
   }
 
-  try {
-    const res = await realApiClient.get("/projects");
-    return (res.data || []).map((p) => ({
-      _id: p._id,
-      title: p.title || p.name || `Project ${p.projectId || ""}`,
-    }));
-  } catch (err) {
-    return [...SEED_PROJECTS];
-  }
+  const res = await realApiClient.get("/projects");
+  const data = Array.isArray(res.data) ? res.data : [];
+  return data.map((p) => ({
+    _id: p._id,
+    title: p.title || p.name || `Project ${p.projectId || ""}`,
+  }));
 };
 
 /**
@@ -1092,17 +1163,208 @@ export const listMembers = async () => {
     return [...SEED_USERS];
   }
 
-  try {
-    const res = await realApiClient.get("/admin/users");
-    if (Array.isArray(res.data) && res.data.length > 0) {
-      return res.data.map((u, idx) => ({
-        _id: u._id || u.id || `user-${idx}`,
-        name: u.name || u.email || "Member",
-        email: u.email,
-      }));
+  const res = await realApiClient.get("/admin/users");
+  const data = Array.isArray(res.data) ? res.data : [];
+  return data.map((u, idx) => ({
+    _id: u._id || u.id || `user-${idx}`,
+    name: u.name || u.email || "Member",
+    email: u.email,
+  }));
+};
+
+/**
+ * Search non-archived document titles across visible spaces via GET /doc/search.
+ */
+export const searchDocuments = async ({ q, limit = 10, signal } = {}) => {
+  if (USE_MOCK) {
+    if (artificialDelayMs > 0) await sleep(artificialDelayMs);
+    checkScenario();
+
+    if (!q || q.trim().length < 2) {
+      return { documents: [] };
     }
-    return [...SEED_USERS];
-  } catch (err) {
-    return [...SEED_USERS];
+
+    const trimmedQ = q.trim().toLowerCase();
+
+    // Map of active spaces in mock mode
+    const spaceMap = new Map();
+    mockSpaces.forEach((s) => {
+      spaceMap.set(String(s._id), {
+        _id: s._id,
+        title: s.title,
+      });
+    });
+
+    // Search active (non-archived) documents in viewable spaces
+    const matchingDocs = mockDocuments.filter((doc) => {
+      if (doc.archived) return false;
+      if (!spaceMap.has(String(doc.spaceId))) return false;
+      const title = (doc.title || "").toLowerCase();
+      return title.includes(trimmedQ);
+    });
+
+    // Sort: prefix match first, then alphabetical by title
+    matchingDocs.sort((a, b) => {
+      const aTitle = (a.title || "").toLowerCase();
+      const bTitle = (b.title || "").toLowerCase();
+      const aStarts = aTitle.startsWith(trimmedQ);
+      const bStarts = bTitle.startsWith(trimmedQ);
+      if (aStarts && !bStarts) return -1;
+      if (!aStarts && bStarts) return 1;
+      return aTitle.localeCompare(bTitle);
+    });
+
+    const sliced = matchingDocs.slice(0, limit);
+
+    return {
+      documents: sliced.map((doc) => ({
+        _id: doc._id,
+        title: doc.title,
+        url: doc.url,
+        provider: doc.provider,
+        area: doc.area,
+        spaceId: doc.spaceId,
+        space: spaceMap.get(String(doc.spaceId)) || {
+          _id: doc.spaceId,
+          title: "",
+        },
+      })),
+    };
   }
+
+  const response = await realApiClient.get("/doc/search", {
+    params: { q, limit },
+    signal,
+  });
+  return response.data;
+};
+
+/**
+ * Admin: List all spaces across the intranet with metrics, pagination, and search.
+ */
+export const getAdminSpaces = async ({ page = 1, limit = 25, q = "" } = {}) => {
+  if (USE_MOCK) {
+    if (artificialDelayMs > 0) await sleep(artificialDelayMs);
+    checkScenario();
+
+    if (currentScenario === MockScenarios.READ_ONLY || currentScenario === MockScenarios.FORBIDDEN) {
+      throw createError(403, "FORBIDDEN", "Only platform admins can access administrative spaces oversight");
+    }
+
+    const p = Math.max(1, parseInt(page, 10) || 1);
+    const l = Math.min(100, Math.max(1, parseInt(limit, 10) || 25));
+    const trimmedQ = (q || "").trim().toLowerCase();
+
+    const matched = mockSpaces.filter((space) => {
+      if (!trimmedQ) return true;
+      const title = (space.title || "").toLowerCase();
+      const projectTitle = (space.projectId?.title || "").toLowerCase();
+      const owner = SEED_USERS.find((u) => u._id === space.createdBy);
+      const ownerName = (owner?.name || "").toLowerCase();
+      return (
+        title.includes(trimmedQ) ||
+        projectTitle.includes(trimmedQ) ||
+        ownerName.includes(trimmedQ)
+      );
+    });
+
+    const total = matched.length;
+    const startIndex = (p - 1) * l;
+    const paginated = matched.slice(startIndex, startIndex + l);
+
+    const formattedSpaces = paginated.map((space) => {
+      const activeDocs = mockDocuments.filter(
+        (d) => d.spaceId === space._id && !d.archived
+      ).length;
+      const archivedDocs = mockDocuments.filter(
+        (d) => d.spaceId === space._id && d.archived
+      ).length;
+      const owner = SEED_USERS.find((u) => u._id === space.createdBy) || {
+        _id: space.createdBy,
+        name: "Admin User",
+        email: "admin@airost.org",
+      };
+
+      return {
+        _id: space._id,
+        title: space.title,
+        description: space.description,
+        project: space.projectId
+          ? {
+              _id: space.projectId._id || space.projectId,
+              title: space.projectId.title || "Project",
+            }
+          : null,
+        owner: {
+          _id: owner._id,
+          name: owner.name,
+          email: owner.email || `${owner.name.toLowerCase().replace(/\s+/g, "")}@airost.org`,
+        },
+        accessType: space.accessType,
+        updateType: space.updateType,
+        accessMembersCount: space.accessMembers ? space.accessMembers.length : 0,
+        updateMembersCount: space.updateMembers ? space.updateMembers.length : 0,
+        documentCount: activeDocs,
+        archivedCount: archivedDocs,
+        createdAt: space.createdAt,
+        updatedAt: space.updatedAt,
+      };
+    });
+
+    return {
+      spaces: formattedSpaces,
+      page: p,
+      limit: l,
+      total,
+    };
+  }
+
+  const response = await realApiClient.get("/doc/admin/spaces", {
+    params: { page, limit, q: q || undefined },
+  });
+  return response.data;
+};
+
+/**
+ * Admin: Reassign space ownership (createdBy).
+ */
+export const reassignSpaceOwner = async (spaceId, userId) => {
+  if (USE_MOCK) {
+    if (artificialDelayMs > 0) await sleep(artificialDelayMs);
+    checkScenario();
+
+    if (currentScenario === MockScenarios.READ_ONLY || currentScenario === MockScenarios.FORBIDDEN) {
+      throw createError(403, "FORBIDDEN", "Only platform admins can reassign space ownership");
+    }
+
+    if (!userId) {
+      throw createError(400, "VALIDATION_ERROR", "User ID is required", [
+        { field: "userId", message: "User ID is required" },
+      ]);
+    }
+
+    const space = mockSpaces.find((s) => s._id === spaceId);
+    if (!space) {
+      throw createError(404, "NOT_FOUND", "Documentation space not found");
+    }
+
+    const targetUser = SEED_USERS.find((u) => u._id === userId);
+    if (!targetUser) {
+      throw createError(400, "VALIDATION_ERROR", "User not found or inactive", [
+        { field: "userId", message: "User not found" },
+      ]);
+    }
+
+    space.createdBy = userId;
+    space.updatedAt = new Date().toISOString();
+
+    return {
+      space: { ...space },
+    };
+  }
+
+  const response = await realApiClient.patch(`/doc/admin/spaces/${spaceId}/owner`, {
+    userId,
+  });
+  return response.data;
 };

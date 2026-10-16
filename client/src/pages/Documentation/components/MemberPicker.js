@@ -4,7 +4,15 @@ import React, { useState, useRef, useEffect } from "react";
  * Member Multi-Select Component
  * Used in Screen 5, 6, 7 under "Selected members"
  */
-const MemberPicker = ({ members = [], selectedIds = [], onChange, error = null }) => {
+const MemberPicker = ({
+  members = [],
+  selectedIds = [],
+  onChange,
+  error = null,
+  loading = false,
+  fetchError = null,
+  onRetry = null,
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const containerRef = useRef(null);
@@ -19,6 +27,43 @@ const MemberPicker = ({ members = [], selectedIds = [], onChange, error = null }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  if (loading) {
+    return (
+      <div
+        className="w-full min-h-[44px] border border-[#DEDEDE] rounded-[6px] px-[12px] py-[10px] bg-[#FAFAFA] flex items-center justify-between font-varela text-[13px] text-[#686868]"
+        data-testid="members-loading"
+      >
+        <div className="flex items-center gap-2">
+          <span className="inline-block w-3.5 h-3.5 border-2 border-[#158019] border-t-transparent rounded-full animate-spin"></span>
+          <span>Loading members...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (fetchError) {
+    return (
+      <div
+        className="w-full min-h-[44px] border border-red-300 rounded-[6px] px-[12px] py-[8px] bg-red-50 flex items-center justify-between gap-2"
+        data-testid="members-error"
+      >
+        <span className="font-varela text-[13px] text-red-700 truncate" title={fetchError}>
+          {fetchError}
+        </span>
+        {onRetry && (
+          <button
+            type="button"
+            onClick={onRetry}
+            className="text-[12px] font-varela text-red-800 underline hover:text-red-900 whitespace-nowrap"
+            data-testid="retry-members-btn"
+          >
+            Retry
+          </button>
+        )}
+      </div>
+    );
+  }
 
   const handleToggleMember = (memberId) => {
     if (selectedIds.includes(memberId)) {

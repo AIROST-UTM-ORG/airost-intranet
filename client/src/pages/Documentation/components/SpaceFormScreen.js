@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useDocNavigate } from "../DocLink";
 import InfoBanner from "./InfoBanner";
 import MemberPicker from "./MemberPicker";
 
@@ -8,20 +9,64 @@ import MemberPicker from "./MemberPicker";
  */
 const SpaceFormScreen = ({
   initialSpace = null, // null for create, object for edit
+  initialProjectId = "",
   projects = [],
   members = [],
   onSubmit,
   onCancel,
   submitting = false,
   serverError = null,
+  projectsLoading = false,
+  projectsError = null,
+  onRetryProjects = null,
+  membersLoading = false,
+  membersError = null,
+  onRetryMembers = null,
 }) => {
+  const navigate = useDocNavigate();
   const isEditing = Boolean(initialSpace && initialSpace._id);
+
+  const handleCancel = (e) => {
+    if (onCancel) {
+      onCancel(e);
+      return;
+    }
+    if (window.history.state && window.history.state.idx > 0) {
+      navigate(-1);
+    } else {
+      navigate(isEditing ? `/doc/spaces/${initialSpace._id}` : "/doc");
+    }
+  };
 
   // Form State
   const [title, setTitle] = useState(initialSpace?.title || "");
-  const [projectId, setProjectId] = useState(
-    initialSpace?.projectId?._id || (initialSpace?.projectId ? initialSpace.projectId : "")
-  );
+  const [projectId, setProjectId] = useState(() => {
+    if (initialSpace?.projectId?._id) return initialSpace.projectId._id;
+    if (initialSpace?.projectId) return initialSpace.projectId;
+    if (initialProjectId && projects && projects.length > 0) {
+      const match = projects.some(
+        (p) =>
+          String(p._id) === String(initialProjectId) ||
+          String(p.id) === String(initialProjectId)
+      );
+      if (match) return initialProjectId;
+      return "";
+    }
+    return initialProjectId || "";
+  });
+
+  useEffect(() => {
+    if (!isEditing && initialProjectId && !projectId && projects && projects.length > 0) {
+      const isValid = projects.some(
+        (p) =>
+          String(p._id) === String(initialProjectId) ||
+          String(p.id) === String(initialProjectId)
+      );
+      if (isValid) {
+        setProjectId(initialProjectId);
+      }
+    }
+  }, [initialProjectId, projects, isEditing, projectId]);
   const [description, setDescription] = useState(initialSpace?.description || "");
   const [accessType, setAccessType] = useState(initialSpace?.accessType || "project_members");
   const [updateType, setUpdateType] = useState(initialSpace?.updateType || "selected");
@@ -34,6 +79,7 @@ const SpaceFormScreen = ({
 
   // Validation state
   const [errors, setErrors] = useState({});
+  const [blockedError, setBlockedError] = useState(null);
 
   const hasProject = Boolean(projectId && projectId !== "");
 
@@ -48,6 +94,17 @@ const SpaceFormScreen = ({
       }
     }
   }, [hasProject, accessType, updateType]);
+
+  // Block submit while required project or member data failed to load
+  useEffect(() => {
+    if (projectsError) {
+      setBlockedError("Cannot save space: required project data failed to load. Please retry loading.");
+    } else if ((accessType === "selected" || updateType === "selected") && membersError) {
+      setBlockedError("Cannot save space: required member data failed to load. Please retry loading.");
+    } else {
+      setBlockedError(null);
+    }
+  }, [projectsError, membersError, accessType, updateType]);
 
   // Map backend field-level validation errors (400 VALIDATION_ERROR details)
   useEffect(() => {
@@ -90,6 +147,17 @@ const SpaceFormScreen = ({
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (projectsLoading || membersLoading) {
+      return;
+    }
+    if (projectsError) {
+      setBlockedError("Cannot save space: required project data failed to load. Please retry loading.");
+      return;
+    }
+    if ((accessType === "selected" || updateType === "selected") && membersError) {
+      setBlockedError("Cannot save space: required member data failed to load. Please retry loading.");
+      return;
+    }
     if (!validate()) return;
 
     const payload = {
@@ -172,34 +240,65 @@ const SpaceFormScreen = ({
           {/* Project Dropdown */}
           <div className="md:col-span-4 flex flex-col">
             <label className="font-varela text-[14px] text-[#171717] mb-[8px]">Project</label>
-            <div className="relative">
-              <select
-                value={projectId || ""}
-                onChange={(e) => setProjectId(e.target.value)}
-                className="doc-input h-[46px] px-[16px] pr-[36px] w-full appearance-none cursor-pointer bg-white"
-                data-testid="space-project-select"
+            {projectsLoading ? (
+              <div
+                className="h-[46px] px-[16px] border border-[#DEDEDE] rounded-[6px] bg-[#FAFAFA] flex items-center justify-between font-varela text-[14px] text-[#686868]"
+                data-testid="projects-loading"
               >
-                <option value="">No project</option>
-                {projects.map((p) => (
-                  <option key={p._id} value={p._id}>
-                    {p.title}
-                  </option>
-                ))}
-              </select>
-              <div className="absolute right-[14px] top-[16px] pointer-events-none text-[#686868]">
-                <svg
-                  className="w-[14px] h-[14px]"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <polyline points="6 9 12 15 18 9" />
-                </svg>
+                <div className="flex items-center gap-2">
+                  <span className="inline-block w-3.5 h-3.5 border-2 border-[#158019] border-t-transparent rounded-full animate-spin"></span>
+                  <span>Loading projects...</span>
+                </div>
               </div>
-            </div>
+            ) : projectsError ? (
+              <div
+                className="min-h-[46px] p-[8px_12px] border border-red-300 rounded-[6px] bg-red-50 flex items-center justify-between gap-2"
+                data-testid="projects-error"
+              >
+                <span className="font-varela text-[12px] text-red-700 truncate" title={projectsError}>
+                  {projectsError}
+                </span>
+                {onRetryProjects && (
+                  <button
+                    type="button"
+                    onClick={onRetryProjects}
+                    className="text-[12px] font-varela text-red-800 underline hover:text-red-900 whitespace-nowrap"
+                    data-testid="retry-projects-btn"
+                  >
+                    Retry
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="relative">
+                <select
+                  value={projectId || ""}
+                  onChange={(e) => setProjectId(e.target.value)}
+                  className="doc-input h-[46px] px-[16px] pr-[36px] w-full appearance-none cursor-pointer bg-white"
+                  data-testid="space-project-select"
+                >
+                  <option value="">No project</option>
+                  {projects.map((p) => (
+                    <option key={p._id} value={p._id}>
+                      {p.title}
+                    </option>
+                  ))}
+                </select>
+                <div className="absolute right-[14px] top-[16px] pointer-events-none text-[#686868]">
+                  <svg
+                    className="w-[14px] h-[14px]"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -292,6 +391,9 @@ const SpaceFormScreen = ({
                       if (errors.accessMembers) setErrors({ ...errors, accessMembers: null });
                     }}
                     error={errors.accessMembers}
+                    loading={membersLoading}
+                    fetchError={membersError}
+                    onRetry={onRetryMembers}
                   />
                 </div>
               )}
@@ -363,6 +465,9 @@ const SpaceFormScreen = ({
                       if (errors.updateMembers) setErrors({ ...errors, updateMembers: null });
                     }}
                     error={errors.updateMembers}
+                    loading={membersLoading}
+                    fetchError={membersError}
+                    onRetry={onRetryMembers}
                   />
                 </div>
               )}
@@ -373,11 +478,21 @@ const SpaceFormScreen = ({
         {/* Row 4: Shared Info Banner */}
         <InfoBanner className="mb-[24px]" />
 
+        {/* Blocking error banner */}
+        {blockedError && (
+          <div
+            className="mb-4 p-3 rounded bg-red-50 border border-red-200 text-red-700 text-[13px] font-varela"
+            data-testid="form-blocked-message"
+          >
+            {blockedError}
+          </div>
+        )}
+
         {/* Row 5: Footer Actions */}
         <div className="flex items-center justify-end gap-[12px]">
           <button
             type="button"
-            onClick={onCancel}
+            onClick={handleCancel}
             disabled={submitting}
             className="doc-btn-secondary w-[84px] h-[42px] text-[14px]"
             data-testid="cancel-space-btn"
@@ -386,10 +501,10 @@ const SpaceFormScreen = ({
           </button>
           <button
             type="submit"
-            disabled={submitting}
+            disabled={submitting || projectsLoading || membersLoading || Boolean(projectsError) || ((accessType === "selected" || updateType === "selected") && Boolean(membersError))}
             className={`doc-btn-primary h-[42px] px-[24px] text-[14px] ${
               isEditing ? "min-w-[132px]" : "min-w-[126px]"
-            }`}
+            } ${(projectsLoading || membersLoading || projectsError || ((accessType === "selected" || updateType === "selected") && membersError)) ? "opacity-50 cursor-not-allowed" : ""}`}
             data-testid="submit-space-btn"
           >
             <span className="font-varela text-[14px] capitalize">

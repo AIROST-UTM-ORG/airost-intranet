@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
+import { useDocNavigate } from "../DocLink";
 import InfoBanner from "./InfoBanner";
 import {
   VALID_AREAS,
@@ -18,13 +20,33 @@ const DocumentFormScreen = ({
   submitting = false,
   serverError = null,
 }) => {
+  const [searchParams] = useSearchParams();
+  const navigate = useDocNavigate();
   const isEditing = Boolean(initialDocument && initialDocument._id);
+
+  const areaQuery = searchParams.get("area");
+  const initialAreaValue =
+    initialDocument?.area ||
+    (areaQuery && VALID_AREAS.includes(areaQuery) ? areaQuery : initialArea) ||
+    "general";
 
   const [title, setTitle] = useState(initialDocument?.title || "");
   const [url, setUrl] = useState(isEditing ? "" : initialDocument?.url || "");
-  const [area, setArea] = useState(initialDocument?.area || initialArea || "general");
+  const [area, setArea] = useState(initialAreaValue);
   const [isAreaDropdownOpen, setIsAreaDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
+
+  const handleCancel = (e) => {
+    if (onCancel) {
+      onCancel(e);
+      return;
+    }
+    if (window.history.state && window.history.state.idx > 0) {
+      navigate(-1);
+    } else {
+      navigate(`/doc/spaces/${space?._id}?area=${area}`);
+    }
+  };
 
   const [errors, setErrors] = useState({});
 
@@ -338,7 +360,7 @@ const DocumentFormScreen = ({
         <div className="flex items-center justify-end gap-[12px]">
           <button
             type="button"
-            onClick={onCancel}
+            onClick={handleCancel}
             disabled={submitting}
             className="doc-btn-secondary w-[84px] h-[42px] text-[14px]"
             data-testid="cancel-doc-btn"

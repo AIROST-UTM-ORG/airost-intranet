@@ -257,3 +257,119 @@
 .doc-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #ADADAD;
 }
+
+/* ==========================================================================
+   Destructive Danger Tokens & Modal Dialog (Admin Only)
+   ========================================================================== */
+
+/* Destructive Red Button (Delete space, Delete permanently) */
+.doc-btn-danger {
+  font-family: 'Varela Round', sans-serif;
+  background-color: #E53935;
+  color: #FFFFFF;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0px 2px 8px rgba(229, 57, 53, 0.25);
+  transition: background-color 0.15s ease, opacity 0.15s ease, transform 0.1s ease;
+}
+
+.doc-btn-danger:hover:not(:disabled) {
+  background-color: #D32F2F;
+}
+
+.doc-btn-danger:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.doc-btn-danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Destructive Menu Item in Overflow Dropdown */
+.doc-menu-item-danger {
+  color: #E53935 !important;
+}
+
+.doc-menu-item-danger:hover {
+  background-color: #FFEBEE !important;
+  color: #D32F2F !important;
+}
+
+.doc-menu-item-danger svg {
+  color: #E53935 !important;
+}
+
+/* Modal Overlay Backdrop & Card Container */
+.doc-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 16px;
+  backdrop-filter: blur(2px);
+}
+
+.doc-modal-card {
+  background-color: #FFFFFF;
+  border-radius: 12px;
+  box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.2);
+  width: 100%;
+  max-width: 520px;
+  padding: 28px;
+  position: relative;
+  font-family: 'Varela Round', sans-serif;
+  animation: docModalIn 0.18s ease-out;
+}
+
+@keyframes docModalIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Accessible Toast Notification */
+.doc-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background-color: #171717;
+  color: #FFFFFF;
+  border-radius: 8px;
+  padding: 12px 20px;
+  font-family: 'Varela Round', sans-serif;
+  font-size: 14px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  animation: docToastIn 0.2s ease-out;
+}
+
+@keyframes docToastIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
