@@ -48,7 +48,7 @@ const SpaceListScreen = ({
   const triggerRefs = useRef({});
 
   // Role resolution
-  const auth = useAuth ? useAuth() : null;
+  const auth = useAuth();
   const user = auth?.user;
   const userIsAdmin = isUserAdmin(user);
   const isAdmin = propIsAdmin !== undefined ? propIsAdmin : userIsAdmin;
@@ -119,9 +119,7 @@ const SpaceListScreen = ({
   // Sync from URL changes (Back/Forward) to state
   useEffect(() => {
     const qFromUrl = searchParams.get("q") || "";
-    if (qFromUrl !== searchQuery) {
-      setSearchQuery(qFromUrl);
-    }
+    setSearchQuery((prev) => (qFromUrl !== prev ? qFromUrl : prev));
   }, [searchParams]);
 
   // Close overflow menu on click outside

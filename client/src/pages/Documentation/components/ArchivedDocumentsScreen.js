@@ -22,7 +22,7 @@ const ArchivedDocumentsScreen = ({
   isAdmin: propIsAdmin,
 }) => {
   const navigate = useDocNavigate();
-  const auth = useAuth ? useAuth() : null;
+  const auth = useAuth();
   const user = auth?.user;
   const userIsAdmin = isUserAdmin(user);
   const isAdmin = propIsAdmin !== undefined ? propIsAdmin : userIsAdmin;

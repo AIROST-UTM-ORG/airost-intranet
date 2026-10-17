@@ -1954,4 +1954,78 @@ describe('Documentation Backend API Tests', () => {
       expect(res.body.title).toBe('Robust Subscriber Space');
     });
   });
+
+  describe('15. Parity Matrix: Database View Filter vs Pure canViewSpace Helper', () => {
+    const docService = require('../services/docService');
+    const { canViewSpace } = require('../utils/docAccess');
+    let paritySpaces = [];
+
+    beforeAll(async () => {
+      const accessTypes = ['all', 'project_members', 'selected'];
+      const updateTypes = ['all', 'project_members', 'selected'];
+      const projectOptions = [true, false];
+
+      for (const accessType of accessTypes) {
+        for (const updateType of updateTypes) {
+          for (const withProj of projectOptions) {
+            const space = await DocumentationSpace.create({
+              title: `Parity Space ${accessType} ${updateType} ${withProj ? 'proj' : 'standalone'}`,
+              description: `Parity test verification space for ${accessType} x ${updateType}`,
+              projectId: withProj ? testProject._id : null,
+              createdBy: creatorUser._id,
+              accessType,
+              updateType,
+              accessMembers: accessType === 'selected' ? [selectedUser._id] : [],
+              updateMembers: updateType === 'selected' ? [selectedUser._id] : [],
+            });
+            paritySpaces.push(space);
+          }
+        }
+      }
+    });
+
+    afterAll(async () => {
+      if (paritySpaces.length > 0) {
+        const ids = paritySpaces.map((s) => s._id);
+        await DocumentationSpace.deleteMany({ _id: { $in: ids } });
+      }
+    });
+
+    const personas = [
+      { name: 'Admin', getUser: () => adminUser },
+      { name: 'Space Creator', getUser: () => creatorUser },
+      { name: 'Project Lead', getUser: () => leadUser },
+      { name: 'Project Member', getUser: () => memberUser },
+      { name: 'Selected User', getUser: () => selectedUser },
+      { name: 'Outsider', getUser: () => outsiderUser },
+    ];
+
+    for (const persona of personas) {
+      it(`guarantees exact parity for persona: ${persona.name} across all 18 space variations`, async () => {
+        const user = persona.getUser();
+
+        // 1. Database View Filter results
+        const filterSpaces = await docService.getViewableSpaces(user);
+        const filterSpaceIds = filterSpaces
+          .filter((s) => paritySpaces.some((ps) => ps._id.equals(s._id)))
+          .map((s) => String(s._id))
+          .sort();
+
+        // 2. Pure canViewSpace helper evaluated for all 18 spaces
+        const helperSpaceIds = [];
+        for (const space of paritySpaces) {
+          const pId = space.projectId ? String(space.projectId._id || space.projectId) : null;
+          const role = pId ? await docService.getUserProjectRole(user._id, pId) : null;
+          const allowed = await canViewSpace(user, space, role);
+          if (allowed) {
+            helperSpaceIds.push(String(space._id));
+          }
+        }
+        helperSpaceIds.sort();
+
+        // 3. Mathematical equality assertion: DB filter set === canViewSpace set
+        expect(filterSpaceIds).toEqual(helperSpaceIds);
+      });
+    }
+  });
 });

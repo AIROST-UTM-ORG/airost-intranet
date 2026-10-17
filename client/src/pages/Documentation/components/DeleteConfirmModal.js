@@ -49,9 +49,10 @@ const DeleteConfirmModal = ({
         }
       }, 30);
 
+      const triggerEl = triggerRef?.current;
       return () => {
         clearTimeout(timer);
-        const target = previousActiveElementRef.current || triggerRef?.current;
+        const target = previousActiveElementRef.current || triggerEl;
         if (target && typeof target.focus === "function") {
           target.focus();
           setTimeout(() => {

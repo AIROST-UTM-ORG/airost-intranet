@@ -167,47 +167,198 @@ const findProjectById = async (projectId) => {
 /* ========================================================================== */
 
 /**
- * Resolves all documentation spaces that the user is permitted to view.
- * Single source of truth for space visibility across listSpaces and searchDocuments,
- * ensuring the two never drift apart.
+ * Batched project membership and lead role resolution for a user across all projects.
+ * Runs once per request.
+ * Returns a Map of projectId (string) -> role ('lead', 'advisor', 'member').
+ * 
+ * Identity rules:
+ * 1. ProjectMember join entity (primary lookup by userId).
+ * 2. Fallback to Project.lead:
+ *    a. User ObjectId (exact match)
+ *    b. Email (case-insensitive exact match)
+ *    c. Display Name (trimmed, case-insensitive exact match ONLY if exactly ONE active user has that name).
+ *       The duplicate-name check runs once per request, not once per project.
  */
-const getViewableSpaces = async (user, filter = {}) => {
-  if (!user) return [];
+const getUserProjectRolesMap = async (user) => {
+  if (!user) return new Map();
 
+  const userId = user._id || user.id || user;
+  if (!userId) return new Map();
+
+  try {
+    let fullUser = user;
+    if ((!fullUser.name || !fullUser.email) && isValidObjectId(String(userId))) {
+      const dbUser = await User.findById(userId).select('_id name email').lean();
+      if (dbUser) {
+        fullUser = dbUser;
+      }
+    }
+
+    const userObjId = fullUser._id || fullUser.id || userId;
+    const userIdStr = String(userObjId);
+    const rolesMap = new Map();
+
+    // 1. Primary lookup: ProjectMember collection (explicit join entity)
+    const memberships = await ProjectMember.find({ userId: userObjId })
+      .select('projectId role')
+      .lean();
+
+    for (const m of memberships) {
+      if (m.projectId && m.role) {
+        rolesMap.set(String(m.projectId), m.role);
+      }
+    }
+
+    // 2. Fallback: Project.lead matching
+    const leadConditions = [{ lead: userIdStr }];
+    if (isValidObjectId(userIdStr)) {
+      leadConditions.push({ lead: new mongoose.Types.ObjectId(userIdStr) });
+    }
+
+    if (fullUser.email && typeof fullUser.email === 'string') {
+      const trimmedEmail = fullUser.email.trim();
+      if (trimmedEmail.length > 0) {
+        const emailRegex = new RegExp(`^\\s*${escapeRegex(trimmedEmail)}\\s*$`, 'i');
+        leadConditions.push({ lead: { $regex: emailRegex } });
+      }
+    }
+
+    if (fullUser.name && typeof fullUser.name === 'string') {
+      const trimmedName = fullUser.name.trim();
+      if (trimmedName.length > 0) {
+        const words = trimmedName.split(/\s+/).map(escapeRegex);
+        const nameRegex = new RegExp(`^\\s*${words.join('\\s+')}\\s*$`, 'i');
+
+        // Check once per request if display name is globally unique
+        const matchingUsers = await User.find({
+          name: { $regex: nameRegex },
+        }).select('_id name').lean();
+
+        const count = matchingUsers.length;
+        if (count === 1 && String(matchingUsers[0]._id) === userIdStr) {
+          leadConditions.push({ lead: { $regex: nameRegex } });
+        } else if (count > 1) {
+          // Ambiguous display name: log warning without user details
+          const ambiguousProjects = await Project.find({
+            lead: { $regex: nameRegex },
+          }).select('_id').lean();
+
+          for (const p of ambiguousProjects) {
+            console.warn(
+              `[docAccess] Ambiguous project lead display name match for project ${p._id}: ${count} users found. Denying lead role.`
+            );
+          }
+        }
+      }
+    }
+
+    if (leadConditions.length > 0) {
+      const leadProjects = await Project.find({
+        $or: leadConditions,
+      }).select('_id lead').lean();
+
+      for (const p of leadProjects) {
+        const pIdStr = String(p._id);
+        // ProjectMember is primary: do not overwrite an existing explicit membership
+        if (!rolesMap.has(pIdStr)) {
+          rolesMap.set(pIdStr, 'lead');
+        }
+      }
+    }
+
+    return rolesMap;
+  } catch (err) {
+    console.error('Error fetching user project roles map:', err);
+    return new Map();
+  }
+};
+
+/**
+ * Constructs a single MongoDB query filter for spaces viewable by the user.
+ * Rewrites the viewable logic as ONE database filter instead of a loop.
+ * For non-admins uses an $or over:
+ * - accessType: 'all'
+ * - updateType: 'all'
+ * - createdBy: user
+ * - accessType: 'selected' and user in accessMembers
+ * - updateType: 'selected' and user in updateMembers
+ * - accessType: 'project_members' and projectId in user's project id set
+ * - updateType: 'project_members' and projectId in user's project id set
+ * Admins skip the filter.
+ */
+const buildViewableSpacesQuery = (user, rolesMap, filter = {}) => {
   const query = {};
   if (filter.projectId) {
     query.projectId = filter.projectId;
   }
 
-  const candidateSpaces = await DocumentationSpace.find(query)
-    .populate('projectId', '_id title name')
-    .sort({ createdAt: -1 });
-
   if (isAdmin(user)) {
-    return candidateSpaces;
+    return query;
   }
 
-  const visible = [];
-  for (const space of candidateSpaces) {
-    const role = space.projectId
-      ? await getUserProjectRole(user._id, space.projectId._id || space.projectId)
-      : null;
+  const rawUserId = user._id || user.id || user;
+  const userId = isValidObjectId(String(rawUserId))
+    ? new mongoose.Types.ObjectId(String(rawUserId))
+    : rawUserId;
 
-    const canView = await canViewSpace(user, space, role);
-    if (canView) {
-      visible.push(space);
+  const userProjectIds = [];
+  if (rolesMap && rolesMap.size > 0) {
+    for (const [pId, role] of rolesMap.entries()) {
+      if (['lead', 'advisor', 'member'].includes(role)) {
+        if (isValidObjectId(pId)) {
+          userProjectIds.push(new mongoose.Types.ObjectId(pId));
+        } else {
+          userProjectIds.push(pId);
+        }
+      }
     }
   }
 
-  return visible;
+  const orConditions = [
+    { accessType: 'all' },
+    { updateType: 'all' },
+    { createdBy: userId },
+    { accessType: 'selected', accessMembers: userId },
+    { updateType: 'selected', updateMembers: userId },
+  ];
+
+  if (userProjectIds.length > 0) {
+    orConditions.push(
+      { accessType: 'project_members', projectId: { $in: userProjectIds } },
+      { updateType: 'project_members', projectId: { $in: userProjectIds } }
+    );
+  }
+
+  query.$or = orConditions;
+  return query;
+};
+
+/**
+ * Resolves all documentation spaces that the user is permitted to view.
+ * Single source of truth for space visibility across listSpaces and searchDocuments,
+ * executing ONE database query instead of an N+1 loop.
+ */
+const getViewableSpaces = async (user, filter = {}, passedRolesMap = null) => {
+  if (!user) return [];
+
+  const rolesMap =
+    passedRolesMap || (isAdmin(user) ? new Map() : await getUserProjectRolesMap(user));
+  const query = buildViewableSpacesQuery(user, rolesMap, filter);
+
+  return await DocumentationSpace.find(query)
+    .populate('projectId', '_id title name')
+    .sort({ createdAt: -1 });
 };
 
 /**
  * List all spaces visible to the authenticated user.
- * Performs query, permission filtering, and document count aggregations in ONE query (no N+1).
+ * Performs query, permission filtering, and document count aggregations in bounded O(1) queries.
  */
 const listSpaces = async (user, filter = {}) => {
-  const visibleSpaces = await getViewableSpaces(user, filter);
+  if (!user) return [];
+
+  const rolesMap = isAdmin(user) ? new Map() : await getUserProjectRolesMap(user);
+  const visibleSpaces = await getViewableSpaces(user, filter, rolesMap);
   if (visibleSpaces.length === 0) {
     return [];
   }
@@ -226,9 +377,8 @@ const listSpaces = async (user, filter = {}) => {
 
   const formattedSpaces = [];
   for (const space of visibleSpaces) {
-    const role = space.projectId
-      ? await getUserProjectRole(user._id, space.projectId._id || space.projectId)
-      : null;
+    const pIdStr = space.projectId ? String(space.projectId._id || space.projectId) : null;
+    const role = pIdStr ? (rolesMap.get(pIdStr) || null) : null;
 
     const canUpdate = await canUpdateSpace(user, space, role);
     const canManage = canManageSpace(user, space);
@@ -269,8 +419,8 @@ const listSpaces = async (user, filter = {}) => {
  * Sort order: titles starting with q first, then alphabetical ascending.
  */
 const searchDocuments = async (user, { q, limit = 10 }) => {
-  // Use the SAME reusable viewable spaces resolver
-  const viewableSpaces = await getViewableSpaces(user);
+  const rolesMap = isAdmin(user) ? new Map() : await getUserProjectRolesMap(user);
+  const viewableSpaces = await getViewableSpaces(user, {}, rolesMap);
   if (viewableSpaces.length === 0) {
     return { documents: [] };
   }
@@ -767,6 +917,8 @@ const updateLegacyDoc = async (id, data) => {
 module.exports = {
   DocError,
   getUserProjectRole,
+  getUserProjectRolesMap,
+  buildViewableSpacesQuery,
   findProjectById,
   getViewableSpaces,
   listSpaces,

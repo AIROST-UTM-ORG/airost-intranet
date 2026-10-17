@@ -682,7 +682,31 @@ export const listSpaces = async (filter = {}) => {
   const response = await realApiClient.get("/doc/spaces", {
     params: Object.keys(params).length > 0 ? params : undefined,
   });
-  return (response.data || []).map((space) => ({
+
+  const rawList = Array.isArray(response.data)
+    ? response.data
+    : Array.isArray(response.data?.spaces)
+    ? response.data.spaces
+    : Array.isArray(response.data?.data)
+    ? response.data.data
+    : null;
+
+  if (!rawList) {
+    if (
+      response.data &&
+      typeof response.data === "object" &&
+      (response.data.message || response.data.error)
+    ) {
+      throw new Error(
+        response.data.error?.message ||
+          response.data.message ||
+          "Invalid server response format for spaces"
+      );
+    }
+    return [];
+  }
+
+  return rawList.map((space) => ({
     ...space,
     isManager: Boolean(space.canManage ?? space.isManager),
     canManage: Boolean(space.canManage ?? space.isManager),
@@ -950,8 +974,14 @@ export const listDocuments = async (spaceId, { area, includeArchived = false } =
   }
 
   const response = await realApiClient.get(`/doc/spaces/${spaceId}/documents`, { params });
-  const docs = response.data || [];
-  return docs.filter((d) => (includeArchived ? Boolean(d.archived) : !d.archived));
+  const rawDocs = Array.isArray(response.data)
+    ? response.data
+    : Array.isArray(response.data?.documents)
+    ? response.data.documents
+    : Array.isArray(response.data?.data)
+    ? response.data.data
+    : [];
+  return rawDocs.filter((d) => (includeArchived ? Boolean(d.archived) : !d.archived));
 };
 
 /**

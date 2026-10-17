@@ -79,11 +79,7 @@ const ProjectDocumentationLink = ({
   }, [effectiveProjectId]);
 
   useEffect(() => {
-    let mounted = true;
     fetchSpaces();
-    return () => {
-      mounted = false;
-    };
   }, [fetchSpaces]);
 
   // Close dropdown on click outside or Escape
