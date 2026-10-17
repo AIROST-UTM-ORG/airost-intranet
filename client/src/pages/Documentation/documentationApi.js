@@ -3,9 +3,10 @@ import { API_URL } from "../../config/api";
 
 /**
  * Flag to toggle between the in-memory mock API and the real backend API.
- * Defaults to false for development/production (real backend API),
- * while defaulting to true in automated test environments.
+ * Defaults to false (real backend API service).
  */
+export let isMockData = false;
+
 const getInitialUseMock = () => {
   if (process.env.NODE_ENV === "production") {
     return false;
@@ -15,7 +16,10 @@ const getInitialUseMock = () => {
   if (mockFlag !== undefined) {
     return mockFlag === "true";
   }
-  return process.env.NODE_ENV === "test";
+  if (process.env.NODE_ENV === "test") {
+    return true;
+  }
+  return Boolean(isMockData);
 };
 
 export let USE_MOCK = getInitialUseMock();
@@ -25,11 +29,15 @@ export const isMockMode = () => Boolean(USE_MOCK);
 export const setUseMock = (value) => {
   if (process.env.NODE_ENV === "production") {
     USE_MOCK = false;
+    isMockData = false;
     return false;
   }
   USE_MOCK = Boolean(value);
+  isMockData = Boolean(value);
   return USE_MOCK;
 };
+
+export const setIsMockData = (value) => setUseMock(value);
 
 // ---------------------------------------------------------------------------
 // Simulation Configuration & Test Hooks
