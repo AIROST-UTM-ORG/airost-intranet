@@ -1,122 +1,45 @@
-const express = require("express");
-const passport = require("passport");
-const passportSetup = require("./passport");
-const cors = require("cors");
-const app = express();
-const authRoutes = require("./routes/auth");
-const session = require("express-session");
-const mongoose = require("mongoose");
-const DocRoutes = require("./routes/docRoutes");
-const adminRoutes = require("./routes/adminRoutes");
-const userRoutes = require("./routes/userRoutes");
-const eventRoutes = require("./routes/eventRoutes");
-const projectRoutes = require("./routes/projectsRoutes");
-
 if (process.env.NODE_ENV !== "test") {
   require("dotenv").config();
 }
 
-const PORT = process.env.PORT || 4000;
+const mongoose = require("mongoose");
+const { createApp } = require("./app");
+const dns = require("dns");
 
-// Connect to db
-const connectDatabase = async () => {
+const PORT = process.env.PORT || 4000;
+const MONGODB_URI = process.env.MONGODB_URI || process.env.MONGO_URI;
+const app = createApp();
+
+// MongoDB connection
+// Go to MongoDB Atlas > Security > IP Access List, click add IP Address (from the warning)
+// After that, go to Computer Setting > Network & Internet > WIFI > Hardware Properties > Change IPv4 server to 8.8.8.8, 8.8.8.4 ; Change IPv6 server to 2001:4860:4860::8888, 2001:4860:4860::8844 
+// npm run start 
+// Please delete this guideline if you found other alternative
+
+if (process.env.USE_CUSTOM_DNS === 'true') {
+  dns.setServers(['8.8.8.8', '8.8.4.4']);
+}
+
+const startServer = async () => {
   try {
-    await mongoose.connect(process.env.MONGO_URI);
+    if (!MONGODB_URI) {
+      throw new Error("MONGODB_URI is not configured");
+    }
+
+    await mongoose.connect(MONGODB_URI);
     console.log("connected to database");
+
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`connected to server on port ${PORT}`);
+    });
   } catch (error) {
-    console.log(error);
+    console.error(error);
     process.exit(1);
   }
 };
 
 if (require.main === module) {
-  connectDatabase();
-}
-
-app.set("trust proxy", 1);
-app.use(express.json());
-
-// CORS configuration - placed before session and passport middlewares
-const allowedOrigins = [
-  process.env.REACT_APP_URL,
-  "http://localhost:3000",
-  "http://localhost:1234",
-  "http://127.0.0.1:3000",
-  "http://127.0.0.1:1234",
-].filter(Boolean);
-
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (e.g. mobile apps, curl, or server-to-server)
-      if (!origin) return callback(null, true);
-      if (
-        allowedOrigins.includes(origin) ||
-        /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)
-      ) {
-        return callback(null, true);
-      }
-      return callback(new Error(`Origin ${origin} not allowed by CORS`));
-    },
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    credentials: true,
-    exposedHeaders: ["set-cookie"],
-  })
-);
-
-const isProduction = process.env.NODE_ENV === "production";
-app.use(
-  session({
-    secret: process.env.PASSPORT_SECRET || "airost-intranet-secret",
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      httpOnly: true,
-      secure: isProduction && process.env.COOKIE_SECURE !== "false",
-      sameSite: isProduction ? "none" : "lax",
-    },
-    proxy: isProduction,
-  })
-);
-
-app.use(passport.initialize());
-app.use(passport.session());
-
-app.use("/auth", authRoutes);
-
-if (process.env.NODE_ENV === "test") {
-  app.post("/test/auth/login", async (req, res) => {
-    try {
-      const User = require("./models/User");
-      const user = await User.findById(req.body.userId);
-      if (!user) return res.status(404).json({ error: "User not found" });
-      req.login(user, (err) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.status(200).json({ success: true, user });
-      });
-    } catch (err) {
-      res.status(500).json({ error: err.message });
-    }
-  });
-}
-
-app.use((req, res, next) => {
-  console.log(req.path, req.method);
-  next();
-});
-
-app.use("/airost/doc", DocRoutes);
-app.use("/doc", DocRoutes);
-app.use("/admin", adminRoutes);
-app.use("/user", userRoutes);
-app.use("/projects", projectRoutes);
-app.use("/calendar", eventRoutes);
-
-if (require.main === module) {
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`connected to server on port ${PORT}`);
-  });
+  startServer();
 }
 
 module.exports = app;
