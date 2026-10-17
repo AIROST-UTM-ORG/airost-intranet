@@ -1,0 +1,48 @@
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: airost-mongodb-prod
+    restart: always
+    volumes:
+      - mongo_data_prod:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: airost-server-prod
+    restart: always
+    ports:
+      - "4000:8080"
+    environment:
+      - PORT=8080
+      - NODE_ENV=production
+      - MONGO_URI=mongodb://mongodb:27017/airost_intranet
+      - REACT_APP_URL=http://localhost:80
+      - PASSPORT_SECRET=${PASSPORT_SECRET:-}
+      - CLIENT_ID=${CLIENT_ID:-}
+      - CLIENT_SECRET=${CLIENT_SECRET:-}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+      args:
+        - REACT_APP_API_URL=http://localhost:4000
+    container_name: airost-client-prod
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - server
+
+volumes:
+  mongo_data_prod:

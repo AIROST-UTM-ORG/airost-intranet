@@ -1,0 +1,17 @@
+node_modules
+client/node_modules
+client/build
+server/node_modules
+npm-debug.log
+.env
+.env.*
+.git
+.gitignore
+.github
+.agents
+tests
+coverage
+*.md
+docs
+.vscode
+.idea

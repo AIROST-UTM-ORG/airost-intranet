@@ -1,11 +1,8 @@
 .env
+.env.*
+!*.example
 /node_modules
-/coverage/
 
 env.yaml
 
-Dockerfile
-
-package-lock.json
-
-/coverage
+coverage/
