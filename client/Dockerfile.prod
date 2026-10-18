@@ -28,12 +28,15 @@ FROM nginx:alpine AS runner
 # Remove default nginx static assets
 RUN rm -rf /usr/share/nginx/html/*
 
-# Copy custom Nginx SPA configuration
+# Copy custom Nginx SPA configuration and runtime entrypoint
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
 
 # Copy compiled static files from builder stage
 COPY --from=builder /app/build /usr/share/nginx/html
 
 EXPOSE 80
 
+ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["nginx", "-g", "daemon off;"]
