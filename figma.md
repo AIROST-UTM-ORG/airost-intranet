@@ -1,3 +1,0 @@
-## Redesign Figma design:
-
-Redesign this Airost club member directory into a polished, modern SaaS dashboard. Use a clear visual identity, refined typography, subtle background textures, purposeful accent colors, varied visual hierarchy, and thoughtfully layered surfaces. Add depth through subtle shadows, borders, and micro-details. Avoid generic AI aesthetics, oversized gradient banners, excessive rounded cards, and plain white/grey layouts. Keep it professional, cohesive, readable, and practical for real-world use. Preserve all existing features and information.
