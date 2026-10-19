@@ -59,12 +59,87 @@
   
   .side-menu-items {
     width: 100%;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
   }
 
   .side-menu-items img{
     display: block;
     margin: auto;
     width: 150px;
+  }
+
+  .side-logo {
+    list-style: none;
+  }
+
+  .side-profile {
+    margin-top: auto;
+    padding-top: 10px;
+    border-top: 1px solid #1d1d1d;
+  }
+
+  .side-profile > a {
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px;
+    border-radius: 8px;
+    color: #f5f5f5;
+    text-decoration: none;
+  }
+
+  .side-profile > a:hover,
+  .side-profile > a.active {
+    background: #151515;
+  }
+
+  .side-profile > a > img,
+  .side-profile-placeholder {
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
+    margin: 0;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #dce7f5;
+  }
+
+  .side-profile-placeholder {
+    display: grid;
+    place-items: center;
+    margin: 0;
+    color: #22324c;
+  }
+
+  .side-profile-copy {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .side-profile-copy strong,
+  .side-profile-copy small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .side-profile-copy strong {
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .side-profile-copy small {
+    color: #929292;
+    font-size: 10px;
+  }
+
+  .side-menu-items > li.side-profile > a > .side-profile-copy {
+    margin: 0;
   }
   
   .sidebar-toggle {
@@ -78,4 +153,16 @@
   
   span {
     margin-left: 16px;
+  }
+
+  @media (max-width: 640px) {
+    .side-profile-copy {
+      display: none;
+    }
+
+    .side-profile > a {
+      justify-content: center;
+      padding-right: 0;
+      padding-left: 0;
+    }
   }
