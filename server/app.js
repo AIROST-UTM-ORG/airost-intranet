@@ -28,7 +28,7 @@ const createApp = () => {
   const app = express();
 
   app.set('trust proxy', 1);
-  app.use(express.json());
+  app.use(express.json({ limit: '1mb' }));
 
   const allowedOrigins = [
     process.env.REACT_APP_URL,
