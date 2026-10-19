@@ -4,7 +4,7 @@ const MemberHeading = ({ count, search }) => (
   <section className="member-heading" aria-labelledby="member-heading-title">
     <div>
       <p className="member-eyebrow"><span aria-hidden="true" /> Airost community</p>
-      <h1 id="member-heading-title">People of Airost</h1>
+      <h1 id="member-heading-title">Airost Members</h1>
       <p className="member-heading-caption">
         {search ? `Showing people matching “${search}”` : 'Meet the people building what comes next.'}
       </p>
