@@ -6,38 +6,42 @@ import FeaturedProject from './components/FeaturedProject';
 import ProfileDetails from './components/ProfileDetails';
 import ProfileHero from './components/ProfileHero';
 import ProfileSearch from './components/ProfileSearch';
+import useAuth from '../../../hooks/useAuth';
+import { getPositions } from '../utils/memberUtils';
 import './Profile.css';
 
-const getPositions = (position) => (
-  Array.isArray(position) ? position.filter(Boolean) : position ? [position] : []
-);
-
-const Profile = () => {
+const Profile = ({ isCurrentUser = false }) => {
   const { email } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { data: users = [], isLoading, isError } = useFetchUsers();
   const routeEmail = decodeURIComponent(email || '');
   const navigationMember = location.state?.member;
-  const member = navigationMember?.email === routeEmail
-    ? navigationMember
-    : users.find((user) => user.email === routeEmail);
-  const positions = getPositions(member?.position);
+  const member = isCurrentUser
+    ? user
+    : navigationMember?.email === routeEmail
+      ? navigationMember
+      : users.find((user) => user.email === routeEmail);
+  const positions = getPositions(member?.profileTitle || member?.position);
   const project = member?.featuredProject;
-  const locationText = member?.location || member?.origin || '';
+  const locationText = [
+    member?.state,
+    member?.country,
+  ].filter(Boolean).join(', ') || member?.location || member?.origin || '';
 
-  if (isLoading && !member) {
+  if ((isCurrentUser && !user) || (isLoading && !member)) {
     return <main className="profile-page"><div className="profile-state" role="status">Loading profile...</div></main>;
   }
 
-  if (isError || !member) {
+  if ((!isCurrentUser && isError) || !member) {
     return (
       <main className="profile-page">
-        <button className="profile-back" type="button" onClick={() => navigate('/members')}>
-          <FiArrowLeft aria-hidden="true" /> Back to members
+        <button className="profile-back" type="button" onClick={() => navigate(isCurrentUser ? '/' : '/members')}>
+          <FiArrowLeft aria-hidden="true" /> {isCurrentUser ? 'Back to dashboard' : 'Back to members'}
         </button>
-        <div className="profile-state" role={isError ? 'alert' : 'status'}>
-          {isError ? 'The profile could not be loaded.' : 'This member profile was not found.'}
+        <div className="profile-state" role={!isCurrentUser && isError ? 'alert' : 'status'}>
+          {!isCurrentUser && isError ? 'The profile could not be loaded.' : 'This member profile was not found.'}
         </div>
       </main>
     );
@@ -50,12 +54,19 @@ const Profile = () => {
     ['Course', member.course],
     ['Location', locationText],
     ['Email', member.email],
+    ['LinkedIn', member.linkedin],
+    ['GitHub', member.github],
+    ['Phone', member.phonenum],
   ].filter(([, value]) => value);
 
   return (
     <main className="profile-page">
-      <ProfileSearch onOpenDirectory={() => navigate('/members')} />
-      <ProfileHero member={member} location={locationText} />
+      {!isCurrentUser && <ProfileSearch onOpenDirectory={() => navigate('/members')} />}
+      <ProfileHero
+        member={member}
+        location={locationText}
+        onEdit={isCurrentUser ? () => navigate('/profile/edit') : undefined}
+      />
       <div className={`profile-content${project ? '' : ' profile-content-no-project'}`}>
         <ProfileDetails memberName={member.name} details={details} />
         <FeaturedProject project={project} />
