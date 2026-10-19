@@ -1,12 +1,12 @@
 import React from 'react';
-import { useState } from 'react';
 import './Projects.css';
 import ProjectList from '../../components/ProjectList';
-import { useForm } from "react-hook-form"
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useForm } from "react-hook-form";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import useFetchUsers from "../../hooks/useFetchUsers";
 import useGetProjects from './hooks/useGetProjects';
-import axios from 'axios'
+import axios from 'axios';
+import { API_URL } from '../../config/api';
 
 function Projects() {
   const projects = useGetProjects();
@@ -15,53 +15,48 @@ function Projects() {
     register,
     handleSubmit,
     reset,
-    formState: { errors },
-  } = useForm()
+  } = useForm();
 
   const users = useFetchUsers();
-  console.log(users.data)
 
   const createProject = async (project) => {
-      return axios.post(`${process.env.REACT_APP_API_URL}/projects`,{
+      return axios.post(`${API_URL}/projects`,{
           title: project.title,
           description: project.description ? project.description : "",
           lead: project.lead,
-      })
-  }
+      });
+  };
 
   const deleteProject = async (projectId) => {
-      return axios.delete(`${process.env.REACT_APP_API_URL}/projects/${projectId}`)
-  }
+      return axios.delete(`${API_URL}/projects/${projectId}`);
+  };
 
   const createProjectMutation = useMutation({
         mutationFn: createProject,
         onSuccess: (data) => {
-          console.log(data)
           queryClient.invalidateQueries(['projects']);
         }
-    })
+    });
 
   const deleteProjectMutation = useMutation({
         mutationFn: deleteProject,
         onSuccess: (data) => {
-          console.log('Project deleted successfully:', data)
           queryClient.invalidateQueries(['projects']);
         },
         onError: (error) => {
-          console.error('Error deleting project:', error)
+          console.error('Error deleting project:', error);
           alert('Failed to delete project. Please try again.');
         }
-    })
+    });
 
   const onSubmit = (data) => {
-    console.log(data)
-    createProjectMutation.mutate(data)
+    createProjectMutation.mutate(data);
     reset();
-  }
+  };
 
   const handleDeleteProject = (projectId) => {
     deleteProjectMutation.mutate(projectId);
-  }
+  };
 
   return (
     <div className='Projects p-5'>
@@ -95,7 +90,7 @@ function Projects() {
                       className="select select-bordered w-full">
                           <option value="no_assignee">Project Lead</option>
                           {users.data.map(user => {
-                              return (<option value={user.email}>{user.name}</option>)
+                              return (<option key={user.email} value={user.email}>{user.name}</option>);
                           })}
                   </select>}
                 <button className='btn btn-neutral' type='submit'>Submit</button>
