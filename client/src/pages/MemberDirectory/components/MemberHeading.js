@@ -3,15 +3,15 @@ import React from 'react';
 const MemberHeading = ({ count, search }) => (
   <section className="member-heading" aria-labelledby="member-heading-title">
     <div>
-      <p className="member-eyebrow">Club members</p>
-      <h1 id="member-heading-title">Member search results</h1>
+      <p className="member-eyebrow"><span aria-hidden="true" /> Airost community</p>
+      <h1 id="member-heading-title">People of Airost</h1>
       <p className="member-heading-caption">
-        {search ? `Members found for "${search}"` : 'Get to know the people behind Airost'}
+        {search ? `Showing people matching “${search}”` : 'Meet the people building what comes next.'}
       </p>
     </div>
     <div className="member-count" aria-live="polite">
       <strong>{count}</strong>
-      <span>{count === 1 ? 'member' : 'members'}</span>
+      <span>{count === 1 ? 'member' : 'members'} found</span>
     </div>
   </section>
 );
