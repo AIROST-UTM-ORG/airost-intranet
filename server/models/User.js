@@ -40,7 +40,37 @@ const userSchema = new mongoose.Schema({
     instagram:{
         type:String,
         required:false,
-    }
+    },
+    profileTitle:{
+        type:String,
+        required:false,
+    },
+    country:{
+        type:String,
+        required:false,
+    },
+    state:{
+        type:String,
+        required:false,
+    },
+    linkedin:{
+        type:String,
+        required:false,
+    },
+    github:{
+        type:String,
+        required:false,
+    },
+    featuredProject:{
+        type: new mongoose.Schema({
+            title: String,
+            description: String,
+            role: String,
+            status: String,
+            technologies: [String],
+        }, { _id: false }),
+        required:false,
+    },
 });
 
 module.exports = mongoose.model('User', userSchema);

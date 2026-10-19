@@ -11,7 +11,8 @@ const FeaturedProject = ({ project }) => (
         <>
           <h3>{project.title || 'Featured project'}</h3>
           <p>{project.description || 'Project details have not been added yet.'}</p>
-          {project.role && <div className="profile-project-meta"><span>Role</span><strong>{project.role}</strong></div>}
+          {project.role &&
+            <div className="profile-project-meta"><span>Role</span><strong>{project.role}</strong></div>}
           {project.status && <div className="profile-project-meta"><span>Status</span><strong>{project.status}</strong></div>}
           {Array.isArray(project.technologies) && (
             <div className="profile-project-tags">
