@@ -1,15 +1,12 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import useFetchUsers from '../../hooks/useFetchUsers';
 import MemberCard from './components/MemberCard';
 import MemberFilters from './components/MemberFilters';
 import MemberHeading from './components/MemberHeading';
 import MemberSearch from './components/MemberSearch';
 import './MemberDirectory.css';
-
-const getPositions = (position) => (
-  Array.isArray(position) ? position.filter(Boolean) : position ? [position] : []
-);
+import useFetchUsers from '../../hooks/useFetchUsers';
+import { getPositions } from './utils/memberUtils';
 
 const MemberDirectory = () => {
   const { data: users = [], isLoading, isError } = useFetchUsers();

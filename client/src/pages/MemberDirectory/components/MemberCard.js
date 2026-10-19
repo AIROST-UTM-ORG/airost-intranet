@@ -1,13 +1,6 @@
 import React from 'react';
 import { FiArrowRight } from 'react-icons/fi';
-
-const getInitials = (name = '') => name
-  .trim()
-  .split(/\s+/)
-  .slice(0, 2)
-  .map((part) => part[0])
-  .join('')
-  .toUpperCase();
+import { CgProfile } from "react-icons/cg";
 
 const MemberCard = ({ member, positions, onViewProfile }) => (
   <article className="member-card">
@@ -15,9 +8,8 @@ const MemberCard = ({ member, positions, onViewProfile }) => (
       {member.photo ? (
         <img className="member-avatar" src={member.photo} alt="" />
       ) : (
-        <div className="member-avatar member-avatar-initials" aria-hidden="true">
-          {getInitials(member.name)}
-        </div>
+        <CgProfile className='member-avatar'/>
+
       )}
       <div className="member-identity">
         <h2>{member.name || 'Airost member'}</h2>
