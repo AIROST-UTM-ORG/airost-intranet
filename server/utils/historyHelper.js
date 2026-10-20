@@ -200,5 +200,7 @@ module.exports = {
     trackTaskCreation,
     trackTaskDeletion,
     getTaskHistory,
-    getProjectHistory
+    getProjectHistory,
+    generateChangeDescription,
+    valuesAreEqual
 };
