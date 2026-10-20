@@ -62,7 +62,7 @@ describe('MemberDirectory', () => {
   test('renders members and unique, non-empty role and year filter options', () => {
     renderDirectory();
 
-    expect(screen.getByRole('heading', { name: 'People of Airost' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Airost Members' })).toBeInTheDocument();
     expect(getCardNames()).toEqual(['Alice Tan', 'Ben Lee', 'Cara Ng']);
     expect(screen.getByLabelText('Filter by role')).toHaveTextContent('Developer');
     expect(screen.getByLabelText('Filter by role')).toHaveTextContent('Designer');
