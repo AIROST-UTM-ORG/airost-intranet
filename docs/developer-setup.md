@@ -11,23 +11,33 @@ Install the following dependencies before starting:
 
 ## Environment configuration
 
-The project uses `.env` files to configure runtime ports, database connections, and authentication secrets.
+The project uses `.env` files created from committed `.env.example` templates to configure ports, database connections, and authentication.
 
-### 1. Root and server configuration
+### 1. Docker Compose stack
 
-Copy the template from the project root:
+Create your root environment file from the root template:
 
 ```bash
 cp .env.example .env
 ```
 
-If running the backend directly on the host rather than inside Docker, create `server/.env`:
+### 2. Standalone host development
 
+When running services directly on the host without Docker:
+
+For the backend server:
 ```bash
-cp .env.example server/.env
+cp server/.env.example server/.env
 ```
 
-Server variables:
+For the frontend client:
+```bash
+cp client/.env.example client/.env
+```
+
+### Variable definitions
+
+Server variables defined in `server/.env.example` and `.env.example`:
 
 | Variable | Default (Dev) | Description |
 | :--- | :--- | :--- |
@@ -42,20 +52,7 @@ Server variables:
 | `CALENDAR_ID` | `none` | Optional Google Calendar ID. |
 | `CREDENTIALS` | `{}` | Optional Google Calendar service account JSON string. |
 
-Never commit `.env` files or real credentials to Git.
-
-### 2. Client configuration
-
-The client container connects to the backend API via `REACT_APP_API_URL`. When developing the frontend on your host machine without Docker, create `client/.env`:
-
-```bash
-cat <<EOF > client/.env
-PORT=3000
-REACT_APP_API_URL=http://localhost:4000
-EOF
-```
-
-Client variables:
+Client variables defined in `client/.env.example`:
 
 | Variable | Default (Dev) | Description |
 | :--- | :--- | :--- |
@@ -63,6 +60,8 @@ Client variables:
 | `REACT_APP_API_URL` | `http://localhost:4000` | Backend API base URL consumed by axios calls. |
 | `CHOKIDAR_USEPOLLING` | `true` | Enables polling for file changes inside container volumes. |
 | `WDS_SOCKET_PORT` | `0` | Webpack Dev Server WebSocket port for hot reloading. |
+
+Never commit `.env` files or real credentials to Git.
 
 ## Starting the environment
 
