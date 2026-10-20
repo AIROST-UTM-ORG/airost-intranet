@@ -8,7 +8,11 @@ const RequireAuth = ({ allowedPosition }) => {
   if (loading) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-gray-50">
-        <span className="loading loading-spinner loading-lg text-primary"></span>
+        <span
+          className="loading loading-spinner loading-lg text-primary"
+          role="status"
+          aria-label="Loading"
+        ></span>
       </div>
     );
   }
