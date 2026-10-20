@@ -11,33 +11,17 @@ Install the following dependencies before starting:
 
 ## Environment configuration
 
-The project uses `.env` files created from committed `.env.example` templates to configure ports, database connections, and authentication.
+The project provides `.env.example` templates in the `server/` and `client/` directories to configure ports, database connections, and authentication.
 
-### 1. Docker Compose stack
+### 1. Server configuration
 
-Create your root environment file from the root template:
+When running the backend server locally or setting custom credentials:
 
-```bash
-cp .env.example .env
-```
-
-### 2. Standalone host development
-
-When running services directly on the host without Docker:
-
-For the backend server:
 ```bash
 cp server/.env.example server/.env
 ```
 
-For the frontend client:
-```bash
-cp client/.env.example client/.env
-```
-
-### Variable definitions
-
-Server variables defined in `server/.env.example` and `.env.example`:
+Server variables:
 
 | Variable | Default (Dev) | Description |
 | :--- | :--- | :--- |
@@ -52,7 +36,15 @@ Server variables defined in `server/.env.example` and `.env.example`:
 | `CALENDAR_ID` | `none` | Optional Google Calendar ID. |
 | `CREDENTIALS` | `{}` | Optional Google Calendar service account JSON string. |
 
-Client variables defined in `client/.env.example`:
+### 2. Client configuration
+
+When developing the frontend client locally without Docker:
+
+```bash
+cp client/.env.example client/.env
+```
+
+Client variables:
 
 | Variable | Default (Dev) | Description |
 | :--- | :--- | :--- |

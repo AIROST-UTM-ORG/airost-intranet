@@ -19,7 +19,6 @@ Follow the step-by-step instructions in the developer guide to configure environ
 Quick start with Docker Compose:
 
 ```bash
-cp .env.example .env
 docker compose up --build
 ```
 
