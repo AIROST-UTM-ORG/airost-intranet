@@ -21,7 +21,7 @@ const Board = () => {
         ?.find(project => project.projectId == projectId)?.title;
     //console.log(projectTitle)
     const getProjectBoard = async () => {
-        return axios.get(`${API_URL}/projects/tracking/${projectId}`) 
+        return axios.get(`${API_URL}/api/projects/tracking/${projectId}`) 
 
         .then(res => {
             

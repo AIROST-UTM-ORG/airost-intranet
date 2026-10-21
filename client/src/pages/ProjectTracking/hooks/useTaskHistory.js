@@ -10,7 +10,7 @@ const useTaskHistory = (taskId) => {
         
         try {
             const response = await axios.get(
-                `${API_URL}/projects/tasks/${taskId}/history`,
+                `${API_URL}/api/projects/tasks/${taskId}/history`,
                 {
                     headers: {
                         'Content-Type': 'application/json',

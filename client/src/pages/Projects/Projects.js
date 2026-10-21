@@ -20,7 +20,7 @@ function Projects() {
   const users = useFetchUsers();
 
   const createProject = async (project) => {
-      return axios.post(`${API_URL}/projects`,{
+      return axios.post(`${API_URL}/api/projects`,{
           title: project.title,
           description: project.description ? project.description : "",
           lead: project.lead,
@@ -28,7 +28,7 @@ function Projects() {
   };
 
   const deleteProject = async (projectId) => {
-      return axios.delete(`${API_URL}/projects/${projectId}`);
+      return axios.delete(`${API_URL}/api/projects/${projectId}`);
   };
 
   const createProjectMutation = useMutation({

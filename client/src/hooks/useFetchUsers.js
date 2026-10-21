@@ -4,7 +4,7 @@ import { API_URL } from '../config/api';
 
 const useFetchUsers = () => {
     const getUsers = async () => {
-        return axios.get(`${API_URL}/admin/users`)
+        return axios.get(`${API_URL}/api/admin/users`)
         .then(res => res.data)
         .catch(err => console.log(err));
     };

@@ -17,14 +17,14 @@ const Admin = () => {
     }, []);
 
     const getUsers = async () => {
-        axios.get(`${API_URL}/admin/users`)
+        axios.get(`${API_URL}/api/admin/users`)
         .then(users => setUsers(users.data))
         .catch(err => console.log(err));
     };
 
     const approveUser = async (user) => {
         try {
-            const response = await axios.post(`${API_URL}/admin/users/verified`, {
+            const response = await axios.post(`${API_URL}/api/admin/users/verified`, {
                 name: user.name,
                 email: user.email,
                 position: "member"
@@ -42,7 +42,7 @@ const Admin = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
   
-        const response = await axios.post(`${API_URL}/admin/users/verified`, {
+        const response = await axios.post(`${API_URL}/api/admin/users/verified`, {
             name : name,
             email : email,
             position : position,
