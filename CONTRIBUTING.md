@@ -2,9 +2,9 @@
 
 Guidelines for Git branching, commit messages, secret safety, pull requests, and code review expectations.
 
-## Domain architecture
+## Project context
 
-Before implementing changes, read [CONTEXT.md](CONTEXT.md) to understand domain terminology and member authorization models. Follow the language guidelines defined there rather than introducing conflicting terms.
+Before implementing changes, read [AGENTS.md](AGENTS.md) to understand project rules, coding standards, and architecture expectations. Follow the guidelines defined there rather than introducing conflicting patterns.
 
 ## Branching protocol
 
