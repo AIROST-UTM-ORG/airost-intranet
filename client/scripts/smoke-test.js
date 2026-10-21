@@ -1,83 +1,87 @@
 #!/usr/bin/env node
+
 /**
- * Smoke test for SPA deep-link routing and reverse proxy behavior.
- * Verifies that client-side routes (e.g. /admin, /projects) serve the React
- * application HTML shell with HTTP 200 rather than falling into proxy collisions.
+ * SPA Deep-Link Smoke Test
+ *
+ * Verifies that client SPA routes (/admin, /projects, etc.) return HTTP 200
+ * and the React HTML shell (<div id="root">) instead of being intercepted
+ * or returning 404/502.
  */
+
 const http = require('http');
 
-const targetUrl = process.argv[2] || process.env.SMOKE_TEST_URL || 'http://localhost:8080';
-const parsedUrl = new URL(targetUrl);
+const baseUrl = process.argv[2] || process.env.BASE_URL || 'http://localhost:80';
 
-const routes = ['/admin', '/projects', '/projects/tracking', '/login'];
+const routesToTest = [
+  '/admin',
+  '/projects',
+  '/projects/tracking',
+  '/login',
+];
 
-const fetchRoute = (path) => {
+function fetchRoute(path) {
   return new Promise((resolve, reject) => {
-    const req = http.get(
-      {
-        hostname: parsedUrl.hostname,
-        port: parsedUrl.port || 80,
-        path: path,
-        timeout: 5000,
-      },
-      (res) => {
-        let body = '';
-        res.setEncoding('utf8');
-        res.on('data', (chunk) => (body += chunk));
-        res.on('end', () => {
-          resolve({
-            statusCode: res.statusCode,
-            headers: res.headers,
-            body: body,
-          });
+    const url = new URL(path, baseUrl);
+    const req = http.get(url, (res) => {
+      let body = '';
+      res.on('data', (chunk) => {
+        body += chunk;
+      });
+      res.on('end', () => {
+        resolve({
+          statusCode: res.statusCode,
+          headers: res.headers,
+          body,
         });
-      }
-    );
+      });
+    });
 
-    req.on('error', reject);
-    req.on('timeout', () => {
-      req.destroy();
-      reject(new Error(`Timeout requesting ${path}`));
+    req.on('error', (err) => {
+      reject(err);
+    });
+
+    req.setTimeout(5000, () => {
+      req.destroy(new Error(`Timeout fetching ${path}`));
     });
   });
-};
+}
 
-async function run() {
-  console.log(`Running SPA deep-link smoke tests against ${targetUrl}...`);
+async function runTests() {
+  console.log(`Running SPA deep-link smoke tests against ${baseUrl}...`);
   let failed = false;
 
-  for (const route of routes) {
+  for (const route of routesToTest) {
     try {
       const res = await fetchRoute(route);
-      const isHtml = (res.headers['content-type'] || '').includes('text/html');
+      const isOk = res.statusCode === 200;
       const hasRoot = res.body.includes('<div id="root">') || res.body.includes('id="root"');
+      const isHtml = (res.headers['content-type'] || '').includes('text/html');
 
-      if (res.statusCode === 200 && isHtml && hasRoot) {
+      if (isOk && hasRoot && isHtml) {
         console.log(`✓ GET ${route} returned HTTP 200 with HTML shell`);
       } else {
         console.error(
-          `✗ GET ${route} failed: status=${res.statusCode}, isHtml=${isHtml}, hasRoot=${hasRoot}`
+          `✗ GET ${route} failed: status=${res.statusCode}, hasRoot=${hasRoot}, contentType=${res.headers['content-type']}`
         );
         failed = true;
       }
     } catch (err) {
-      console.error(`✗ GET ${route} encountered error: ${err.message}`);
+      console.error(`✗ GET ${route} error: ${err.message}`);
       failed = true;
     }
   }
 
-  // Also verify that /api/ is NOT served as the SPA HTML shell
+  // Also verify that /api/ is forwarded to proxy and does NOT serve the React SPA index.html
   try {
     const apiRes = await fetchRoute('/api/projects');
-    const isHtml = (apiRes.headers['content-type'] || '').includes('text/html');
-    if (!isHtml) {
-      console.log(`✓ GET /api/projects is correctly routed away from SPA HTML fallback (status=${apiRes.statusCode})`);
+    const hasSpaRoot = apiRes.statusCode === 200 && (apiRes.body.includes('<div id="root">') || apiRes.body.includes('id="root"'));
+    if (!hasSpaRoot) {
+      console.log(`✓ GET /api/projects correctly routed to backend proxy (status=${apiRes.statusCode}, SPA fallback bypassed)`);
     } else {
-      console.error(`✗ GET /api/projects erroneously served HTML shell`);
+      console.error(`✗ GET /api/projects erroneously served React SPA HTML shell`);
       failed = true;
     }
   } catch (err) {
-    // A connection error or 502 Bad Gateway to the unstarted backend is expected and correct
     console.log(`✓ GET /api/projects forwarded to backend proxy (${err.message})`);
   }
 
@@ -85,9 +89,8 @@ async function run() {
     console.error('Smoke tests failed!');
     process.exit(1);
   } else {
-    console.log('All SPA routing smoke tests passed successfully.');
-    process.exit(0);
+    console.log('All SPA deep-link smoke tests passed!');
   }
 }
 
-run();
+runTests();
