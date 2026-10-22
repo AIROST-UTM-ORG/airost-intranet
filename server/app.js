@@ -30,8 +30,9 @@ const createApp = () => {
   app.set('trust proxy', 1);
   app.use(express.json());
 
+  const clientAppUrl = (process.env.REACT_APP_URL || '').trim().replace(/\/+$/, '');
   const allowedOrigins = [
-    process.env.REACT_APP_URL,
+    clientAppUrl,
     'http://localhost:3000',
     'http://localhost:1234',
     'http://127.0.0.1:3000',
