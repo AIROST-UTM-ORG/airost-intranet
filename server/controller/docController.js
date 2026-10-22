@@ -17,6 +17,7 @@ const {
   canManageSpace,
   canViewSpace,
   canUpdateSpace,
+  getUserProjectRole,
 } = require('../utils/docAccess');
 
 /**
@@ -77,8 +78,10 @@ const listSpaces = async (req, res) => {
           accessMembers: space.accessMembers,
           updateMembers: space.updateMembers,
           documentCount: activeCount,
+          activeDocumentCount: activeCount,
           canUpdate,
           canManage,
+          isManager: canManage,
           createdAt: space.createdAt,
           updatedAt: space.updatedAt,
         });
@@ -217,8 +220,11 @@ const getSpace = async (req, res) => {
       updateMembers: space.updateMembers,
       canUpdate,
       canManage,
+      isManager: canManage,
       documentCount: activeCount,
+      activeDocumentCount: activeCount,
       archivedCount,
+      archivedDocumentCount: archivedCount,
       areaCounts,
       createdAt: space.createdAt,
       updatedAt: space.updatedAt,
@@ -273,6 +279,27 @@ const updateSpace = async (req, res) => {
       const project = await Project.findById(validation.data.projectId);
       if (!project) {
         return sendError(res, 404, 'NOT_FOUND', 'Linked project not found');
+      }
+    }
+
+    if (!isAdmin(req.user)) {
+      if (validation.data.hasOwnProperty('projectId')) {
+        if (!validation.data.projectId) {
+          return sendError(res, 403, 'FORBIDDEN', 'Only platform admins can convert spaces to standalone');
+        }
+        const currentProjId = space.projectId ? String(space.projectId._id || space.projectId) : null;
+        const targetProjId = String(validation.data.projectId);
+        if (currentProjId !== targetProjId) {
+          const targetRole = await getUserProjectRole(req.user._id, validation.data.projectId);
+          if (targetRole !== 'lead') {
+            return sendError(
+              res,
+              403,
+              'FORBIDDEN',
+              'You must be the project lead of the target project to transfer this space'
+            );
+          }
+        }
       }
     }
 
