@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import SpaceListScreen from "./components/SpaceListScreen";
 import SpaceFormScreen from "./components/SpaceFormScreen";
 import SpaceDetailScreen from "./components/SpaceDetailScreen";
@@ -29,8 +30,49 @@ export const ViewModes = {
   ARCHIVED_DOCUMENTS: "ARCHIVED_DOCUMENTS",
 };
 
+/**
+ * Parses client pathnames according to docs/api/documentation.md Section 8.1
+ */
+export const parseDocPath = (pathname) => {
+  if (!pathname) return null;
+  if (pathname === "/doc/spaces/new" || pathname === "/doc/spaces/new/") {
+    return { mode: ViewModes.CREATE_SPACE, spaceId: null };
+  }
+  const editMatch = pathname.match(/^\/doc\/spaces\/([^/]+)\/edit\/?$/);
+  if (editMatch) {
+    return { mode: ViewModes.EDIT_SPACE, spaceId: editMatch[1] };
+  }
+  const addDocMatch = pathname.match(/^\/doc\/spaces\/([^/]+)\/documents\/new\/?$/);
+  if (addDocMatch) {
+    return { mode: ViewModes.ADD_DOCUMENT, spaceId: addDocMatch[1] };
+  }
+  const archivedMatch = pathname.match(/^\/doc\/spaces\/([^/]+)\/archived\/?$/);
+  if (archivedMatch) {
+    return { mode: ViewModes.ARCHIVED_DOCUMENTS, spaceId: archivedMatch[1] };
+  }
+  const detailMatch = pathname.match(/^\/doc\/spaces\/([^/]+)\/?$/);
+  if (detailMatch && detailMatch[1] !== "new") {
+    return { mode: ViewModes.SPACE_DETAIL, spaceId: detailMatch[1] };
+  }
+  if (pathname === "/doc" || pathname === "/doc/") {
+    return { mode: ViewModes.SPACES_LIST, spaceId: null };
+  }
+  return null;
+};
+
 const Documentation = ({ initialView = ViewModes.SPACES_LIST, initialSpaceId = null }) => {
-  const [viewMode, setViewMode] = useState(initialView);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const lastPathRef = useRef(null);
+
+  const [viewMode, setViewMode] = useState(() => {
+    if (initialView && initialView !== ViewModes.SPACES_LIST) {
+      return initialView;
+    }
+    const parsed = parseDocPath(location?.pathname);
+    return parsed ? parsed.mode : ViewModes.SPACES_LIST;
+  });
+  const [editReturnMode, setEditReturnMode] = useState(ViewModes.SPACES_LIST);
   const [spaces, setSpaces] = useState([]);
   const [selectedSpace, setSelectedSpace] = useState(null);
   const [documents, setDocuments] = useState([]);
@@ -48,6 +90,16 @@ const Documentation = ({ initialView = ViewModes.SPACES_LIST, initialSpaceId = n
   const [error, setError] = useState(null);
   const [serverError, setServerError] = useState(null);
   const [restoringId, setRestoringId] = useState(null);
+
+  const navigateSafe = useCallback(
+    (to) => {
+      if (navigate && location?.pathname !== to) {
+        lastPathRef.current = to;
+        navigate(to);
+      }
+    },
+    [navigate, location?.pathname]
+  );
 
   // Handlers
   const handleAuthError = (err) => {
@@ -67,6 +119,17 @@ const Documentation = ({ initialView = ViewModes.SPACES_LIST, initialSpaceId = n
     };
   };
 
+  // Load auxiliary data (projects & members)
+  const loadAuxData = useCallback(async () => {
+    try {
+      const [projData, memberData] = await Promise.all([listProjects(), listMembers()]);
+      setProjects(projData);
+      setMembers(memberData);
+    } catch {
+      // Ignore aux loading errors
+    }
+  }, []);
+
   // Load spaces & aux data
   const loadInitialData = useCallback(async () => {
     setLoading(true);
@@ -80,18 +143,16 @@ const Documentation = ({ initialView = ViewModes.SPACES_LIST, initialSpaceId = n
       setSpaces(spaceData);
       setProjects(projData);
       setMembers(memberData);
+      return true;
     } catch (err) {
-      if (handleAuthError(err)) return;
+      if (handleAuthError(err)) return false;
       const msg = err.response?.data?.error?.message || err.message || "Failed to load spaces";
       setError(msg);
+      return false;
     } finally {
       setLoading(false);
     }
   }, []);
-
-  useEffect(() => {
-    loadInitialData();
-  }, [loadInitialData]);
 
   // Load space details & documents
   const loadSpaceDetail = useCallback(async (spaceId) => {
@@ -104,10 +165,12 @@ const Documentation = ({ initialView = ViewModes.SPACES_LIST, initialSpaceId = n
       ]);
       setSelectedSpace(spData);
       setDocuments(docData);
+      return true;
     } catch (err) {
-      if (handleAuthError(err)) return;
+      if (handleAuthError(err)) return false;
       const msg = err.response?.data?.error?.message || err.message || "Failed to load space";
       setError(msg);
+      return false;
     } finally {
       setLoading(false);
     }
@@ -119,31 +182,74 @@ const Documentation = ({ initialView = ViewModes.SPACES_LIST, initialSpaceId = n
     try {
       const docs = await listDocuments(spaceId, { includeArchived: true });
       setArchivedDocuments(docs);
+      return true;
     } catch (err) {
-      if (handleAuthError(err)) return;
+      if (handleAuthError(err)) return false;
       const msg =
         err.response?.data?.error?.message || err.message || "Failed to load archived documents";
       setError(msg);
+      return false;
     } finally {
       setLoading(false);
     }
   }, []);
 
+  // Sync on prop change if initialSpaceId provided
+  useEffect(() => {
+    if (initialSpaceId) {
+      loadSpaceDetail(initialSpaceId);
+    }
+  }, [initialSpaceId, loadSpaceDetail]);
+
+  // Synchronize on mount & pathname changes (handles deep-links, direct URLs, and back/forward navigation)
+  useEffect(() => {
+    if (lastPathRef.current === location?.pathname) {
+      return;
+    }
+    lastPathRef.current = location?.pathname;
+
+    const parsed = parseDocPath(location?.pathname);
+    if (!parsed) {
+      loadInitialData();
+      return;
+    }
+
+    if (parsed.mode === ViewModes.SPACES_LIST) {
+      setViewMode(ViewModes.SPACES_LIST);
+      loadInitialData();
+    } else if (parsed.mode === ViewModes.CREATE_SPACE) {
+      setViewMode(ViewModes.CREATE_SPACE);
+      loadAuxData();
+    } else if (parsed.spaceId) {
+      setViewMode(parsed.mode);
+      loadSpaceDetail(parsed.spaceId);
+      loadAuxData();
+      if (parsed.mode === ViewModes.ARCHIVED_DOCUMENTS) {
+        loadArchivedDocuments(parsed.spaceId);
+      }
+    }
+  }, [location?.pathname, loadInitialData, loadSpaceDetail, loadArchivedDocuments, loadAuxData]);
+
   // Handlers
   const handleOpenSpace = async (space) => {
-    await loadSpaceDetail(space._id);
-    setActiveArea("development");
-    setViewMode(ViewModes.SPACE_DETAIL);
+    const ok = await loadSpaceDetail(space._id);
+    if (ok) {
+      setActiveArea("development");
+      setViewMode(ViewModes.SPACE_DETAIL);
+      navigateSafe(`/doc/spaces/${space._id}`);
+    }
   };
 
   const handleStartCreateSpace = () => {
     setServerError(null);
     setSelectedSpace(null);
     setViewMode(ViewModes.CREATE_SPACE);
+    navigateSafe("/doc/spaces/new");
   };
 
-  const handleStartEditSpace = async (space) => {
+  const handleStartEditSpace = async (space, returnMode = ViewModes.SPACES_LIST) => {
     setServerError(null);
+    setEditReturnMode(returnMode);
     try {
       const fullSpace = await getSpace(space._id);
       setSelectedSpace(fullSpace);
@@ -151,6 +257,7 @@ const Documentation = ({ initialView = ViewModes.SPACES_LIST, initialSpaceId = n
       setSelectedSpace(space);
     }
     setViewMode(ViewModes.EDIT_SPACE);
+    navigateSafe(`/doc/spaces/${space._id}/edit`);
   };
 
   const handleCreateSpaceSubmit = async (payload) => {
@@ -161,6 +268,7 @@ const Documentation = ({ initialView = ViewModes.SPACES_LIST, initialSpaceId = n
       await loadInitialData();
       await loadSpaceDetail(created._id);
       setViewMode(ViewModes.SPACE_DETAIL);
+      navigateSafe(`/doc/spaces/${created._id}`);
     } catch (err) {
       if (handleAuthError(err)) return;
       setServerError(extractError(err, "Failed to create space"));
@@ -178,6 +286,7 @@ const Documentation = ({ initialView = ViewModes.SPACES_LIST, initialSpaceId = n
       await loadInitialData();
       await loadSpaceDetail(updated._id);
       setViewMode(ViewModes.SPACE_DETAIL);
+      navigateSafe(`/doc/spaces/${updated._id}`);
     } catch (err) {
       if (handleAuthError(err)) return;
       setServerError(extractError(err, "Failed to update space"));
@@ -191,6 +300,9 @@ const Documentation = ({ initialView = ViewModes.SPACES_LIST, initialSpaceId = n
     setSelectedDocument(null);
     setActiveArea(area || "general");
     setViewMode(ViewModes.ADD_DOCUMENT);
+    if (selectedSpace) {
+      navigateSafe(`/doc/spaces/${selectedSpace._id}/documents/new`);
+    }
   };
 
   const handleStartEditDocument = (doc) => {
@@ -208,6 +320,7 @@ const Documentation = ({ initialView = ViewModes.SPACES_LIST, initialSpaceId = n
       await loadSpaceDetail(selectedSpace._id);
       setActiveArea(payload.area || "general");
       setViewMode(ViewModes.SPACE_DETAIL);
+      navigateSafe(`/doc/spaces/${selectedSpace._id}`);
     } catch (err) {
       if (handleAuthError(err)) return;
       setServerError(extractError(err, "Failed to add document"));
@@ -225,6 +338,7 @@ const Documentation = ({ initialView = ViewModes.SPACES_LIST, initialSpaceId = n
       await loadSpaceDetail(selectedSpace._id);
       setActiveArea(payload.area || selectedDocument.area || "general");
       setViewMode(ViewModes.SPACE_DETAIL);
+      navigateSafe(`/doc/spaces/${selectedSpace._id}`);
     } catch (err) {
       if (handleAuthError(err)) return;
       setServerError(extractError(err, "Failed to update document"));
@@ -250,6 +364,7 @@ const Documentation = ({ initialView = ViewModes.SPACES_LIST, initialSpaceId = n
     if (!selectedSpace) return;
     await loadArchivedDocuments(selectedSpace._id);
     setViewMode(ViewModes.ARCHIVED_DOCUMENTS);
+    navigateSafe(`/doc/spaces/${selectedSpace._id}/archived`);
   };
 
   const handleRestoreDocument = async (doc) => {
@@ -280,8 +395,8 @@ const Documentation = ({ initialView = ViewModes.SPACES_LIST, initialSpaceId = n
           error={error}
           onOpenSpace={handleOpenSpace}
           onCreateSpace={handleStartCreateSpace}
-          onEditSpace={handleStartEditSpace}
-          onManagePermissions={handleStartEditSpace}
+          onEditSpace={(space) => handleStartEditSpace(space, ViewModes.SPACES_LIST)}
+          onManagePermissions={(space) => handleStartEditSpace(space, ViewModes.SPACES_LIST)}
           onRetry={loadInitialData}
         />
       )}
@@ -292,7 +407,10 @@ const Documentation = ({ initialView = ViewModes.SPACES_LIST, initialSpaceId = n
           projects={projects}
           members={members}
           onSubmit={handleCreateSpaceSubmit}
-          onCancel={() => setViewMode(ViewModes.SPACES_LIST)}
+          onCancel={() => {
+            setViewMode(ViewModes.SPACES_LIST);
+            navigateSafe("/doc");
+          }}
           submitting={submitting}
           serverError={serverError}
         />
@@ -305,10 +423,11 @@ const Documentation = ({ initialView = ViewModes.SPACES_LIST, initialSpaceId = n
           members={members}
           onSubmit={handleEditSpaceSubmit}
           onCancel={() => {
-            if (selectedSpace) {
-              setViewMode(ViewModes.SPACE_DETAIL);
+            setViewMode(editReturnMode);
+            if (editReturnMode === ViewModes.SPACE_DETAIL && selectedSpace) {
+              navigateSafe(`/doc/spaces/${selectedSpace._id}`);
             } else {
-              setViewMode(ViewModes.SPACES_LIST);
+              navigateSafe("/doc");
             }
           }}
           submitting={submitting}
@@ -327,9 +446,10 @@ const Documentation = ({ initialView = ViewModes.SPACES_LIST, initialSpaceId = n
           onBack={() => {
             loadInitialData();
             setViewMode(ViewModes.SPACES_LIST);
+            navigateSafe("/doc");
           }}
           onAddDocument={(area) => handleStartAddDocument(area)}
-          onEditSpace={() => handleStartEditSpace(selectedSpace)}
+          onEditSpace={() => handleStartEditSpace(selectedSpace, ViewModes.SPACE_DETAIL)}
           onEditDocument={(doc) => handleStartEditDocument(doc)}
           onArchiveDocument={handleArchiveDocument}
           onViewArchived={handleViewArchived}
@@ -342,7 +462,12 @@ const Documentation = ({ initialView = ViewModes.SPACES_LIST, initialSpaceId = n
           initialDocument={null}
           initialArea={activeArea}
           onSubmit={handleAddDocumentSubmit}
-          onCancel={() => setViewMode(ViewModes.SPACE_DETAIL)}
+          onCancel={() => {
+            setViewMode(ViewModes.SPACE_DETAIL);
+            if (selectedSpace) {
+              navigateSafe(`/doc/spaces/${selectedSpace._id}`);
+            }
+          }}
           submitting={submitting}
           serverError={serverError}
         />
@@ -354,7 +479,12 @@ const Documentation = ({ initialView = ViewModes.SPACES_LIST, initialSpaceId = n
           initialDocument={selectedDocument}
           initialArea={selectedDocument.area}
           onSubmit={handleEditDocumentSubmit}
-          onCancel={() => setViewMode(ViewModes.SPACE_DETAIL)}
+          onCancel={() => {
+            setViewMode(ViewModes.SPACE_DETAIL);
+            if (selectedSpace) {
+              navigateSafe(`/doc/spaces/${selectedSpace._id}`);
+            }
+          }}
           submitting={submitting}
           serverError={serverError}
         />
@@ -369,6 +499,9 @@ const Documentation = ({ initialView = ViewModes.SPACES_LIST, initialSpaceId = n
           onBack={async () => {
             await loadSpaceDetail(selectedSpace._id);
             setViewMode(ViewModes.SPACE_DETAIL);
+            if (selectedSpace) {
+              navigateSafe(`/doc/spaces/${selectedSpace._id}`);
+            }
           }}
           onRestore={handleRestoreDocument}
           restoringId={restoringId}

@@ -738,7 +738,25 @@ export const createSpace = async (payload) => {
     return newSpace;
   }
 
-  const response = await realApiClient.post("/doc/spaces", payload);
+  const sanitizedPayload = {
+    ...payload,
+    ...(payload.accessMembers
+      ? {
+          accessMembers: payload.accessMembers.filter(
+            (id) => typeof id === "string" && /^[0-9a-fA-F]{24}$/.test(id)
+          ),
+        }
+      : {}),
+    ...(payload.updateMembers
+      ? {
+          updateMembers: payload.updateMembers.filter(
+            (id) => typeof id === "string" && /^[0-9a-fA-F]{24}$/.test(id)
+          ),
+        }
+      : {}),
+  };
+
+  const response = await realApiClient.post("/doc/spaces", sanitizedPayload);
   const data = response.data;
   return {
     ...data,
@@ -799,7 +817,25 @@ export const updateSpace = async (spaceId, payload) => {
     return updated;
   }
 
-  const response = await realApiClient.patch(`/doc/spaces/${spaceId}`, payload);
+  const sanitizedPayload = {
+    ...payload,
+    ...(payload.accessMembers
+      ? {
+          accessMembers: payload.accessMembers.filter(
+            (id) => typeof id === "string" && /^[0-9a-fA-F]{24}$/.test(id)
+          ),
+        }
+      : {}),
+    ...(payload.updateMembers
+      ? {
+          updateMembers: payload.updateMembers.filter(
+            (id) => typeof id === "string" && /^[0-9a-fA-F]{24}$/.test(id)
+          ),
+        }
+      : {}),
+  };
+
+  const response = await realApiClient.patch(`/doc/spaces/${spaceId}`, sanitizedPayload);
   const data = response.data;
   return {
     ...data,
@@ -1095,11 +1131,13 @@ export const listMembers = async () => {
   try {
     const res = await realApiClient.get("/admin/users");
     if (Array.isArray(res.data) && res.data.length > 0) {
-      return res.data.map((u, idx) => ({
-        _id: u._id || u.id || `user-${idx}`,
-        name: u.name || u.email || "Member",
-        email: u.email,
-      }));
+      return res.data
+        .map((u) => ({
+          _id: u._id || u.id,
+          name: u.name || u.email || "Member",
+          email: u.email,
+        }))
+        .filter((u) => u._id && /^[0-9a-fA-F]{24}$/.test(String(u._id)));
     }
     return [...SEED_USERS];
   } catch (err) {
