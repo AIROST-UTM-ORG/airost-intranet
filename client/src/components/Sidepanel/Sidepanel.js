@@ -60,7 +60,11 @@ function Sidepanel() {
             <li className="side-text">
               <Link
                 to="/doc"
-                className={location.pathname.startsWith("/doc") ? "active" : ""}
+                className={
+                  location.pathname === "/doc" || location.pathname.startsWith("/doc/")
+                    ? "active"
+                    : ""
+                }
               >
                 <aiicon.AiOutlineFileText />
                 <span>Documentation</span>

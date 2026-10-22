@@ -481,4 +481,56 @@ describe("Documentation Feature - All 14 Screens", () => {
     // Active documents in Development now includes the restored document!
     expect(await screen.findByText("Database Schema (legacy)")).toBeInTheDocument();
   });
+
+  // -------------------------------------------------------------------------
+  // Review Feedback Verification: Deep Links & Navigation
+  // -------------------------------------------------------------------------
+  test("Deep Link: Directly routes to /doc/spaces/new and renders Create Space screen", async () => {
+    render(
+      <MemoryRouter initialEntries={["/doc/spaces/new"]}>
+        <Documentation />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByTestId("space-form-title")).toHaveTextContent(
+      "Create Documentation Space"
+    );
+  });
+
+  test("Deep Link: Directly routes to /doc/spaces/:id and renders Space Detail screen", async () => {
+    render(
+      <MemoryRouter initialEntries={["/doc/spaces/65f29d20c571c48201a00001"]}>
+        <Documentation />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByTestId("space-detail-title")).toHaveTextContent(
+      "Engineering Handbook"
+    );
+  });
+
+  test("Cancel Space Edit: Canceling edit started from Spaces List returns to Spaces List", async () => {
+    await renderDocumentation();
+
+    // Click overflow menu on space card
+    const trigger = await screen.findByTestId("space-menu-trigger-65f29d20c571c48201a00001");
+    fireEvent.click(trigger);
+
+    // Click Edit space
+    const editMenuItem = await screen.findByTestId("edit-space-menu-item");
+    fireEvent.click(editMenuItem);
+
+    expect(await screen.findByTestId("space-form-title")).toHaveTextContent(
+      "Edit Documentation Space"
+    );
+
+    // Click Cancel
+    const cancelBtn = screen.getByTestId("cancel-space-btn");
+    fireEvent.click(cancelBtn);
+
+    // Should return to Spaces List, NOT Space Detail
+    expect(await screen.findByTestId("documentation-title")).toHaveTextContent("Documentation");
+    expect(screen.queryByTestId("space-detail-screen")).not.toBeInTheDocument();
+  });
 });
+
