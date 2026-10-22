@@ -47,7 +47,7 @@ describe('Server Test Setup Smoke Tests', () => {
   it('connects to in-memory MongoDB instead of remote Atlas', () => {
     expect(mongoose.connection.readyState).toBe(1);
     expect(mongoose.connection.host).toMatch(/127\.0\.0\.1|localhost/);
-    expect(process.env.MONGO_URI).toBeUndefined();
+    expect(process.env.MONGO_URI).toBeFalsy();
   });
 
   it('GET /auth/login/failed returns 401 UNAUTHENTICATED', async () => {

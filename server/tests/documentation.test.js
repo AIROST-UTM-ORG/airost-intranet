@@ -389,7 +389,11 @@ describe('Documentation Backend API Tests', () => {
       const res = await adminAgent.get(`/doc/spaces/${space._id}`);
       expect(res.status).toBe(200);
       expect(res.body.documentCount).toBe(3);
+      expect(res.body.activeDocumentCount).toBe(3);
       expect(res.body.archivedCount).toBe(2);
+      expect(res.body.archivedDocumentCount).toBe(2);
+      expect(res.body.canManage).toBe(true);
+      expect(res.body.isManager).toBe(true);
       expect(res.body.areaCounts).toEqual({
         general: 0,
         requirements: 0,
@@ -398,6 +402,14 @@ describe('Documentation Backend API Tests', () => {
         testing: 1,
         deployment: 0,
       });
+
+      const listRes = await adminAgent.get('/doc/spaces');
+      expect(listRes.status).toBe(200);
+      const spaceInList = listRes.body.find((s) => String(s._id) === String(space._id));
+      expect(spaceInList.documentCount).toBe(3);
+      expect(spaceInList.activeDocumentCount).toBe(3);
+      expect(spaceInList.canManage).toBe(true);
+      expect(spaceInList.isManager).toBe(true);
     });
   });
 
@@ -638,4 +650,54 @@ describe('Documentation Backend API Tests', () => {
       expect(res.body.error.code).toBe('NOT_FOUND');
     });
   });
+
+  describe('11. Space Update Restrictions (projectId changes and standalone conversion)', () => {
+    let secondProject;
+    let managedSpace;
+
+    beforeAll(async () => {
+      secondProject = await Project.create({
+        projectId: 102,
+        title: 'Second Project',
+        description: 'Second project description',
+        lead: 'Another Lead',
+      });
+
+      managedSpace = await DocumentationSpace.create({
+        title: 'Space To Update',
+        description: 'Managed by creatorUser',
+        projectId: testProject._id,
+        createdBy: creatorUser._id,
+        accessType: 'all',
+        updateType: 'all',
+      });
+    });
+
+    it('rejects non-admin creator from converting a space to standalone (projectId: null)', async () => {
+      const res = await creatorAgent.patch(`/doc/spaces/${managedSpace._id}`).send({
+        projectId: null,
+      });
+      expect(res.status).toBe(403);
+      expect(res.body.error.code).toBe('FORBIDDEN');
+      expect(res.body.error.message).toContain('Only platform admins can convert spaces to standalone');
+    });
+
+    it('rejects non-admin creator from transferring space to a project where they are not lead', async () => {
+      const res = await creatorAgent.patch(`/doc/spaces/${managedSpace._id}`).send({
+        projectId: secondProject._id,
+      });
+      expect(res.status).toBe(403);
+      expect(res.body.error.code).toBe('FORBIDDEN');
+      expect(res.body.error.message).toContain('You must be the project lead of the target project to transfer this space');
+    });
+
+    it('allows platform admin to convert space to standalone', async () => {
+      const res = await adminAgent.patch(`/doc/spaces/${managedSpace._id}`).send({
+        projectId: null,
+      });
+      expect(res.status).toBe(200);
+      expect(res.body.projectId).toBeNull();
+    });
+  });
 });
+
