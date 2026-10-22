@@ -3,13 +3,14 @@ import React from 'react';
 import { Link } from "react-router-dom";
 import { useParams } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import { API_URL } from '../../../config/api';
 
 const DocBlog = () => {
   const [docs, setDocs] = useState(null)
 
   useEffect(() => {
     const fetchDocs = async () => {
-      const response = await fetch('/airost/doc')
+      const response = await fetch(`${API_URL}/api/airost/doc`)
       const json = await response.json()
 
       if (response.ok) {

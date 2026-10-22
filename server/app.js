@@ -30,8 +30,9 @@ const createApp = () => {
   app.set('trust proxy', 1);
   app.use(express.json());
 
+  const clientAppUrl = (process.env.REACT_APP_URL || '').trim().replace(/\/+$/, '');
   const allowedOrigins = [
-    process.env.REACT_APP_URL,
+    clientAppUrl,
     'http://localhost:3000',
     'http://localhost:1234',
     'http://127.0.0.1:3000',
@@ -76,7 +77,16 @@ const createApp = () => {
   app.use(passport.session());
 
   app.use('/auth', authRoutes);
+  app.use('/api/auth', authRoutes);
 
+  // Dedicated API namespace
+  app.use('/api/airost/doc', DocRoutes);
+  app.use('/api/admin', adminRoutes);
+  app.use('/api/user', userRoutes);
+  app.use('/api/projects', projectRoutes);
+  app.use('/api/calendar', eventRoutes);
+
+  // Legacy root mounts for backward compatibility
   app.use('/airost/doc', DocRoutes);
   app.use('/admin', adminRoutes);
   app.use('/user', userRoutes);

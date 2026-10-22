@@ -12,8 +12,9 @@ const usePBMCreate = ({projectId, cards}) => {
         try {
           console.log("Sending project board data:", { projectId, cards }," to ", API_URL);
           console.log("Current user for creation:", user); // Debug log
-          const response = await axios.post(`${API_URL}/projects/tracking`, {
-            projectId:projectId,            tasks: cards.map(card => ({
+          const response = await axios.post(`${API_URL}/api/projects/tracking`, {
+            projectId:projectId,
+            tasks: cards.map(card => ({
               ...card,
               createdBy: card.createdBy || user?.email || user?.name || user?.username || 'Unknown User'
             })),
