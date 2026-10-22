@@ -27,4 +27,4 @@ docker compose up --build
 Refer to the project guidelines before opening pull requests or proposing changes:
 
 - [Contributing guidelines](CONTRIBUTING.md) for branch naming rules, conventional commits, PR formats, and review approval policies.
-- [Domain context](CONTEXT.md) for domain terminology, authentication models, and member profile definitions.
+- [Project context](AGENTS.md) for coding standards, project rules, and architectural expectations.
