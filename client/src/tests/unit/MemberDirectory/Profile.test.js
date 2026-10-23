@@ -71,6 +71,9 @@ describe('Member profile', () => {
   test('renders profile details, social links, location, and featured project', () => {
     renderProfileRoutes('/members/alice%40example.com');
 
+    expect(screen.getByRole('button', { name: 'Back to members' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Back to members' }).parentElement)
+      .toContainElement(screen.getByRole('searchbox', { name: 'Search other club members' }));
     expect(screen.getByRole('heading', { name: 'Alice Tan' })).toBeInTheDocument();
     expect(screen.getByText('Building helpful technology.')).toBeInTheDocument();
     expect(screen.getAllByText('Selangor, Malaysia')).toHaveLength(2);
@@ -98,6 +101,20 @@ describe('Member profile', () => {
     expect(screen.getByText('React')).toBeInTheDocument();
     expect(screen.getByText('Node.js')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Edit profile' })).not.toBeInTheDocument();
+  });
+
+  test('returns to the member directory from a member profile', async () => {
+    renderProfileRoutes('/members/alice%40example.com');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Back to members' }));
+
+    expect(await screen.findByRole('heading', { name: 'Member directory' })).toBeInTheDocument();
+  });
+
+  test('does not show the directory back button on the current user profile', () => {
+    renderProfileRoutes('/profile');
+
+    expect(screen.queryByRole('button', { name: 'Back to members' })).not.toBeInTheDocument();
   });
 
   test('shows loading, missing-profile, and fetch-error states', () => {
@@ -135,13 +152,19 @@ describe('Member profile', () => {
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
-  test('opens the member directory when the member search receives focus or input', async () => {
+  test('navigates to a matching member profile only after selecting a search result', async () => {
+    const otherMember = { name: 'Alex Lee', email: 'alex@example.com' };
+    useFetchUsers.mockReturnValue({ data: [member, otherMember] });
     renderProfileRoutes('/members/alice%40example.com');
     const search = screen.getByRole('searchbox', { name: 'Search other club members' });
 
-    await userEvent.click(search);
+    await userEvent.type(search, 'alex');
+    expect(screen.getByRole('heading', { name: 'Alice Tan' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /Alex Lee/ })).toBeInTheDocument();
 
-    expect(await screen.findByRole('heading', { name: 'Member directory' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('option', { name: /Alex Lee/ }));
+
+    expect(await screen.findByRole('heading', { name: 'Alex Lee' })).toBeInTheDocument();
   });
 
   test('edits and saves the current profile, updates auth state, and returns to profile', async () => {

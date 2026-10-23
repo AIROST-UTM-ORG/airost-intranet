@@ -5,7 +5,7 @@ import useFetchUsers from '../../../hooks/useFetchUsers';
 import FeaturedProject from './components/FeaturedProject';
 import ProfileDetails from './components/ProfileDetails';
 import ProfileHero from './components/ProfileHero';
-import ProfileSearch from './components/ProfileSearch';
+import ProfileSearch from '../components/ProfileSearch';
 import useAuth from '../../../hooks/useAuth';
 import { getPositions } from '../utils/memberUtils';
 import './Profile.css';
@@ -61,7 +61,25 @@ const Profile = ({ isCurrentUser = false }) => {
 
   return (
     <main className="profile-page">
-      {!isCurrentUser && <ProfileSearch onOpenDirectory={() => navigate('/members')} />}
+      {!isCurrentUser && (
+        <div className="profile-search-toolbar">
+          <button
+            className="profile-back profile-back-directory"
+            type="button"
+            onClick={() => navigate('/members')}
+          >
+            <FiArrowLeft aria-hidden="true" /> Back to members
+          </button>
+          <ProfileSearch
+            users={users}
+            currentMemberEmail={member.email}
+            onSelectMember={(selectedMember) => navigate(
+              `/members/${encodeURIComponent(selectedMember.email)}`,
+              { state: { member: selectedMember } },
+            )}
+          />
+        </div>
+      )}
       <ProfileHero
         member={member}
         location={locationText}
