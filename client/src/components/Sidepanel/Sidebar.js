@@ -30,13 +30,13 @@ export const Sidebar = [
     path: '/events',
     icon: <aiicon.AiFillCalendar />,
     cName: 'side-text',
-    hideNavItem: true,
+    hideNavItem: false,
   },
   {
     title: 'Documentation',
     path: '/doc',
-    icon: <faicon.FaFilePdf />,
+    icon: <faicon.FaRegFileAlt />,
     cName: 'side-text',
-    hideNavItem: true,
+    hideNavItem: false,
   },
 ];

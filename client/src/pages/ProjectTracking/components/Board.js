@@ -21,20 +21,19 @@ const Board = () => {
         ?.find(project => project.projectId == projectId)?.title;
     //console.log(projectTitle)
     const getProjectBoard = async () => {
-        return axios.get(`${API_URL}/projects/tracking/${projectId}`) 
-
-        .then(res => {
-            
-            setCards(res.data.tasks)
-            
-            return res.data
-        })
-        .catch(err => console.log(err))
+        try {
+            const res = await axios.get(`${API_URL}/projects/tracking/${projectId}`);
+            setCards(res.data?.tasks || []);
+            return res.data;
+        } catch (err) {
+            console.error("Error fetching project board:", err);
+            throw err;
+        }
     }
     const projectBoard = useQuery({
-        queryKey:["projectBoard"],
+        queryKey: ["projectBoard", projectId],
         queryFn: getProjectBoard,
-        enabled: !isNaN(projectId)
+        enabled: Boolean(projectId) && !isNaN(projectId)
     })
 
     const users = useFetchUsers();

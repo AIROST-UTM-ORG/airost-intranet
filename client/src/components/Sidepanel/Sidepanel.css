@@ -54,7 +54,14 @@
   }
   
   .side-text a:hover {
-    background-color: #a3a3a3;
+    background-color: rgba(255, 255, 255, 0.15);
+  }
+
+  .side-text a.active-link,
+  .side-text.active a {
+    background-color: rgba(255, 255, 255, 0.25);
+    color: #ffffff;
+    font-weight: 500;
   }
   
   .side-menu-items {

@@ -6,6 +6,16 @@ const ProjectDetails = () => {
 
     const { id } = useParams();
     const project = projectsData[id-1];
+
+    if (!project) {
+        return (
+            <div className="project-detail p-5">
+                <h1 className='title'>Project Not Found</h1>
+                <p>No project found with ID {id}.</p>
+            </div>
+        );
+    }
+
     return ( 
         <div className="project-detail">
             <h1 className='title'>{ project.title }</h1>
