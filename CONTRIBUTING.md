@@ -51,7 +51,7 @@ GitHub does not automatically label issues or pull requests. When creating issue
 
 1. **Phase labels (Required - exactly 1)**:
    - `phase:2-delivery`: Active delivery items committed to Phase 2.
-   - `phase:3-db-migration`: Future Phase 3 database migration and architectural refactor items.
+   - `phase:3-architecture`: Future Phase 3 architecture restructuring and platform evolution.
 
 2. **Module labels (Required - at least 1)**:
    - `module:auth`: Authentication, sessions, login/logout, tokens, and authorization.
