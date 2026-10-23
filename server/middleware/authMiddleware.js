@@ -1,4 +1,3 @@
-const User = require('../models/User');
 
 /**
  * Middleware to ensure the requester is authenticated.
@@ -82,26 +81,10 @@ const checkProjectPermission = (project, user) => {
 };
 
 /**
- * Optional authentication: Populates req.user if session or header is provided,
- * but does not reject unauthenticated requests.
+ * Optional authentication: Pass-through middleware that allows requests to proceed.
+ * Passport session middleware is responsible for populating req.user when authenticated.
  */
-const optionalAuth = async (req, res, next) => {
-  if (req.isAuthenticated && req.isAuthenticated() && req.user) {
-    return next();
-  }
-
-  const authHeader = req.headers['x-user-email'] || req.headers['authorization'];
-  if (authHeader) {
-    try {
-      const email = authHeader.replace(/^Bearer\s+/i, '').trim();
-      const user = await User.findOne({ email });
-      if (user) {
-        req.user = user;
-      }
-    } catch (err) {
-      console.error('Error in optionalAuth middleware:', err);
-    }
-  }
+const optionalAuth = (req, res, next) => {
   return next();
 };
 
