@@ -10,6 +10,8 @@ The system consists of three primary components:
 - **Server**: Express REST API with session authentication and Google OAuth 2.0. Runs on port `4000`.
 - **Database**: MongoDB instance for member data, projects, and documents. Runs on port `27017`.
 
+For details on production reverse proxy routing, Cloudflare Tunnel ingress rules, and secret management, see the [Deployment and infrastructure architecture guide](docs/deployment-and-network-architecture.md).
+
 ## Local development
 
 Follow the step-by-step instructions in the developer guide to configure environment variables, run containers, seed mock data, and inspect logs:
