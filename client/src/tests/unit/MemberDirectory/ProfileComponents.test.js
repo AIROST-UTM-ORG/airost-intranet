@@ -1,9 +1,58 @@
 import React from 'react';
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ProfileDetails from '../../../pages/MemberDirectory/Profile/components/ProfileDetails';
 import ProfileHero from '../../../pages/MemberDirectory/Profile/components/ProfileHero';
+import ProfileSearch from '../../../pages/MemberDirectory/components/ProfileSearch';
 import MemberCard from '../../../pages/MemberDirectory/components/MemberCard';
+
+describe('ProfileSearch', () => {
+  test('shows matching member names and selects a result without leaving on input', async () => {
+    const onSelectMember = jest.fn();
+    const matchingMember = { name: 'Alex Lee', email: 'alex@example.com' };
+    render(
+      <ProfileSearch
+        users={[
+          matchingMember,
+          { name: 'Jordan Lee', email: 'jordan@example.com' },
+          { name: 'Current Member', email: 'current@example.com' },
+        ]}
+        currentMemberEmail="current@example.com"
+        onSelectMember={onSelectMember}
+      />,
+    );
+
+    const searchInput = screen.getByRole('searchbox', { name: 'Search other club members' });
+    await userEvent.type(searchInput, 'alex');
+
+    expect(screen.getByRole('option', { name: /Alex Lee/ })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: /Jordan Lee/ })).not.toBeInTheDocument();
+    expect(onSelectMember).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole('option', { name: /Alex Lee/ }));
+    expect(onSelectMember).toHaveBeenCalledWith(matchingMember);
+  });
+
+  test('closes suggestions when the user clicks outside the search', async () => {
+    render(
+      <ProfileSearch
+        users={[{ name: 'Alex Lee', email: 'alex@example.com' }]}
+        onSelectMember={jest.fn()}
+      />,
+    );
+    const searchInput = screen.getByRole('searchbox', { name: 'Search other club members' });
+
+    await userEvent.type(searchInput, 'alex');
+    expect(screen.getByRole('option', { name: /Alex Lee/ })).toBeInTheDocument();
+
+    fireEvent.pointerDown(document.body);
+    expect(screen.queryByRole('option', { name: /Alex Lee/ })).not.toBeInTheDocument();
+    expect(searchInput).toHaveAttribute('aria-expanded', 'false');
+
+    fireEvent.focus(searchInput);
+    expect(screen.getByRole('option', { name: /Alex Lee/ })).toBeInTheDocument();
+  });
+});
 
 describe('ProfileDetails', () => {
   test('shows a fallback member label and renders each supplied detail', () => {

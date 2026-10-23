@@ -16,45 +16,6 @@
   margin-left: 0;
 }
 
-.profile-search {
-  width: min(100%, 620px);
-  min-height: 48px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 0 auto;
-  padding: 0 15px;
-  border: 1px solid var(--profile-line);
-  border-radius: 9px;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 2px 5px rgba(25, 43, 61, 0.035);
-  transition: border-color 160ms ease, box-shadow 160ms ease;
-}
-
-.profile-search:focus-within {
-  border-color: #79adba;
-  box-shadow: 0 0 0 3px rgba(18, 107, 139, 0.11);
-}
-
-.profile-search svg {
-  flex: 0 0 auto;
-  color: #6c8290;
-}
-
-.profile-search input {
-  width: 100%;
-  min-width: 0;
-  border: 0;
-  outline: 0;
-  color: var(--profile-ink);
-  background: transparent;
-  font-size: 13px;
-}
-
-.profile-search input::placeholder {
-  color: #8a9aa4;
-}
-
 .profile-hero {
   position: relative;
   isolation: isolate;
@@ -377,6 +338,7 @@
 }
 
 .profile-back {
+  width: 170px;
   min-height: 36px;
   display: inline-flex;
   align-items: center;
@@ -391,6 +353,26 @@
   font-weight: 600;
   cursor: pointer;
   transition: border-color 150ms ease, background-color 150ms ease;
+}
+
+.profile-search-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 620px) minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 23px;
+}
+
+.profile-search-toolbar .profile-search-container {
+  grid-column: 2;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.profile-back-directory {
+  grid-column: 1;
+  flex: 0 0 auto;
+  margin: 0;
 }
 
 .profile-back:hover {
@@ -423,6 +405,29 @@
 @media (max-width: 760px) {
   .profile-page {
     padding: 20px 16px 24px;
+  }
+
+  .profile-search-toolbar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .profile-back-directory {
+    width: fit-content;
+    min-height: 40px;
+    gap: 7px;
+    padding: 0 12px;
+    border-radius: 7px;
+    font-size: 12px;
+    margin-bottom: 0;
+  }
+
+  .profile-back-directory,
+  .profile-search-toolbar .profile-search-container {
+    grid-column: 1;
+  }
+
+  .profile-search-toolbar .profile-search-container {
+    width: 100%;
   }
 
   .profile-hero {
@@ -477,7 +482,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .profile-search,
   .profile-contact-pills a,
   .profile-contact-pills button,
   .profile-social-links a,

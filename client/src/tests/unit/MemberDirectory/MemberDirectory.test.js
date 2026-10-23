@@ -95,6 +95,18 @@ describe('MemberDirectory', () => {
     expect(getCardNames()).toEqual(['Alice Tan', 'Cara Ng']);
   });
 
+  test('navigates to a member profile from the shared search suggestions', async () => {
+    renderDirectory();
+    const search = screen.getByRole('searchbox', { name: /Search members/ });
+
+    await userEvent.type(search, 'Alice');
+    await userEvent.click(screen.getByRole('option', { name: /Alice Tan/ }));
+
+    expect(navigate).toHaveBeenCalledWith('/members/alice%40example.com', {
+      state: { member: sampleUsers[0] },
+    });
+  });
+
   test('filters members by role and year', async () => {
     renderDirectory();
 

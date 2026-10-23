@@ -22,53 +22,6 @@
   margin-left: 0;
 }
 
-.member-search {
-  width: min(100%, 620px);
-  min-height: 48px;
-  display: flex;
-  align-items: center;
-  gap: 13px;
-  margin: 0 auto;
-  padding: 0 15px;
-  border: 1px solid var(--member-line);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 2px 5px rgba(25, 43, 61, 0.035);
-  transition: border-color 160ms ease, box-shadow 160ms ease;
-}
-
-.member-search:focus-within {
-  border-color: #75a9c6;
-  box-shadow: 0 0 0 3px rgba(18, 105, 169, 0.11);
-}
-
-.member-search > svg {
-  flex: 0 0 auto;
-  color: #647795;
-}
-
-.member-search input {
-  width: 100%;
-  min-width: 0;
-  border: 0;
-  outline: 0;
-  color: var(--member-ink);
-  background: transparent;
-  font-size: 13px;
-}
-
-.member-search input::placeholder {
-  color: #98a4b8;
-}
-
-.member-search-context {
-  flex: 0 0 auto;
-  color: var(--member-muted);
-  font-size: 10px;
-  font-weight: 600;
-}
-
-.member-search button,
 .member-dialog-close {
   width: 28px;
   height: 28px;
@@ -82,7 +35,6 @@
   cursor: pointer;
 }
 
-.member-search button:hover,
 .member-dialog-close:hover {
   color: var(--member-ink);
   background: #eef3fa;
@@ -228,7 +180,6 @@
 
 .member-controls select:focus-visible,
 .member-card-footer button:focus-visible,
-.member-search button:focus-visible,
 .member-dialog-close:focus-visible {
   outline: 3px solid rgba(18, 105, 169, 0.22);
   outline-offset: 2px;
@@ -532,14 +483,6 @@
 }
 
 @media (max-width: 420px) {
-  .member-search {
-    gap: 8px;
-  }
-
-  .member-search-context {
-    display: none;
-  }
-
   .member-count {
     min-width: 76px;
     min-height: 66px;
@@ -594,7 +537,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .member-search,
   .member-controls select,
   .member-card,
   .member-card-footer button {

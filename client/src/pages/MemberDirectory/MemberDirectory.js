@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import MemberCard from './components/MemberCard';
 import MemberFilters from './components/MemberFilters';
 import MemberHeading from './components/MemberHeading';
-import MemberSearch from './components/MemberSearch';
+import ProfileSearch from './components/ProfileSearch';
 import './MemberDirectory.css';
 import useFetchUsers from '../../hooks/useFetchUsers';
 import { getPositions } from './utils/memberUtils';
@@ -51,7 +51,20 @@ const MemberDirectory = () => {
 
   return (
     <main className="member-directory">
-      <MemberSearch value={search} onChange={setSearch} />
+      <ProfileSearch
+        users={users}
+        value={search}
+        onChange={setSearch}
+        onSelectMember={(member) => navigate(
+          `/members/${encodeURIComponent(member.email)}`,
+          { state: { member } },
+        )}
+        label="Search members"
+        placeholder="Search by name, role, or course"
+        context="Club members"
+        showClear
+        showEmptyState={false}
+      />
       <MemberHeading count={members.length} search={search} />
       <MemberFilters
         roles={roles}
