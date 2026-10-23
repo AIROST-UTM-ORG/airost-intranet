@@ -16,6 +16,7 @@ The `main` branch is protected and always deployable.
   - Features: `feature/<descriptive-name>` (example: `feature/task-kanban`)
   - Bug fixes: `fix/<descriptive-name>` (example: `fix/login-redirect`)
   - Refactoring: `refactor/<descriptive-name>` (example: `refactor/session-storage`)
+  - Documentation: `docs/<descriptive-name>` (example: `docs/contributing-guidelines`)
 - Avoid vague branch names like `test`, `update`, `work`, or `final`.
 - Do not commit directly onto another contributor's branch without explicit coordination.
 
@@ -41,6 +42,36 @@ Keep commits small and focused on a single layer. When completing a feature, com
 3. Frontend UI components
 4. Validation and error handling
 5. Automated tests
+
+## Issue and pull request labeling standards
+
+GitHub does not automatically label issues or pull requests. When creating issues or opening pull requests via the GitHub UI or `gh` CLI, authors must assign the appropriate labels and link them to the project board.
+
+### Label taxonomy
+
+1. **Phase labels (Required - exactly 1)**:
+   - `phase:2-delivery`: Active delivery items committed to Phase 2.
+   - `phase:3-architecture`: Future Phase 3 architecture restructuring and platform evolution.
+
+2. **Module labels (Required - at least 1)**:
+   - `module:auth`: Authentication, sessions, login/logout, tokens, and authorization.
+   - `module:members`: Member directory, profiles, search, and filtering.
+   - `module:projects`: Project tracking, Kanban boards, and project management.
+   - `module:docs`: Documentation spaces, external links, and space access rules.
+   - `module:mobile`: Mobile responsive layouts, navigation drawer, and touch UX.
+   - `module:infra`: Docker, CI/CD, Nginx reverse proxy, networking, and deployment tooling.
+   - `module:refactor`: Structural codebase reorganization and feature-oriented architecture.
+
+3. **Type labels (Optional / as applicable)**:
+   - `bug`: Defects and unexpected runtime behaviors.
+   - `enhancement`: New features and functional capabilities.
+   - `documentation`: Contributor guides, developer environment setup, and architecture documentation.
+
+### GitHub Project affiliation
+
+Every issue and pull request must be attached to the official delivery board:
+- **Project**: `AIROST Intranet` (Organization Project #6)
+- Do not link items to personal scratchpads or deprecated projects.
 
 ## Secret management and security guardrails
 
@@ -93,5 +124,7 @@ Before submitting a pull request for final review, verify:
 
 - All acceptance criteria listed in the issue are met.
 - Automated tests pass locally.
+- Phase label (`phase:2-delivery`) and module label are applied.
+- The item is linked to the `AIROST Intranet` project board.
 - No secrets or environment files are staged in Git.
 - The PR description follows the required format and references the target issue.
