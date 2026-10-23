@@ -2,32 +2,15 @@ const User = require('../models/User');
 
 /**
  * Middleware to ensure the requester is authenticated.
- * Supports Passport session, as well as x-user-email or Bearer token for direct API calls/tests.
  */
-const requireAuth = async (req, res, next) => {
-  // 1. Session check
+const requireAuth = (req, res, next) => {
   if (req.isAuthenticated && req.isAuthenticated() && req.user) {
     return next();
   }
 
-  // 2. Direct API header check (x-user-email or authorization)
-  const authHeader = req.headers['x-user-email'] || req.headers['authorization'];
-  if (authHeader) {
-    try {
-      const email = authHeader.replace(/^Bearer\s+/i, '').trim();
-      const user = await User.findOne({ email });
-      if (user) {
-        req.user = user;
-        return next();
-      }
-    } catch (err) {
-      console.error('Error in requireAuth middleware:', err);
-    }
-  }
-
   return res.status(401).json({
     success: false,
-    error: 'Unauthorized: Authentication required to perform this action',
+    error: 'Unauthorized: Please log in to continue',
   });
 };
 
