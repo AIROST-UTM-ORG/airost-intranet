@@ -14,7 +14,7 @@ import { FaCheck, FaXmark } from "react-icons/fa6";const Admin = () => {
     }, [])
 
     const getUsers = async () => {
-        axios.get(`${process.env.REACT_APP_API_URL}/admin/users`)
+        axios.get(`${process.env.REACT_APP_API_URL}/user/users`)
         .then(users => setUsers(users.data))
         .catch(err => console.log(err))
     }
