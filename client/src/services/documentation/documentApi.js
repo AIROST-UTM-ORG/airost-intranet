@@ -56,6 +56,26 @@ export const listDocuments = async (spaceId, { area, includeArchived = false } =
 };
 
 /**
+ * Read one document by ID.
+ */
+export const getDocument = async (documentId) => {
+  if (USE_MOCK) {
+    const delay = getArtificialDelay();
+    if (delay > 0) await sleep(delay);
+    checkScenario();
+
+    const doc = mockDocuments.find((d) => d._id === documentId);
+    if (!doc) {
+      throw createError(404, "NOT_FOUND", "Document not found");
+    }
+    return doc;
+  }
+
+  const response = await realApiClient.get(`/doc/documents/${documentId}`);
+  return response.data;
+};
+
+/**
  * Add a new document link to a space.
  */
 export const createDocument = async (spaceId, payload) => {
@@ -205,6 +225,11 @@ export const archiveDocument = async (documentId) => {
 };
 
 /**
+ * Delete a document (soft delete archive alias).
+ */
+export const deleteDocument = archiveDocument;
+
+/**
  * Restore an archived document (archived = false).
  */
 export const restoreDocument = async (documentId) => {
@@ -233,5 +258,73 @@ export const permanentlyDeleteDocument = async (documentId) => {
   }
 
   const response = await realApiClient.delete(`/doc/documents/${documentId}/permanent`);
+  return response.data;
+};
+
+/**
+ * Search non-archived document titles across visible spaces via GET /doc/search.
+ */
+export const searchDocuments = async ({ q, limit = 10, signal } = {}) => {
+  if (USE_MOCK) {
+    const delay = getArtificialDelay();
+    if (delay > 0) await sleep(delay);
+    checkScenario();
+
+    if (!q || q.trim().length < 2) {
+      return { documents: [] };
+    }
+
+    const trimmedQ = q.trim().toLowerCase();
+
+    // Map of active spaces in mock mode
+    const spaceMap = new Map();
+    mockSpaces.forEach((s) => {
+      spaceMap.set(String(s._id), {
+        _id: s._id,
+        title: s.title,
+      });
+    });
+
+    // Search active (non-archived) documents in viewable spaces
+    const matchingDocs = mockDocuments.filter((doc) => {
+      if (doc.archived) return false;
+      if (!spaceMap.has(String(doc.spaceId))) return false;
+      const title = (doc.title || "").toLowerCase();
+      return title.includes(trimmedQ);
+    });
+
+    // Sort: prefix match first, then alphabetical by title
+    matchingDocs.sort((a, b) => {
+      const aTitle = (a.title || "").toLowerCase();
+      const bTitle = (b.title || "").toLowerCase();
+      const aStarts = aTitle.startsWith(trimmedQ);
+      const bStarts = bTitle.startsWith(trimmedQ);
+      if (aStarts && !bStarts) return -1;
+      if (!aStarts && bStarts) return 1;
+      return aTitle.localeCompare(bTitle);
+    });
+
+    const sliced = matchingDocs.slice(0, limit);
+
+    return {
+      documents: sliced.map((doc) => ({
+        _id: doc._id,
+        title: doc.title,
+        url: doc.url,
+        provider: doc.provider,
+        area: doc.area,
+        spaceId: doc.spaceId,
+        space: spaceMap.get(String(doc.spaceId)) || {
+          _id: doc.spaceId,
+          title: "",
+        },
+      })),
+    };
+  }
+
+  const response = await realApiClient.get("/doc/search", {
+    params: { q, limit },
+    signal,
+  });
   return response.data;
 };
