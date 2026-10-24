@@ -17,11 +17,13 @@ const requireAuth = (req, res, next) => {
  * Helper to check if a user is an admin.
  */
 const isAdmin = (user) => {
-  if (!user || !user.position) return false;
-  if (Array.isArray(user.position)) {
-    return user.position.includes('admin');
+  if (!user) return false;
+  const position = user.position || user.positions;
+  if (!position) return false;
+  if (Array.isArray(position)) {
+    return position.includes('admin');
   }
-  return user.position === 'admin';
+  return position === 'admin';
 };
 
 /**
@@ -73,6 +75,21 @@ const checkProjectPermission = (project, user) => {
   }
 
   if (isTeamMember || hasAccess) {
+    return { canView: true, canEdit: true, canDelete: false, role: 'member' };
+  }
+
+  // Handle older projects that lack createdBy/owner and teamMembers/access fields.
+  // Their lead is stored as a name rather than an email address.
+  const isOlderProject = (
+    !project.createdBy &&
+    !project.owner &&
+    (!Array.isArray(project.teamMembers) || project.teamMembers.length === 0) &&
+    (!Array.isArray(project.access) || project.access.length === 0)
+  );
+
+  if (isOlderProject) {
+    // Authenticated members can edit older projects (role 'member' permits editing title, description, category),
+    // but only administrators or the matched lead can delete or modify lead/members/access.
     return { canView: true, canEdit: true, canDelete: false, role: 'member' };
   }
 

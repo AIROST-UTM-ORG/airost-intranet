@@ -3,10 +3,16 @@ import useAuth from "../hooks/useAuth";
 
 const ProjectList = ({ projects, onDeleteProject }) => {
   const { user } = useAuth();
+  const position = user?.position || user?.positions;
   const isAdmin =
-    user &&
-    user.position &&
-    (Array.isArray(user.position) ? user.position.includes("admin") : user.position === "admin");
+    position &&
+    (Array.isArray(position) ? position.includes("admin") : position === "admin");
+
+  const isOlderProject = (proj) =>
+    !proj.createdBy &&
+    !proj.owner &&
+    (!Array.isArray(proj.teamMembers) || proj.teamMembers.length === 0) &&
+    (!Array.isArray(proj.access) || proj.access.length === 0);
 
   const handleDelete = (e, projectId) => {
     e.preventDefault();
@@ -48,6 +54,7 @@ const ProjectList = ({ projects, onDeleteProject }) => {
               {(isAdmin ||
                 project.permissions?.canEdit ||
                 (user && (
+                  isOlderProject(project) ||
                   user.email === project.lead ||
                   user.name === project.lead ||
                   user.email === project.createdBy ||
