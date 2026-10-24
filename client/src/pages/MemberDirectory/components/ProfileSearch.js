@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { FiSearch, FiX } from 'react-icons/fi';
-import './ProfileSearch.css';
+import '../styles/shared.css';
 
 const ProfileSearch = ({
   users = [],
