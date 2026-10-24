@@ -1,46 +1,25 @@
-const mongoose = require('mongoose'); 
+const mongoose = require('mongoose');
+
+const originSchema = new mongoose.Schema({
+  state: { type: String, default: '' },
+  country: { type: String, default: '' },
+}, { _id: false });
 
 const userSchema = new mongoose.Schema({
-    googleID:{
-        type:String,
-        required:true,
-    },
-    email:{
-        type:String,
-        required:false,
-     },
-    name:{
-        type:String,
-        required:true,
-     },
-    photo:{
-        type:String,
-        required:true,
-     },
-    position:{
-        type:Array,
-        required:true,
-    },
-    description:{
-        type:String,
-        required:false,
-    },
-    year:{
-        type:String,
-        required:false,
-    },
-    course:{
-        type:String,
-        required:false,
-    },
-    phonenum:{
-        type:String,
-        required:false,
-    },
-    instagram:{
-        type:String,
-        required:false,
-    }
-});
+  googleId: { type: String, unique: true, sparse: true, trim: true },
+  email: { type: String, trim: true, lowercase: true },
+  name: { type: String, required: true, trim: true },
+  photoUrl: { type: String, default: '' },
+  positions: { type: [String], default: [] },
+  year: { type: String, default: '' },
+  course: { type: String, default: '' },
+  origin: { type: originSchema, default: () => ({}) },
+  description: { type: String, default: '' },
+  linkedinUrl: { type: String, default: '' },
+  githubUrl: { type: String, default: '' },
+  instagramUrl: { type: String, default: '' },
+  featuredProjectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', default: null },
+  isActive: { type: Boolean, default: true },
+}, { timestamps: true });
 
 module.exports = mongoose.model('User', userSchema);
