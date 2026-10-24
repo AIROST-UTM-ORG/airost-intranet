@@ -2,8 +2,6 @@ const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const passport = require("passport");
 const dotenv = require('dotenv');
 const User = require('./models/User');
-const VerifiedUser = require('./models/VerifiedUser');
-const mongoose = require('mongoose');
 
 dotenv.config();
 
@@ -14,28 +12,28 @@ passport.use(new GoogleStrategy({
   },
   async function(accessToken, refreshToken, profile, cb) {
     try {
-      let user = await User.findOne({ googleID: profile.id });
+      const email = profile.emails?.[0]?.value?.toLowerCase();
+      const photoUrl = profile.photos?.[0]?.value || '';
+      let user = await User.findOne({ googleId: profile.id });
       if (user) {
         cb(null, user);
       } else {
-        const verifiedUser = await VerifiedUser.findOne({ email: profile.emails[0].value });
-        let userPosition; 
-
-        if (verifiedUser) {
-          userPosition = verifiedUser.position[0];
+        // Admin-created directory records are placeholders until their first login.
+        user = email ? await User.findOne({ email }) : null;
+        if (user) {
+          user.googleId = profile.id;
+          user.name = profile.displayName || user.name;
+          user.email = email;
+          user.photoUrl = photoUrl || user.photoUrl;
+          await user.save();
         } else {
-          userPosition = " ";
+          user = await User.create({
+            googleId: profile.id,
+            name: profile.displayName || email || 'Airost member',
+            email,
+            photoUrl,
+          });
         }
-
-        const newUser = new User({
-          googleID: profile.id,
-          name: profile.displayName,
-          email: profile.emails[0].value,
-          photo: profile.photos[0].value,
-          position: userPosition,
-          description: "no description added yet...",
-        });
-        user = await User.create(newUser);
         cb(null, user);
       }
     } catch (err) {
