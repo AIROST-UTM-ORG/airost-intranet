@@ -25,7 +25,7 @@ const Profile = ({ isCurrentUser = false }) => {
       ? navigationMember
       : users.find((user) => user.email === routeEmail);
   const positions = getPositions(member?.positions);
-  const project = member?.featuredProjectId;
+  const projects = member?.featuredProjectIds || [];
   const locationText = [
     member?.origin?.state,
     member?.origin?.country,
@@ -85,9 +85,9 @@ const Profile = ({ isCurrentUser = false }) => {
         location={locationText}
         onEdit={isCurrentUser ? () => navigate('/profile/edit') : undefined}
       />
-      <div className={`profile-content${project ? '' : ' profile-content-no-project'}`}>
+      <div className={`profile-content${projects.length ? '' : ' profile-content-no-project'}`}>
         <ProfileDetails memberName={member.name} details={details} />
-        <FeaturedProject project={project} />
+        <FeaturedProject projects={projects} />
       </div>
     </main>
   );

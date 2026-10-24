@@ -99,8 +99,12 @@
     @apply w-full;
   }
 
+  .profile-project-list {
+    @apply mt-4 grid gap-3;
+  }
+
   .profile-project {
-    @apply mt-4 rounded-[9px] border border-[#e2ecee] bg-[#f4f8f8] p-[17px];
+    @apply rounded-[9px] border border-[#e2ecee] bg-[#f4f8f8] p-[17px];
   }
 
   .profile-project h3 {
@@ -131,7 +135,7 @@
     @apply rounded-[5px] border border-[#dce8e9] bg-white px-[9px] py-[5px] text-[10px] text-[#36586a];
   }
 
-  .profile-project .profile-project-empty {
+  .profile-project-list > .profile-project-empty {
     @apply rounded-[7px] border border-dashed border-[#d2e0e3] p-3 text-[11px] text-[#657888];
     background: rgba(255, 255, 255, 0.58);
   }
@@ -253,6 +257,18 @@
 
   .profile-project-fields legend {
     @apply pr-2 text-sm font-bold;
+  }
+
+  .profile-edit-project-options {
+    @apply mt-2 grid max-h-52 gap-2 overflow-y-auto rounded-lg border border-[#e2e9f2] bg-white p-3;
+  }
+
+  .profile-edit-project-options label {
+    @apply flex cursor-pointer items-center gap-2 text-sm text-[#344765];
+  }
+
+  .profile-edit-project-options input[type="checkbox"] {
+    @apply h-4 w-4 accent-[#1769ca];
   }
 
   .profile-save-button,
