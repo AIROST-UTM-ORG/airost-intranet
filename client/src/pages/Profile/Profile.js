@@ -1,15 +1,15 @@
 import React from 'react';
 import { FiArrowLeft } from 'react-icons/fi';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import useFetchUsers from '../../../hooks/useFetchUsers';
+import useFetchUsers from '../../hooks/useFetchUsers';
 import FeaturedProject from './components/FeaturedProject';
 import ProfileDetails from './components/ProfileDetails';
 import ProfileHero from './components/ProfileHero';
-import ProfileSearch from '../components/ProfileSearch';
-import useAuth from '../../../hooks/useAuth';
-import { getPositions } from '../utils/memberUtils';
+import ProfileSearch from '../MemberDirectory/components/ProfileSearch';
+import useAuth from '../../hooks/useAuth';
+import { getPositions } from '../MemberDirectory/utils/memberUtils';
 import './styles/profile.css';
-import '../styles/shared.css';
+import '../MemberDirectory/styles/shared.css';
 
 const Profile = ({ isCurrentUser = false }) => {
   const { email } = useParams();

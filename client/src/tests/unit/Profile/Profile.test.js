@@ -4,11 +4,11 @@ import userEvent from '@testing-library/user-event';
 import axios from 'axios';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import Profile from '../../../pages/MemberDirectory/Profile/Profile';
-import EditProfile from '../../../pages/MemberDirectory/Profile/EditProfile';
+import Profile from '../../../pages/Profile/Profile';
+import EditProfile from '../../../pages/Profile/EditProfile';
 import useAuth from '../../../hooks/useAuth';
 import useFetchUsers from '../../../hooks/useFetchUsers';
-import { makeSquarePhoto } from '../../../helper/photo';
+import { makeSquarePhoto } from '../../../pages/Profile/utils/photo';
 
 jest.mock('axios', () => ({ patch: jest.fn() }));
 jest.mock('@tanstack/react-query', () => ({
@@ -17,7 +17,7 @@ jest.mock('@tanstack/react-query', () => ({
 }));
 jest.mock('../../../hooks/useAuth', () => jest.fn());
 jest.mock('../../../hooks/useFetchUsers', () => jest.fn());
-jest.mock('../../../helper/photo', () => ({
+jest.mock('../../../pages/Profile/utils/photo', () => ({
   makeSquarePhoto: jest.fn(),
 }));
 

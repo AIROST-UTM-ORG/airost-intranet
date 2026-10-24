@@ -1,8 +1,8 @@
 import React from 'react';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import ProfileDetails from '../../../pages/MemberDirectory/Profile/components/ProfileDetails';
-import ProfileHero from '../../../pages/MemberDirectory/Profile/components/ProfileHero';
+import ProfileDetails from '../../../pages/Profile/components/ProfileDetails';
+import ProfileHero from '../../../pages/Profile/components/ProfileHero';
 import ProfileSearch from '../../../pages/MemberDirectory/components/ProfileSearch';
 import MemberCard from '../../../pages/MemberDirectory/components/MemberCard';
 
