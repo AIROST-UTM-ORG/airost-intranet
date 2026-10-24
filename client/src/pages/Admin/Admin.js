@@ -1,23 +1,36 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios'
-import './Admin.css'
-import { FaCheck, FaXmark } from "react-icons/fa6";const Admin = () => {
+import axios from 'axios';
+import './Admin.css';
+import { FaCheck } from "react-icons/fa6";
+import useAuth from "../../hooks/useAuth";
+import AdminDocumentationPanel from "./AdminDocumentationPanel";
+
+const Admin = () => {
+    const { user: currentUser } = useAuth();
+    const [activeTab, setActiveTab] = useState("users");
+    const isAdmin = Boolean(
+        currentUser &&
+        currentUser.position &&
+        (Array.isArray(currentUser.position)
+            ? currentUser.position.some((p) => typeof p === "string" && p.toLowerCase().includes("admin"))
+            : typeof currentUser.position === "string" && currentUser.position.toLowerCase().includes("admin"))
+    );
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [position, setPosition] = useState("");
     const [showModal, setShowModal] = useState(false);
-    const [users, setUsers]  = useState([])
+    const [users, setUsers]  = useState([]);
     const [createSuccess, setCreateSuccess] = useState(false);
 
     useEffect(() => {
         getUsers();
-    }, [])
+    }, []);
 
     const getUsers = async () => {
         axios.get(`${process.env.REACT_APP_API_URL}/admin/users`)
         .then(users => setUsers(users.data))
-        .catch(err => console.log(err))
-    }
+        .catch(err => console.log(err));
+    };
 
     const approveUser = async (user) => {
         try {
@@ -34,7 +47,7 @@ import { FaCheck, FaXmark } from "react-icons/fa6";const Admin = () => {
         } catch (error) {
             console.error("Error approving user:", error);
         }
-    }
+    };
     
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -43,21 +56,53 @@ import { FaCheck, FaXmark } from "react-icons/fa6";const Admin = () => {
             name : name,
             email : email,
             position : position,
-        })
+        });
         
-        if (response.data.createStatus == "success"){
+        if (response.data.createStatus === "success"){
             setCreateSuccess(true);
             setName("");
             setEmail("");
             setPosition("");
         }
-    }
+    };
     
     const handleCloseModal = () => setShowModal(false);
     const handleShowModal = () => setShowModal(true);
 
     return (
     <div className='admin-page container'>
+        {isAdmin && (
+            <div className="flex border-b border-gray-200 px-5 pt-4 gap-4" data-testid="admin-tabs">
+                <button
+                    type="button"
+                    className={`pb-2 px-3 text-sm font-medium border-b-2 transition-colors ${
+                        activeTab === "users"
+                            ? "border-primary text-primary font-bold"
+                            : "border-transparent text-gray-500 hover:text-gray-700"
+                    }`}
+                    onClick={() => setActiveTab("users")}
+                    data-testid="admin-tab-users"
+                >
+                    Users
+                </button>
+                <button
+                    type="button"
+                    className={`pb-2 px-3 text-sm font-medium border-b-2 transition-colors ${
+                        activeTab === "documentation"
+                            ? "border-primary text-primary font-bold"
+                            : "border-transparent text-gray-500 hover:text-gray-700"
+                    }`}
+                    onClick={() => setActiveTab("documentation")}
+                    data-testid="admin-tab-documentation"
+                >
+                    Documentation
+                </button>
+            </div>
+        )}
+
+        {activeTab === "documentation" && isAdmin ? (
+            <AdminDocumentationPanel />
+        ) : (
         <div className="col">
             <div className="flex flex-row justify-between items-center mt-3 p-5">
                 <h1 className='font-bold text-3xl'>Users</h1>
@@ -129,9 +174,9 @@ import { FaCheck, FaXmark } from "react-icons/fa6";const Admin = () => {
                     </table>
                 </div>
         </div>
+        )}
     </div>
-        
      );
-}
+};
  
 export default Admin;

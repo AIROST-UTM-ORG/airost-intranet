@@ -1,5 +1,6 @@
 import { projectsData } from '../../data/project-data';
 import { useParams } from "react-router-dom";
+import ProjectDocumentationLink from '../Documentation/components/ProjectDocumentationLink';
 import './ProjectDetail.css';
 
 const ProjectDetails = () => {
@@ -17,7 +18,7 @@ const ProjectDetails = () => {
                 <p>{ project.summary }</p>
                 <h1>Resources</h1>
                 <p>
-                Project handbook: https://docs.google.com/presentation/d/1WfgjvnfRSWaVgm8x5XaVtvL-xEgQaSZOiLbw7OlUGM4/ edit#slide=id.p
+                Project handbook: <ProjectDocumentationLink projectId={project?._id || project?.id || id} project={project} />
                 <br />
                 Documentation: Google Docs or Notion 
                 <br />
