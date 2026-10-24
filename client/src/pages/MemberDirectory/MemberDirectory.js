@@ -18,7 +18,7 @@ const MemberDirectory = () => {
   const [sortBy, setSortBy] = useState('name-asc');
 
   const roles = useMemo(() => Array.from(new Set(
-    users.flatMap((user) => getPositions(user.position)),
+    users.flatMap((user) => getPositions(user.positions)),
   )).sort((left, right) => left.localeCompare(right)), [users]);
 
   const years = useMemo(() => Array.from(new Set(
@@ -28,7 +28,7 @@ const MemberDirectory = () => {
   const members = useMemo(() => {
     const query = search.trim().toLowerCase();
     const filteredUsers = users.filter((user) => {
-      const positions = getPositions(user.position);
+      const positions = getPositions(user.positions);
       const searchable = [user.name, user.email, user.course, user.year, ...positions]
         .filter(Boolean)
         .join(' ')
@@ -42,8 +42,8 @@ const MemberDirectory = () => {
     return filteredUsers.sort((left, right) => {
       if (sortBy === 'name-desc') return (right.name || '').localeCompare(left.name || '');
       if (sortBy === 'role') {
-        const leftRole = getPositions(left.position)[0] || '';
-        const rightRole = getPositions(right.position)[0] || '';
+        const leftRole = getPositions(left.positions)[0] || '';
+        const rightRole = getPositions(right.positions)[0] || '';
         return leftRole.localeCompare(rightRole);
       }
       return (left.name || '').localeCompare(right.name || '');
@@ -87,7 +87,7 @@ const MemberDirectory = () => {
       ) : members.length ? (
         <section className="member-grid" aria-label="Member search results">
           {members.map((member) => {
-            const positions = getPositions(member.position);
+            const positions = getPositions(member.positions);
             return (
               <MemberCard
                 key={member.email || member.name}

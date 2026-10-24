@@ -5,8 +5,8 @@ const ProjectList = ({ projects, onDeleteProject }) => {
   const { user } = useAuth();
   const isAdmin =
     user &&
-    user.position &&
-    (Array.isArray(user.position) ? user.position.includes("admin") : user.position === "admin");
+    user.positions &&
+    (Array.isArray(user.positions) ? user.positions.includes("admin") : user.positions === "admin");
 
   const handleDelete = (e, projectId) => {
     e.preventDefault();

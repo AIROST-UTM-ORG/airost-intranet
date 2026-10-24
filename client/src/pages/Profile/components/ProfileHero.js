@@ -24,26 +24,26 @@ const ProfileHero = ({ member, location, onEdit }) => (
       </div>
     </div>
     <div className="profile-hero-body">
-      {member.photo ? (
-        <img className="profile-photo" src={member.photo} alt={`${member.name || 'Member'} profile`} />
+      {member.photoUrl ? (
+        <img className="profile-photo" src={member.photoUrl} alt={`${member.name || 'Member'} profile`} />
       ) : (
         <CgProfile className='profile-photo'/>
       )}
       <div className="profile-intro">
         <p>{member.description || `${member.name || 'This member'} is part of the Airost club.`}</p>
         <div className="profile-social-links">
-          {member.instagram && (
-            <a href={getSocialUrl(member.instagram, 'instagram')} target="_blank" rel="noreferrer">
+          {member.instagramUrl && (
+            <a href={getSocialUrl(member.instagramUrl, 'instagram')} target="_blank" rel="noreferrer">
               <FiInstagram aria-hidden="true" /> Instagram
             </a>
           )}
-          {member.github && (
-            <a href={getSocialUrl(member.github, 'github')} target="_blank" rel="noreferrer">
+          {member.githubUrl && (
+            <a href={getSocialUrl(member.githubUrl, 'github')} target="_blank" rel="noreferrer">
               <FiGithub aria-hidden="true" /> GitHub
             </a>
           )}
-          {member.linkedin && (
-            <a href={getSocialUrl(member.linkedin, 'linkedin')} target="_blank" rel="noreferrer">
+          {member.linkedinUrl && (
+            <a href={getSocialUrl(member.linkedinUrl, 'linkedin')} target="_blank" rel="noreferrer">
               <FiLinkedin aria-hidden="true" /> LinkedIn
             </a>
           )}

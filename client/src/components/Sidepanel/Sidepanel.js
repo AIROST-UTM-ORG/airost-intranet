@@ -17,8 +17,8 @@ function Sidepanel() {
   };
 
   const isAdmin =
-    user?.position &&
-    (Array.isArray(user.position) ? user.position.includes("admin") : user.position === "admin");
+    user?.positions &&
+    (Array.isArray(user.positions) ? user.positions.includes("admin") : user.positions === "admin");
 
   return (
     <>
@@ -56,8 +56,8 @@ function Sidepanel() {
             </li>
             <li className="side-profile">
               <NavLink to="/profile" className={({ isActive }) => (isActive ? "active" : "")}>
-                {user?.photo ? (
-                  <img src={user.photo} alt="" referrerPolicy="no-referrer" />
+                {user?.photoUrl ? (
+                  <img src={user.photoUrl} alt="" referrerPolicy="no-referrer" />
                 ) : (
                   <span className="side-profile-placeholder"><FiUser aria-hidden="true" /></span>
                 )}

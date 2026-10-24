@@ -4,8 +4,8 @@ import { CgProfile } from "react-icons/cg";
 const MemberCard = ({ member, positions, onViewProfile }) => (
   <article className="member-card">
     <div className="member-card-heading">
-      {member.photo ? (
-        <img className="member-avatar" src={member.photo} alt="" />
+      {member.photoUrl ? (
+        <img className="member-avatar" src={member.photoUrl} alt="" />
       ) : (
         <CgProfile className='member-avatar'/>
 
