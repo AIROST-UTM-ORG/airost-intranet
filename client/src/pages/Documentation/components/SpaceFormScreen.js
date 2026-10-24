@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
+import { FiChevronDown } from "react-icons/fi";
 import InfoBanner from "./InfoBanner";
-import MemberPicker from "./MemberPicker";
+import SpaceFormHeader from "./SpaceFormHeader";
+import SpaceAccessSection from "./SpaceAccessSection";
 
 /**
  * SpaceFormScreen - Covers Screens 5, 6, and 7
@@ -105,28 +107,14 @@ const SpaceFormScreen = ({
     onSubmit(payload);
   };
 
-  // Determine Subtitle according to Screen 5, 6, 7
-  let subtitleText = "";
-  if (isEditing) {
-    subtitleText = `${initialSpace.title || "Space"} · Manager access`;
-  } else if (hasProject) {
-    subtitleText = "Organize external document links and choose who can access and update them.";
-  } else {
-    subtitleText =
-      "A standalone space brings shared knowledge together without linking to a project.";
-  }
-
   return (
     <div className="w-full max-w-[959px] mx-auto pb-12 font-varela" data-testid="space-form-screen">
       {/* Page Header */}
-      <div className="mb-[24px]">
-        <h1 className="doc-page-title" data-testid="space-form-title">
-          {isEditing ? "Edit Documentation Space" : "Create Documentation Space"}
-        </h1>
-        <p className="font-varela text-[14px] text-[#686868] mt-[12px]" data-testid="space-form-subtitle">
-          {subtitleText}
-        </p>
-      </div>
+      <SpaceFormHeader
+        isEditing={isEditing}
+        hasProject={hasProject}
+        initialTitle={initialSpace?.title}
+      />
 
       {/* Main Form Card */}
       <form
@@ -187,17 +175,7 @@ const SpaceFormScreen = ({
                 ))}
               </select>
               <div className="absolute right-[14px] top-[16px] pointer-events-none text-[#686868]">
-                <svg
-                  className="w-[14px] h-[14px]"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <polyline points="6 9 12 15 18 9" />
-                </svg>
+                <FiChevronDown className="w-[14px] h-[14px]" strokeWidth={2} />
               </div>
             </div>
           </div>
@@ -228,147 +206,20 @@ const SpaceFormScreen = ({
         </div>
 
         {/* Row 3: 2-Column Permissions Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-[48px] mb-[24px]">
-          {/* Left Column: Access */}
-          <div className="flex flex-col">
-            <h3 className="font-varela text-[18px] text-[#171717] font-normal mb-[6px]">Access</h3>
-            <p className="font-varela text-[13px] text-[#686868] mb-[16px]">
-              Who can view and open document links?
-            </p>
-
-            <div className="flex flex-col gap-[14px]">
-              {/* Option: All */}
-              <label className="flex items-center gap-[10px] cursor-pointer select-none">
-                <input
-                  type="radio"
-                  name="accessType"
-                  value="all"
-                  checked={accessType === "all"}
-                  onChange={() => setAccessType("all")}
-                  className="doc-radio"
-                  data-testid="access-radio-all"
-                />
-                <span className="font-varela text-[14px] text-[#171717]">All</span>
-              </label>
-
-              {/* Option: Project members (ONLY shown if project linked per Screen 5 vs Screen 6) */}
-              {hasProject && (
-                <label className="flex items-center gap-[10px] cursor-pointer select-none">
-                  <input
-                    type="radio"
-                    name="accessType"
-                    value="project_members"
-                    checked={accessType === "project_members"}
-                    onChange={() => setAccessType("project_members")}
-                    className="doc-radio"
-                    data-testid="access-radio-project-members"
-                  />
-                  <span className="font-varela text-[14px] text-[#171717]">Project members</span>
-                </label>
-              )}
-
-              {/* Option: Selected members */}
-              <label className="flex items-center gap-[10px] cursor-pointer select-none">
-                <input
-                  type="radio"
-                  name="accessType"
-                  value="selected"
-                  checked={accessType === "selected"}
-                  onChange={() => setAccessType("selected")}
-                  className="doc-radio"
-                  data-testid="access-radio-selected"
-                />
-                <span className="font-varela text-[14px] text-[#171717]">Selected members</span>
-              </label>
-
-              {/* Member Picker when accessType === "selected" */}
-              {accessType === "selected" && (
-                <div className="mt-[4px] pl-[26px]">
-                  <MemberPicker
-                    members={members}
-                    selectedIds={accessMembers}
-                    onChange={(ids) => {
-                      setAccessMembers(ids);
-                      if (errors.accessMembers) setErrors({ ...errors, accessMembers: null });
-                    }}
-                    error={errors.accessMembers}
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Right Column: Update permissions */}
-          <div className="flex flex-col">
-            <h3 className="font-varela text-[18px] text-[#171717] font-normal mb-[6px]">
-              Update permissions
-            </h3>
-            <p className="font-varela text-[13px] text-[#686868] mb-[16px]">
-              Who can add, edit and archive document links?
-            </p>
-
-            <div className="flex flex-col gap-[14px]">
-              {/* Option: All */}
-              <label className="flex items-center gap-[10px] cursor-pointer select-none">
-                <input
-                  type="radio"
-                  name="updateType"
-                  value="all"
-                  checked={updateType === "all"}
-                  onChange={() => setUpdateType("all")}
-                  className="doc-radio"
-                  data-testid="update-radio-all"
-                />
-                <span className="font-varela text-[14px] text-[#171717]">All</span>
-              </label>
-
-              {/* Option: Project members (ONLY shown if project linked per Screen 5 vs Screen 6) */}
-              {hasProject && (
-                <label className="flex items-center gap-[10px] cursor-pointer select-none">
-                  <input
-                    type="radio"
-                    name="updateType"
-                    value="project_members"
-                    checked={updateType === "project_members"}
-                    onChange={() => setUpdateType("project_members")}
-                    className="doc-radio"
-                    data-testid="update-radio-project-members"
-                  />
-                  <span className="font-varela text-[14px] text-[#171717]">Project members</span>
-                </label>
-              )}
-
-              {/* Option: Selected members */}
-              <label className="flex items-center gap-[10px] cursor-pointer select-none">
-                <input
-                  type="radio"
-                  name="updateType"
-                  value="selected"
-                  checked={updateType === "selected"}
-                  onChange={() => setUpdateType("selected")}
-                  className="doc-radio"
-                  data-testid="update-radio-selected"
-                />
-                <span className="font-varela text-[14px] text-[#171717]">Selected members</span>
-              </label>
-
-              {/* Member Picker when updateType === "selected" */}
-              {updateType === "selected" && (
-                <div className="mt-[4px] pl-[26px]">
-                  <MemberPicker
-                    members={members}
-                    selectedIds={updateMembers}
-                    onChange={(ids) => {
-                      setUpdateMembers(ids);
-                      if (errors.updateMembers) setErrors({ ...errors, updateMembers: null });
-                    }}
-                    error={errors.updateMembers}
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <SpaceAccessSection
+          hasProject={hasProject}
+          accessType={accessType}
+          setAccessType={setAccessType}
+          updateType={updateType}
+          setUpdateType={setUpdateType}
+          accessMembers={accessMembers}
+          setAccessMembers={setAccessMembers}
+          updateMembers={updateMembers}
+          setUpdateMembers={setUpdateMembers}
+          members={members}
+          errors={errors}
+          setErrors={setErrors}
+        />
 
         {/* Row 4: Shared Info Banner */}
         <InfoBanner className="mb-[24px]" />
