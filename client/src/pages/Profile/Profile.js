@@ -24,12 +24,12 @@ const Profile = ({ isCurrentUser = false }) => {
     : navigationMember?.email === routeEmail
       ? navigationMember
       : users.find((user) => user.email === routeEmail);
-  const positions = getPositions(member?.profileTitle || member?.position);
-  const project = member?.featuredProject;
+  const positions = getPositions(member?.positions);
+  const project = member?.featuredProjectId;
   const locationText = [
-    member?.state,
-    member?.country,
-  ].filter(Boolean).join(', ') || member?.location || member?.origin || '';
+    member?.origin?.state,
+    member?.origin?.country,
+  ].filter(Boolean).join(', ') || '';
 
   if ((isCurrentUser && !user) || (isLoading && !member)) {
     return <main className="profile-page"><div className="profile-state" role="status">Loading profile...</div></main>;
@@ -55,9 +55,8 @@ const Profile = ({ isCurrentUser = false }) => {
     ['Course', member.course],
     ['Location', locationText],
     ['Email', member.email],
-    ['LinkedIn', member.linkedin],
-    ['GitHub', member.github],
-    ['Phone', member.phonenum],
+    ['LinkedIn', member.linkedinUrl],
+    ['GitHub', member.githubUrl],
   ].filter(([, value]) => value);
 
   return (

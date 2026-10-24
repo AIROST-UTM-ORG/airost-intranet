@@ -104,10 +104,10 @@ import { FaCheck, FaXmark } from "react-icons/fa6";const Admin = () => {
                                 users.map(
                                     (user,index) => {
                                         return <tr key={index}>
-                                            <td><img src={user.photo} alt="Profile"/></td>
+                                            <td><img src={user.photoUrl} alt="Profile"/></td>
                                             <td>{user.name}</td>
                                             <td>{user.email}</td>
-                                            <td>{user.position}</td>
+                                            <td>{user.positions?.join(', ')}</td>
                                             <td className="text-center">
                                                 <div className="flex items-center justify-center h-full w-full">
                                                     {user.verified 

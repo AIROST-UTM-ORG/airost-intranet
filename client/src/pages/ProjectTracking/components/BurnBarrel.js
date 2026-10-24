@@ -27,7 +27,7 @@ const BurnBarrel = ({ setCards, cards, projectId, user }) => {
         console.log("selectedCard: ",selectedCard)
         console.log("user: ",user)
         const userIsCreator = selectedCard?.createdBy !== user?.email; 
-        if(userIsCreator && !user.position?.includes("admin")){
+        if(userIsCreator && !user.positions?.includes("admin")){
             errorDeleteNotification();
             setActive(false);
             return;
