@@ -18,7 +18,7 @@ const userSchema = new mongoose.Schema({
   linkedinUrl: { type: String, default: '' },
   githubUrl: { type: String, default: '' },
   instagramUrl: { type: String, default: '' },
-  featuredProjectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', default: null },
+  featuredProjectIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Project' }],
   isActive: { type: Boolean, default: true },
 }, { timestamps: true });
 
