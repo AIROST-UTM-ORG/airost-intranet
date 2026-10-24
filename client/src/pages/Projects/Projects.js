@@ -39,11 +39,11 @@ function Projects() {
       title: project.title,
       description: project.description ? project.description : "",
       lead: project.lead,
-    })
+    }, { withCredentials: true })
   }
 
   const deleteProject = async (projectId) => {
-    return axios.delete(`${API_URL}/projects/${projectId}`)
+    return axios.delete(`${API_URL}/projects/${projectId}`, { withCredentials: true })
   }
 
   const createProjectMutation = useMutation({

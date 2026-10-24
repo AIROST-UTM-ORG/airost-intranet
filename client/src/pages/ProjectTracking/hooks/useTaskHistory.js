@@ -12,6 +12,7 @@ const useTaskHistory = (taskId) => {
             const response = await axios.get(
                 `${API_URL}/projects/tasks/${taskId}/history`,
                 {
+                    withCredentials: true,
                     headers: {
                         'Content-Type': 'application/json',
                     }
@@ -22,7 +23,9 @@ const useTaskHistory = (taskId) => {
             console.error('Error fetching task history:', error.response?.data || error.message);
             throw error;
         }
-    };    return useQuery({
+    };
+
+    return useQuery({
         queryKey: ['taskHistory', taskId],
         queryFn: fetchTaskHistory,
         enabled: !!taskId, // Only run query if taskId exists

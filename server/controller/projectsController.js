@@ -79,7 +79,7 @@ const createProject = async (req, res) => {
         }
 
         // Determine next projectId
-        const lastProject = await Project.findOne({}, {}, { sort: { createdAt: -1 } });
+        const lastProject = await Project.findOne({}, {}, { sort: { projectId: -1 } });
         const nextProjectId = lastProject && typeof lastProject.projectId === 'number' ? lastProject.projectId + 1 : 1;
 
         const creator = req.user ? (req.user.email || req.user.name) : lead.trim();
@@ -97,11 +97,12 @@ const createProject = async (req, res) => {
         };
 
         const savedProject = await Project.create(newProjectData);
-        // Create associated ProjectBoard
-        await ProjectBoard.create({
-            projectId: nextProjectId,
-            tasks: [],
-        });
+
+        await ProjectBoard.findOneAndUpdate(
+            { projectId: nextProjectId },
+            { $setOnInsert: { projectId: nextProjectId, tasks: [] } },
+            { upsert: true, new: true }
+        );
 
         console.log(`Created project #${nextProjectId}: "${savedProject.title}" by ${creator}`);
         return res.status(201).json(savedProject);
@@ -222,11 +223,14 @@ const deleteProject = async (req, res) => {
 
 const getProjectBoard = async (req, res) => {
     const projectId = req.params.uid;
-    if (!isNaN(projectId)){
-        try{
-            let projectBoard = await ProjectBoard.findOne({"projectId": Number(projectId)});
+    if (!isNaN(projectId)) {
+        try {
+            let projectBoard = await ProjectBoard.findOne({ "projectId": Number(projectId) });
+            if (!projectBoard) {
+                return res.status(200).json({ projectId: Number(projectId), tasks: [] });
+            }
             return res.status(200).json(projectBoard);
-        } catch(error){
+        } catch (error) {
             console.error(error.message);
             return res.status(500).json({ error: error.message });
         }
@@ -236,9 +240,9 @@ const getProjectBoard = async (req, res) => {
 };
 
 const createProjectBoard = async (req, res) => {
-    try{
+    try {
         const existingBoard = await ProjectBoard.findOne({ projectId: req.body.projectId });
-        if(!existingBoard){
+        if (!existingBoard) {
             const newProjectBoard = await ProjectBoard.create(req.body);
             if (req.body.tasks && req.body.tasks.length > 0) {
                 for (const task of req.body.tasks) {
@@ -250,7 +254,7 @@ const createProjectBoard = async (req, res) => {
             const oldTasks = existingBoard.tasks || [];
             existingBoard.tasks = req.body.tasks;
             await existingBoard.save();
-            
+
             if (req.body.tasks && req.body.tasks.length > 0) {
                 for (const newTask of req.body.tasks) {
                     const existingTask = oldTasks.find(t => t.task_id === newTask.task_id);
@@ -261,35 +265,35 @@ const createProjectBoard = async (req, res) => {
             }
             return res.status(200).json(existingBoard);
         }
-    } catch(error){
+    } catch (error) {
         console.error("Error creating/updating project board: ", error.message);
         return res.status(400).json({ error: error.message });
     }
 };
 
 const refreshProjectBoard = async (req, res) => {
-    try{
+    try {
         const updatedProjectBoard = await ProjectBoard.findOneAndUpdate(
             { projectId: req.body.projectId },
             { $set: { tasks: req.body.tasks } },
             { new: true }
         );
         return res.status(200).json(updatedProjectBoard);
-    } catch(error) {
+    } catch (error) {
         console.error(error.message);
         return res.status(500).json({ error: error.message });
     }
 };
 
 const updateProjectBoard = async (req, res) => {
-    try{
+    try {
         const currentBoard = await ProjectBoard.findOne({
             projectId: req.body.projectId,
             "tasks.task_id": req.body.tasks.task_id,
         });
-        
+
         const oldTask = currentBoard ? currentBoard.tasks.find(t => t.task_id === req.body.tasks.task_id) : null;
-        
+
         const updatedProjectBoard = await ProjectBoard.findOneAndUpdate(
             {
                 projectId: req.body.projectId,
@@ -305,9 +309,9 @@ const updateProjectBoard = async (req, res) => {
             const changedBy = req.body.changedBy || req.body.tasks.assignee || 'system';
             await trackTaskChanges(oldTask, req.body.tasks, req.body.projectId, changedBy);
         }
-        
+
         return res.status(200).json(updatedProjectBoard);
-    } catch(error){
+    } catch (error) {
         console.error(error.message);
         return res.status(500).json({ message: 'Error updating project board', error: error.message });
     }
