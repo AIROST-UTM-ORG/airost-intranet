@@ -1,6 +1,7 @@
 import React from "react";
+import { FiFileText, FiRotateCcw } from "react-icons/fi";
 import InfoBanner from "./InfoBanner";
-import { getProviderDisplayName, AREA_LABELS } from "../documentationApi";
+import { getProviderDisplayName, AREA_LABELS } from "../api";
 
 /**
  * ArchivedDocumentsScreen - Covers Screen 14
@@ -99,21 +100,7 @@ const ArchivedDocumentsScreen = ({
                     <div className="flex items-center gap-[16px] flex-1 pr-[16px]">
                       {/* Leading 44x44 Icon Box */}
                       <div className="w-[44px] h-[44px] bg-[#F5F5F5] rounded-[8px] flex items-center justify-center flex-shrink-0">
-                        <svg
-                          className="w-[20px] h-[20px] text-[#686868]"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                          <polyline points="14 2 14 8 20 8" />
-                          <line x1="16" y1="13" x2="8" y2="13" />
-                          <line x1="16" y1="17" x2="8" y2="17" />
-                          <polyline points="10 9 9 9 8 9" />
-                        </svg>
+                        <FiFileText className="w-[20px] h-[20px] text-[#686868]" strokeWidth={2} />
                       </div>
 
                       {/* Text Stack */}
@@ -135,20 +122,7 @@ const ArchivedDocumentsScreen = ({
                       className="doc-btn-secondary w-[100px] h-[38px] text-[14px] gap-[8px]"
                       data-testid={`restore-doc-btn-${doc._id}`}
                     >
-                      <svg
-                        className="w-[15px] h-[15px] text-[#171717]"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <polyline points="21 8 21 21 3 21 3 8" />
-                        <rect x="1" y="3" width="22" height="5" />
-                        <line x1="12" y1="17" x2="12" y2="11" />
-                        <polyline points="9 14 12 11 15 14" />
-                      </svg>
+                      <FiRotateCcw className="w-[15px] h-[15px] text-[#171717]" strokeWidth={2} />
                       <span>{isRestoring ? "Restoring..." : "Restore"}</span>
                     </button>
                   </div>

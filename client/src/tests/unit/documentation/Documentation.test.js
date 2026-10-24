@@ -2,12 +2,12 @@ import React from "react";
 import "@testing-library/jest-dom";
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import Documentation from "../Documentation";
+import Documentation from "../../../pages/Documentation/Documentation";
 import {
   resetMockData,
   setMockScenario,
   MockScenarios,
-} from "../documentationApi";
+} from "../../../pages/Documentation/documentationApi";
 
 jest.mock("axios", () => {
   const mockAxiosInstance = {

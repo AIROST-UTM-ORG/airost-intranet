@@ -1,198 +1,71 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
 import SpaceListScreen from "./components/SpaceListScreen";
 import SpaceFormScreen from "./components/SpaceFormScreen";
 import SpaceDetailScreen from "./components/SpaceDetailScreen";
 import DocumentFormScreen from "./components/DocumentFormScreen";
 import ArchivedDocumentsScreen from "./components/ArchivedDocumentsScreen";
 import {
-  listSpaces,
+  ViewModes,
+  parseDocPath,
+  useDocumentationRouter,
+} from "./hooks/useDocumentationRouter";
+import { useSpaceList } from "./hooks/useSpaceList";
+import { useSpaceDetail } from "./hooks/useSpaceDetail";
+import {
   getSpace,
   createSpace,
   updateSpace,
-  listDocuments,
   createDocument,
   updateDocument,
-  archiveDocument,
-  restoreDocument,
-  listProjects,
-  listMembers,
-} from "./documentationApi";
+} from "./api";
 import "./Documentation.css";
 
-export const ViewModes = {
-  SPACES_LIST: "SPACES_LIST",
-  CREATE_SPACE: "CREATE_SPACE",
-  EDIT_SPACE: "EDIT_SPACE",
-  SPACE_DETAIL: "SPACE_DETAIL",
-  ADD_DOCUMENT: "ADD_DOCUMENT",
-  EDIT_DOCUMENT: "EDIT_DOCUMENT",
-  ARCHIVED_DOCUMENTS: "ARCHIVED_DOCUMENTS",
-};
-
-/**
- * Parses client pathnames according to docs/api/documentation.md Section 8.1
- */
-export const parseDocPath = (pathname) => {
-  if (!pathname) return null;
-  if (pathname === "/doc/spaces/new" || pathname === "/doc/spaces/new/") {
-    return { mode: ViewModes.CREATE_SPACE, spaceId: null };
-  }
-  const editMatch = pathname.match(/^\/doc\/spaces\/([^/]+)\/edit\/?$/);
-  if (editMatch) {
-    return { mode: ViewModes.EDIT_SPACE, spaceId: editMatch[1] };
-  }
-  const addDocMatch = pathname.match(/^\/doc\/spaces\/([^/]+)\/documents\/new\/?$/);
-  if (addDocMatch) {
-    return { mode: ViewModes.ADD_DOCUMENT, spaceId: addDocMatch[1] };
-  }
-  const archivedMatch = pathname.match(/^\/doc\/spaces\/([^/]+)\/archived\/?$/);
-  if (archivedMatch) {
-    return { mode: ViewModes.ARCHIVED_DOCUMENTS, spaceId: archivedMatch[1] };
-  }
-  const detailMatch = pathname.match(/^\/doc\/spaces\/([^/]+)\/?$/);
-  if (detailMatch && detailMatch[1] !== "new") {
-    return { mode: ViewModes.SPACE_DETAIL, spaceId: detailMatch[1] };
-  }
-  if (pathname === "/doc" || pathname === "/doc/") {
-    return { mode: ViewModes.SPACES_LIST, spaceId: null };
-  }
-  return null;
-};
+export { ViewModes, parseDocPath };
 
 const Documentation = ({ initialView = ViewModes.SPACES_LIST, initialSpaceId = null }) => {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const lastPathRef = useRef(null);
+  const { pathname, navigateSafe, lastPathRef } = useDocumentationRouter();
+
+  const {
+    spaces,
+    projects,
+    members,
+    loading,
+    setLoading,
+    error,
+    setError,
+    loadInitialData,
+    loadAuxData,
+    handleAuthError,
+    extractError,
+  } = useSpaceList();
+
+  const {
+    selectedSpace,
+    setSelectedSpace,
+    documents,
+    archivedDocuments,
+    selectedDocument,
+    setSelectedDocument,
+    activeArea,
+    setActiveArea,
+    restoringId,
+    loadSpaceDetail,
+    loadArchivedDocuments,
+    handleArchiveDocument,
+    handleRestoreDocument,
+  } = useSpaceDetail({ setLoading, setError, handleAuthError });
 
   const [viewMode, setViewMode] = useState(() => {
     if (initialView && initialView !== ViewModes.SPACES_LIST) {
       return initialView;
     }
-    const parsed = parseDocPath(location?.pathname);
+    const parsed = parseDocPath(pathname);
     return parsed ? parsed.mode : ViewModes.SPACES_LIST;
   });
+
   const [editReturnMode, setEditReturnMode] = useState(ViewModes.SPACES_LIST);
-  const [spaces, setSpaces] = useState([]);
-  const [selectedSpace, setSelectedSpace] = useState(null);
-  const [documents, setDocuments] = useState([]);
-  const [archivedDocuments, setArchivedDocuments] = useState([]);
-  const [selectedDocument, setSelectedDocument] = useState(null);
-  const [activeArea, setActiveArea] = useState("development");
-
-  // Auxiliary data
-  const [projects, setProjects] = useState([]);
-  const [members, setMembers] = useState([]);
-
-  // Async status
-  const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState(null);
   const [serverError, setServerError] = useState(null);
-  const [restoringId, setRestoringId] = useState(null);
-
-  const navigateSafe = useCallback(
-    (to) => {
-      if (navigate && location?.pathname !== to) {
-        lastPathRef.current = to;
-        navigate(to);
-      }
-    },
-    [navigate, location?.pathname]
-  );
-
-  // Handlers
-  const handleAuthError = (err) => {
-    if (err.response?.status === 401 || err.response?.data?.error?.code === "UNAUTHENTICATED") {
-      window.location.href = "/login";
-      return true;
-    }
-    return false;
-  };
-
-  const extractError = (err, defaultMsg = "Operation failed") => {
-    const errData = err.response?.data?.error;
-    return {
-      message: errData?.message || err.message || defaultMsg,
-      code: errData?.code,
-      details: errData?.details || [],
-    };
-  };
-
-  // Load auxiliary data (projects & members)
-  const loadAuxData = useCallback(async () => {
-    try {
-      const [projData, memberData] = await Promise.all([listProjects(), listMembers()]);
-      setProjects(projData);
-      setMembers(memberData);
-    } catch {
-      // Ignore aux loading errors
-    }
-  }, []);
-
-  // Load spaces & aux data
-  const loadInitialData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [spaceData, projData, memberData] = await Promise.all([
-        listSpaces(),
-        listProjects(),
-        listMembers(),
-      ]);
-      setSpaces(spaceData);
-      setProjects(projData);
-      setMembers(memberData);
-      return true;
-    } catch (err) {
-      if (handleAuthError(err)) return false;
-      const msg = err.response?.data?.error?.message || err.message || "Failed to load spaces";
-      setError(msg);
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Load space details & documents
-  const loadSpaceDetail = useCallback(async (spaceId) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [spData, docData] = await Promise.all([
-        getSpace(spaceId),
-        listDocuments(spaceId, { includeArchived: false }),
-      ]);
-      setSelectedSpace(spData);
-      setDocuments(docData);
-      return true;
-    } catch (err) {
-      if (handleAuthError(err)) return false;
-      const msg = err.response?.data?.error?.message || err.message || "Failed to load space";
-      setError(msg);
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const loadArchivedDocuments = useCallback(async (spaceId) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const docs = await listDocuments(spaceId, { includeArchived: true });
-      setArchivedDocuments(docs);
-      return true;
-    } catch (err) {
-      if (handleAuthError(err)) return false;
-      const msg =
-        err.response?.data?.error?.message || err.message || "Failed to load archived documents";
-      setError(msg);
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
 
   // Sync on prop change if initialSpaceId provided
   useEffect(() => {
@@ -201,14 +74,14 @@ const Documentation = ({ initialView = ViewModes.SPACES_LIST, initialSpaceId = n
     }
   }, [initialSpaceId, loadSpaceDetail]);
 
-  // Synchronize on mount & pathname changes (handles deep-links, direct URLs, and back/forward navigation)
+  // Synchronize on mount & pathname changes
   useEffect(() => {
-    if (lastPathRef.current === location?.pathname) {
+    if (lastPathRef.current === pathname) {
       return;
     }
-    lastPathRef.current = location?.pathname;
+    lastPathRef.current = pathname;
 
-    const parsed = parseDocPath(location?.pathname);
+    const parsed = parseDocPath(pathname);
     if (!parsed) {
       loadInitialData();
       return;
@@ -228,7 +101,7 @@ const Documentation = ({ initialView = ViewModes.SPACES_LIST, initialSpaceId = n
         loadArchivedDocuments(parsed.spaceId);
       }
     }
-  }, [location?.pathname, loadInitialData, loadSpaceDetail, loadArchivedDocuments, loadAuxData]);
+  }, [pathname, lastPathRef, loadInitialData, loadSpaceDetail, loadArchivedDocuments, loadAuxData]);
 
   // Handlers
   const handleOpenSpace = async (space) => {
@@ -347,43 +220,11 @@ const Documentation = ({ initialView = ViewModes.SPACES_LIST, initialSpaceId = n
     }
   };
 
-  const handleArchiveDocument = async (doc) => {
-    if (!selectedSpace) return;
-    try {
-      await archiveDocument(doc._id);
-      await loadSpaceDetail(selectedSpace._id);
-    } catch (err) {
-      if (handleAuthError(err)) return;
-      const msg =
-        err.response?.data?.error?.message || err.message || "Failed to archive document";
-      setError(msg);
-    }
-  };
-
   const handleViewArchived = async () => {
     if (!selectedSpace) return;
     await loadArchivedDocuments(selectedSpace._id);
     setViewMode(ViewModes.ARCHIVED_DOCUMENTS);
     navigateSafe(`/doc/spaces/${selectedSpace._id}/archived`);
-  };
-
-  const handleRestoreDocument = async (doc) => {
-    if (!selectedSpace) return;
-    setRestoringId(doc._id);
-    try {
-      await restoreDocument(doc._id);
-      await Promise.all([
-        loadArchivedDocuments(selectedSpace._id),
-        getSpace(selectedSpace._id).then((sp) => setSelectedSpace(sp)),
-      ]);
-    } catch (err) {
-      if (handleAuthError(err)) return;
-      const msg =
-        err.response?.data?.error?.message || err.message || "Failed to restore document";
-      setError(msg);
-    } finally {
-      setRestoringId(null);
-    }
   };
 
   return (

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { FiChevronDown, FiSearch } from "react-icons/fi";
 
 /**
  * Member Multi-Select Component
@@ -75,19 +76,12 @@ const MemberPicker = ({ members = [], selectedIds = [], onChange, error = null }
             ))
           )}
         </div>
-        <svg
+        <FiChevronDown
           className={`w-[14px] h-[14px] text-[#686868] ml-2 flex-shrink-0 transition-transform ${
             isOpen ? "rotate-180" : ""
           }`}
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
+          strokeWidth={2}
+        />
       </div>
 
       {error && <p className="text-red-500 font-varela text-[12px] mt-1">{error}</p>}
@@ -100,18 +94,7 @@ const MemberPicker = ({ members = [], selectedIds = [], onChange, error = null }
         >
           {/* Search Row */}
           <div className="flex items-center gap-[8px] border-b border-[#F0F0F0] pb-[8px] mb-[10px]">
-            <svg
-              className="w-[14px] h-[14px] text-[#686868] flex-shrink-0"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <circle cx="11" cy="11" r="8" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
+            <FiSearch className="w-[14px] h-[14px] text-[#686868] flex-shrink-0" strokeWidth={2} />
             <input
               type="text"
               className="w-full font-varela text-[13px] text-[#171717] placeholder-[#686868] outline-none bg-transparent"
