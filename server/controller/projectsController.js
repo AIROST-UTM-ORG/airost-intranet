@@ -134,10 +134,30 @@ const updateProject = async (req, res) => {
 
         // Only lead, owner, or admin can modify team members, lead, or access
         const isLeadOrAdmin = permission.role === 'lead' || permission.role === 'admin';
-        if (!isLeadOrAdmin && (lead !== undefined || teamMembers !== undefined || access !== undefined)) {
-            return res.status(403).json({
-                error: 'Forbidden: Only project owners, leads, or administrators can change project lead, members, or access permissions.'
-            });
+        if (!isLeadOrAdmin) {
+            const normalizeList = (list) => {
+                if (!Array.isArray(list)) return [];
+                return [...new Set(list.map(item => (typeof item === 'string' ? item.trim() : '')).filter(Boolean))].sort();
+            };
+            const areListsEqual = (listA, listB) => {
+                const a = normalizeList(listA);
+                const b = normalizeList(listB);
+                if (a.length !== b.length) return false;
+                return a.every((val, idx) => val === b[idx]);
+            };
+
+            const isLeadDifferent = lead !== undefined && (
+                typeof lead !== 'string' ||
+                lead.trim() !== (project.lead || '').trim()
+            );
+            const isTeamMembersDifferent = teamMembers !== undefined && !areListsEqual(teamMembers, project.teamMembers);
+            const isAccessDifferent = access !== undefined && !areListsEqual(access, project.access);
+
+            if (isLeadDifferent || isTeamMembersDifferent || isAccessDifferent) {
+                return res.status(403).json({
+                    error: 'Forbidden: Only project owners, leads, or administrators can change project lead, members, or access permissions.'
+                });
+            }
         }
 
         // Input validation if fields are provided
@@ -155,29 +175,31 @@ const updateProject = async (req, res) => {
             project.description = description.trim();
         }
 
-        if (lead !== undefined) {
-            if (typeof lead !== 'string' || lead.trim().length === 0) {
-                return res.status(400).json({ error: 'Project lead cannot be empty' });
-            }
-            project.lead = lead.trim();
-        }
-
         if (category !== undefined || field !== undefined) {
             project.category = (category || field || project.category).trim();
         }
 
-        if (teamMembers !== undefined) {
-            if (!Array.isArray(teamMembers)) {
-                return res.status(400).json({ error: 'Team members must be an array' });
+        if (isLeadOrAdmin) {
+            if (lead !== undefined) {
+                if (typeof lead !== 'string' || lead.trim().length === 0) {
+                    return res.status(400).json({ error: 'Project lead cannot be empty' });
+                }
+                project.lead = lead.trim();
             }
-            project.teamMembers = [...new Set(teamMembers.map(m => typeof m === 'string' ? m.trim() : '').filter(Boolean))];
-        }
 
-        if (access !== undefined) {
-            if (!Array.isArray(access)) {
-                return res.status(400).json({ error: 'Access list must be an array' });
+            if (teamMembers !== undefined) {
+                if (!Array.isArray(teamMembers)) {
+                    return res.status(400).json({ error: 'Team members must be an array' });
+                }
+                project.teamMembers = [...new Set(teamMembers.map(m => typeof m === 'string' ? m.trim() : '').filter(Boolean))];
             }
-            project.access = [...new Set(access.map(a => typeof a === 'string' ? a.trim() : '').filter(Boolean))];
+
+            if (access !== undefined) {
+                if (!Array.isArray(access)) {
+                    return res.status(400).json({ error: 'Access list must be an array' });
+                }
+                project.access = [...new Set(access.map(a => typeof a === 'string' ? a.trim() : '').filter(Boolean))];
+            }
         }
 
         const updatedProject = await project.save();
