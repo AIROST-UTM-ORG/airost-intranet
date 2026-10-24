@@ -2,9 +2,9 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { API_URL } from '../../../config/api';
-import useAuth from '../../../hooks/useAuth';
-import EditProfileForm from './components/EditProfileForm';
+import { API_URL } from '../../config/api.js';
+import useAuth from '../../hooks/useAuth.js';
+import EditProfileForm from './components/EditProfileForm.js';
 import { makeSquarePhoto } from './utils/photo.js';
 import { getInitialForm } from './utils/profileForm.js';
 
