@@ -4,7 +4,8 @@ import MemberCard from './components/MemberCard';
 import MemberFilters from './components/MemberFilters';
 import MemberHeading from './components/MemberHeading';
 import ProfileSearch from './components/ProfileSearch';
-import './MemberDirectory.css';
+import './styles/member-directory.css';
+import './styles/shared.css';
 import useFetchUsers from '../../hooks/useFetchUsers';
 import { getPositions } from './utils/memberUtils';
 

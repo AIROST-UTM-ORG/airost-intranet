@@ -5,8 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { API_URL } from '../../../config/api';
 import useAuth from '../../../hooks/useAuth';
 import EditProfileForm from './components/EditProfileForm';
-import './EditProfile.css';
-import { makeSquarePhoto } from '../../../helper/photo';
+import { makeSquarePhoto } from './utils/photo.js';
 import { getInitialForm } from './utils/profileForm.js';
 
 const EditProfile = () => {

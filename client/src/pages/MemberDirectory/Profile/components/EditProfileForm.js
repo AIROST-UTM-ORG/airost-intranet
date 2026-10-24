@@ -1,6 +1,8 @@
 import React from 'react';
 import { FiArrowLeft, FiCamera, FiUser } from 'react-icons/fi';
 import FeaturedProject from './FeaturedProject';
+import '../styles/editProfile.css';
+import '../../styles/shared.css';
 
 const EditProfileForm = ({
   form,
