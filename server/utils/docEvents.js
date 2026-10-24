@@ -18,7 +18,15 @@ const emitDocEvent = (type, payload) => {
     const listeners = docEmitter.rawListeners(type);
     for (const listener of listeners) {
       try {
-        listener(payload);
+        const res = listener(payload);
+        if (res && typeof res.catch === 'function') {
+          res.catch((err) => {
+            console.error(
+              `[docEvents] Async listener failed for event '${type}':`,
+              err?.message || err
+            );
+          });
+        }
       } catch (listenerErr) {
         // Safe logging: listeners must never crash caller
         console.error(
