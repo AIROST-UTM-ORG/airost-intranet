@@ -4,7 +4,10 @@ import { FiEdit2, FiGithub, FiInstagram, FiLinkedin, FiMail, FiMapPin } from 're
 import { getSocialUrl } from '../utils/socialUrl';
 
 const ProfileHero = ({ member, location, onEdit }) => (
-  <section className="profile-hero" aria-labelledby="profile-name">
+  <section
+    className="profile-hero before:pointer-events-none before:absolute before:-z-[1] before:right-[10%] before:top-[-215px] before:h-[360px] before:w-[360px] before:rounded-full before:border before:border-[rgba(108,211,201,0.28)] before:content-[''] before:shadow-[0_0_0_30px_rgba(108,211,201,0.045),0_0_0_60px_rgba(108,211,201,0.035),0_0_0_90px_rgba(108,211,201,0.025)]"
+    aria-labelledby="profile-name"
+  >
     <div className="profile-hero-top">
       <div>
         <p className="profile-eyebrow">Student profile</p>
