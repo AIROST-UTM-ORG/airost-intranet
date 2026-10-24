@@ -15,7 +15,7 @@ import {
 /**
  * List all spaces the user can view.
  */
-export const listSpaces = async () => {
+export const listSpaces = async (filter = {}) => {
   if (USE_MOCK) {
     const delay = getArtificialDelay();
     if (delay > 0) await sleep(delay);
@@ -26,25 +26,52 @@ export const listSpaces = async () => {
       return [];
     }
 
-    return mockSpaces.map((space) => {
+    let spaces = mockSpaces;
+    if (filter && filter.projectId) {
+      const targetId = String(
+        typeof filter.projectId === "object" ? filter.projectId._id : filter.projectId
+      );
+      spaces = spaces.filter((space) => {
+        const pId = space.projectId
+          ? typeof space.projectId === "object"
+            ? space.projectId._id
+            : space.projectId
+          : null;
+        return pId && String(pId) === targetId;
+      });
+    }
+
+    return spaces.map((space) => {
       const counts = computeSpaceCounts(space._id);
       const isReadOnly = currentScenario === MockScenarios.READ_ONLY;
       return {
         ...space,
         activeDocumentCount: counts.activeDocumentCount,
+        documentCount: counts.activeDocumentCount,
+        archivedDocumentCount: counts.archivedDocumentCount,
+        archivedCount: counts.archivedDocumentCount,
         canUpdate: isReadOnly ? false : space.canUpdate,
         isManager: isReadOnly ? false : space.isManager,
       };
     });
   }
 
-  const response = await realApiClient.get("/doc/spaces");
+  const params = {};
+  if (filter && filter.projectId) {
+    params.projectId =
+      typeof filter.projectId === "object" ? filter.projectId._id : filter.projectId;
+  }
+  const response = await realApiClient.get("/doc/spaces", {
+    params: Object.keys(params).length > 0 ? params : undefined,
+  });
   return (response.data || []).map((space) => ({
     ...space,
     isManager: Boolean(space.canManage ?? space.isManager),
     canManage: Boolean(space.canManage ?? space.isManager),
     documentCount: space.documentCount ?? space.activeDocumentCount ?? 0,
     activeDocumentCount: space.documentCount ?? space.activeDocumentCount ?? 0,
+    archivedCount: space.archivedCount ?? space.archivedDocumentCount ?? 0,
+    archivedDocumentCount: space.archivedCount ?? space.archivedDocumentCount ?? 0,
   }));
 };
 

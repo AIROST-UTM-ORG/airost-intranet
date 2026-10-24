@@ -23,7 +23,7 @@ import "./Documentation.css";
 export { ViewModes, parseDocPath };
 
 const Documentation = ({ initialView = ViewModes.SPACES_LIST, initialSpaceId = null }) => {
-  const { pathname, navigateSafe, lastPathRef } = useDocumentationRouter();
+  const { pathname, search, navigateSafe, lastPathRef } = useDocumentationRouter();
 
   const {
     spaces,
@@ -38,6 +38,23 @@ const Documentation = ({ initialView = ViewModes.SPACES_LIST, initialSpaceId = n
     handleAuthError,
     extractError,
   } = useSpaceList();
+
+  const requestedProjectId = React.useMemo(() => {
+    return new URLSearchParams(search || "").get("projectId");
+  }, [search]);
+
+  const preselectedProjectId = React.useMemo(() => {
+    if (!requestedProjectId || !projects || projects.length === 0) return "";
+    const match = projects.find((p, idx) => {
+      const pId = String(p._id || p.id || "");
+      if (pId === String(requestedProjectId)) return true;
+      if (p.id !== undefined && String(p.id) === String(requestedProjectId)) return true;
+      if (p.projectId && String(p.projectId) === String(requestedProjectId)) return true;
+      if (String(idx + 1) === String(requestedProjectId)) return true;
+      return false;
+    });
+    return match ? (match._id || match.id) : "";
+  }, [requestedProjectId, projects]);
 
   const {
     selectedSpace,
@@ -244,7 +261,7 @@ const Documentation = ({ initialView = ViewModes.SPACES_LIST, initialSpaceId = n
 
       {viewMode === ViewModes.CREATE_SPACE && (
         <SpaceFormScreen
-          initialSpace={null}
+          initialSpace={preselectedProjectId ? { projectId: preselectedProjectId } : null}
           projects={projects}
           members={members}
           onSubmit={handleCreateSpaceSubmit}

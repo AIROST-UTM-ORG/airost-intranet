@@ -1,6 +1,11 @@
-const ProjectMember = require('../models/ProjectMember');
-const Project = require('../models/Project');
-const User = require('../models/User');
+let _projectRoleResolver = null;
+
+/**
+ * Registers an external role resolver function (provided by docService).
+ */
+const registerProjectRoleResolver = (resolver) => {
+  _projectRoleResolver = resolver;
+};
 
 /**
  * Checks whether the given user has platform admin privileges.
@@ -38,39 +43,14 @@ const isUserInList = (userId, list) => {
 
 /**
  * Resolves a user's role on a specific project ('lead', 'advisor', 'member', or null).
- * Checks the ProjectMember collection first, then falls back to Project.lead matching user name.
+ * Delegates to the registered service-layer resolver.
  */
 const getUserProjectRole = async (userId, projectId) => {
   if (!userId || !projectId) return null;
-
-  try {
-    // Primary: query ProjectMember collection
-    const member = await ProjectMember.findOne({
-      projectId: projectId,
-      userId: userId,
-    });
-    if (member && member.role) {
-      return member.role;
-    }
-
-    // Fallback: check Project.lead string match against User.name
-    const project = await Project.findById(projectId);
-    if (project && project.lead) {
-      const user = await User.findById(userId);
-      if (
-        user &&
-        user.name &&
-        user.name.trim().toLowerCase() === project.lead.trim().toLowerCase()
-      ) {
-        return 'lead';
-      }
-    }
-
-    return null;
-  } catch (err) {
-    console.error('Error fetching user project role:', err);
-    return null;
+  if (typeof _projectRoleResolver === 'function') {
+    return await _projectRoleResolver(userId, projectId);
   }
+  return null;
 };
 
 /**
@@ -119,7 +99,10 @@ const canViewSpace = async (user, space, projectRole) => {
     role = await getUserProjectRole(user._id, space.projectId);
   }
 
-  // Implicit View Grant: If user has direct update permission via selected or project_members
+  // Implicit View Grant: If user has direct update permission via selected or project_members or all
+  if (space.updateType === 'all') {
+    return true;
+  }
   if (space.updateType === 'selected' && isUserInList(user._id, space.updateMembers)) {
     return true;
   }
@@ -192,4 +175,5 @@ module.exports = {
   canManageSpace,
   canViewSpace,
   canUpdateSpace,
+  registerProjectRoleResolver,
 };

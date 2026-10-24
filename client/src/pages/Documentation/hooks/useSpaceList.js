@@ -1,13 +1,20 @@
 import { useState, useCallback } from "react";
-import { listSpaces, listProjects, listMembers } from "../documentationApi";
+import {
+  listSpaces,
+  listProjects,
+  listMembers,
+  SEED_PROJECTS,
+  SEED_USERS,
+  isMockMode,
+} from "../documentationApi";
 
 /**
  * Custom hook to manage spaces overview, projects, members, and initial data loading.
  */
 export const useSpaceList = () => {
   const [spaces, setSpaces] = useState([]);
-  const [projects, setProjects] = useState([]);
-  const [members, setMembers] = useState([]);
+  const [projects, setProjects] = useState(() => (isMockMode() ? SEED_PROJECTS : []));
+  const [members, setMembers] = useState(() => (isMockMode() ? SEED_USERS : []));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
