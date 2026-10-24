@@ -1,0 +1,21 @@
+# Dedicated Dockerfile for client local development
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install dependencies first for layer caching (.npmrc contains legacy-peer-deps=true for React 19)
+COPY package*.json .npmrc* ./
+RUN npm install --legacy-peer-deps
+
+# Copy source code
+COPY . .
+
+# Configure Create React App / Webpack dev server for containerized environments
+ENV PORT=3000
+ENV WDS_SOCKET_PORT=0
+ENV CHOKIDAR_USEPOLLING=true
+
+EXPOSE 3000
+
+# Start React development server
+CMD ["npx", "react-scripts", "start"]

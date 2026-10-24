@@ -1,6 +1,7 @@
 .env
+.env.*
+!*.example
 /node_modules
-/coverage/
 
 env.yaml
 

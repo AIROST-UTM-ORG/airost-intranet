@@ -1,21 +1,34 @@
-# Use Node.js LTS
-FROM node:18
+# -------------------------------------------------------------
+# Stage 1: Dependencies builder
+# -------------------------------------------------------------
+FROM node:20-alpine AS deps
 
-# Create app directory
-WORKDIR /usr/src/app
+WORKDIR /app
 
-# Copy package files
+# Copy dependency manifests
 COPY package*.json ./
 
-# Install dependencies
-RUN npm install --only=production
+# Install production dependencies only
+RUN npm ci --omit=dev --ignore-scripts
 
-# Copy the rest of your app
-COPY . .
+# -------------------------------------------------------------
+# Stage 2: Production runner
+# -------------------------------------------------------------
+FROM node:20-alpine AS runner
 
-# Expose the port Cloud Run uses
+WORKDIR /app
+
+ENV NODE_ENV=production
 ENV PORT=8080
+
+# Run with non-root node user provided by the Alpine base image
+COPY --from=deps --chown=node:node /app/node_modules ./node_modules
+COPY --chown=node:node . .
+
+USER node
+
+# Expose standard Cloud Run / Container port
 EXPOSE 8080
 
-# Start the server
-CMD ["npm", "start"]
+# Start production server
+CMD ["node", "server.js"]
