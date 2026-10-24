@@ -1,4 +1,6 @@
 .env
+.env.*
+!*.example
 /node_modules
 
 env.yaml
@@ -6,3 +8,5 @@ env.yaml
 Dockerfile
 
 package-lock.json
+
+/coverage
