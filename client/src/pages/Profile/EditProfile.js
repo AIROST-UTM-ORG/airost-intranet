@@ -13,6 +13,7 @@ const EditProfile = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [form, setForm] = useState(() => getInitialForm(user));
+  const [projects, setProjects] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -20,16 +21,23 @@ const EditProfile = () => {
     setForm(getInitialForm(user));
   }, [user]);
 
+  useEffect(() => {
+    axios.get(`${API_URL}/projects`, { withCredentials: true })
+      .then((response) => setProjects(Array.isArray(response.data) ? response.data : []))
+      .catch(() => setProjects([]));
+  }, []);
+
   const updateField = (event) => {
     const { name, value } = event.target;
     setForm((current) => ({ ...current, [name]: value }));
   };
 
-  const updateProjectField = (event) => {
-    const { name, value } = event.target;
+  const toggleFeaturedProject = (projectId) => {
     setForm((current) => ({
       ...current,
-      featuredProject: { ...current.featuredProject, [name]: value },
+      featuredProjectIds: current.featuredProjectIds.includes(projectId)
+        ? current.featuredProjectIds.filter((id) => id !== projectId)
+        : [...current.featuredProjectIds, projectId],
     }));
   };
 
@@ -50,7 +58,7 @@ const EditProfile = () => {
     setErrorMessage('');
     try {
       const photo = await makeSquarePhoto(file);
-      setForm((current) => ({ ...current, photo }));
+      setForm((current) => ({ ...current, photoUrl: photo }));
     } catch (error) {
       setErrorMessage(error.message);
     }
@@ -68,34 +76,17 @@ const EditProfile = () => {
       return;
     }
 
-    const technologies = form.featuredProject.technologies
-      .split(',')
-      .map((technology) => technology.trim())
-      .filter(Boolean);
-
-    const featuredProject = {
-      title: form.featuredProject.title.trim(),
-      description: form.featuredProject.description.trim(),
-      role: form.featuredProject.role.trim(),
-      status: form.featuredProject.status.trim(),
-      technologies,
-    };
-    const hasFeaturedProject = Object.values(featuredProject)
-      .some((value) => Array.isArray(value) ? value.length > 0 : Boolean(value));
     const payload = {
       name: form.name.trim(),
-      profileTitle: form.profileTitle.trim(),
       year: form.year.trim(),
       course: form.course.trim(),
-      country: form.country.trim(),
-      state: form.state.trim(),
-      phonenum: form.phonenum.trim(),
-      instagram: form.instagram.trim(),
-      linkedin: form.linkedin.trim(),
-      github: form.github.trim(),
+      origin: { country: form.country.trim(), state: form.state.trim() },
+      instagramUrl: form.instagramUrl.trim(),
+      linkedinUrl: form.linkedinUrl.trim(),
+      githubUrl: form.githubUrl.trim(),
       description: form.description.trim(),
-      photo: form.photo,
-      featuredProject: hasFeaturedProject ? featuredProject : null,
+      photoUrl: form.photoUrl,
+      featuredProjectIds: form.featuredProjectIds,
     };
 
     setIsSaving(true);
@@ -132,8 +123,9 @@ const EditProfile = () => {
       onBack={() => navigate('/profile')}
       onSubmit={handleSubmit}
       onFieldChange={updateField}
-      onProjectFieldChange={updateProjectField}
+      onProjectToggle={toggleFeaturedProject}
       onPhotoChange={handlePhotoChange}
+      projects={projects}
     />
   );
 };

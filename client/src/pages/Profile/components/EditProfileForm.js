@@ -11,8 +11,9 @@ const EditProfileForm = ({
   onBack,
   onSubmit,
   onFieldChange,
-  onProjectFieldChange,
+  onProjectToggle,
   onPhotoChange,
+  projects = [],
 }) => (
   <main className="profile-edit-page">
     <button className="profile-back" type="button" onClick={onBack}>
@@ -22,7 +23,7 @@ const EditProfileForm = ({
       <section className="profile-edit-panel" aria-labelledby="edit-profile-title">
         <div className="profile-edit-heading">
           <h1 id="edit-profile-title">Edit profile</h1>
-          <p>Update your personal details and featured project information.</p>
+          <p>Update your personal details and select a project to feature.</p>
         </div>
         {errorMessage && <p className="profile-edit-error" role="alert">{errorMessage}</p>}
 
@@ -30,10 +31,6 @@ const EditProfileForm = ({
           <label className="profile-edit-field">
             <span>Name</span>
             <input name="name" value={form.name} onChange={onFieldChange} autoComplete="name" required />
-          </label>
-          <label className="profile-edit-field">
-            <span>Position</span>
-            <input name="profileTitle" value={form.profileTitle} onChange={onFieldChange} placeholder="e.g. Student Developer" />
           </label>
           <label className="profile-edit-field">
             <span>Year</span>
@@ -56,20 +53,16 @@ const EditProfileForm = ({
             <input value={form.email} readOnly disabled />
           </label>
           <label className="profile-edit-field">
-            <span>Phone number</span>
-            <input name="phonenum" value={form.phonenum} onChange={onFieldChange} type="tel" autoComplete="tel" />
-          </label>
-          <label className="profile-edit-field">
             <span>Instagram</span>
-            <input name="instagram" value={form.instagram} onChange={onFieldChange} placeholder="@username" />
+            <input name="instagramUrl" value={form.instagramUrl} onChange={onFieldChange} placeholder="https://instagram.com/…" />
           </label>
           <label className="profile-edit-field">
             <span>LinkedIn</span>
-            <input name="linkedin" value={form.linkedin} onChange={onFieldChange} type="url" placeholder="https://linkedin.com/in/…" />
+            <input name="linkedinUrl" value={form.linkedinUrl} onChange={onFieldChange} type="url" placeholder="https://linkedin.com/in/…" />
           </label>
           <label className="profile-edit-field">
             <span>GitHub</span>
-            <input name="github" value={form.github} onChange={onFieldChange} type="url" placeholder="https://github.com/…" />
+            <input name="githubUrl" value={form.githubUrl} onChange={onFieldChange} type="url" placeholder="https://github.com/…" />
           </label>
           <label className="profile-edit-field profile-edit-field-wide">
             <span>Short description</span>
@@ -79,32 +72,21 @@ const EditProfileForm = ({
 
         <fieldset className="profile-project-fields">
           <legend>Featured project</legend>
-          <div className="profile-edit-fields">
-            <label className="profile-edit-field">
-              <span>Project name</span>
-              <input name="title" value={form.featuredProject.title} onChange={onProjectFieldChange} />
-            </label>
-            <label className="profile-edit-field">
-              <span>Your role</span>
-              <input name="role" value={form.featuredProject.role} onChange={onProjectFieldChange} />
-            </label>
-            <label className="profile-edit-field">
-              <span>Status</span>
-              <input name="status" value={form.featuredProject.status} onChange={onProjectFieldChange} />
-            </label>
-            <label className="profile-edit-field">
-              <span>Technologies</span>
-              <input
-                name="technologies"
-                value={form.featuredProject.technologies}
-                onChange={onProjectFieldChange}
-                placeholder="React, Node.js"
-              />
-            </label>
-            <label className="profile-edit-field profile-edit-field-wide">
-              <span>Project description</span>
-              <textarea name="description" value={form.featuredProject.description} onChange={onProjectFieldChange} rows="4" />
-            </label>
+          <div className="profile-edit-field">
+            <span>Select one or more projects</span>
+            <div className="profile-edit-project-options">
+              {projects.map((project) => (
+                <label key={project._id}>
+                  <input
+                    type="checkbox"
+                    checked={form.featuredProjectIds.includes(project._id)}
+                    onChange={() => onProjectToggle(project._id)}
+                  />
+                  <span>{project.title || `Project ${project.projectId}`}</span>
+                </label>
+              ))}
+              {!projects.length && <span>No projects are available to feature.</span>}
+            </div>
           </div>
         </fieldset>
 
@@ -125,8 +107,8 @@ const EditProfileForm = ({
             <p>Update the photo shown on your profile.</p>
           </div>
           <label className="profile-image-preview" htmlFor="profile-image-file">
-            {form.photo ? (
-              <img src={form.photo} alt="Profile preview" />
+            {form.photoUrl ? (
+              <img src={form.photoUrl} alt="Profile preview" />
             ) : (
               <FiUser aria-hidden="true" />
             )}
@@ -146,14 +128,7 @@ const EditProfileForm = ({
 
         <section className="profile-edit-panel profile-edit-project-preview" aria-label="Featured project preview">
           <FeaturedProject
-            project={
-              Object.values(form.featuredProject).some((value) => value.trim())
-                ? {
-                  ...form.featuredProject,
-                  technologies: form.featuredProject.technologies.split(',').map((item) => item.trim()).filter(Boolean),
-                }
-                : null
-            }
+            projects={projects.filter((project) => form.featuredProjectIds.includes(project._id))}
           />
         </section>
       </aside>
