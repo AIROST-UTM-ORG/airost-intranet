@@ -5,7 +5,12 @@ module.exports = {
     "./node_modules/react-tailwindcss-datepicker/dist/index.esm.js",
   ],
   theme: {
-    extend: {},
+    extend: {
+      fontFamily: {
+        varela: ["'Varela Round'", "sans-serif"],
+        outfit: ["'Outfit'", "sans-serif"],
+      },
+    },
   },
   plugins: [
     require("daisyui"),
