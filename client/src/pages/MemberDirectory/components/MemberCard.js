@@ -1,7 +1,7 @@
 import { FiArrowRight } from 'react-icons/fi';
 import { CgProfile } from "react-icons/cg";
 
-const MemberCard = ({ member, positions, onViewProfile }) => (
+const MemberCard = ({ member, positions, isCurrentUser = false, onViewProfile }) => (
   <article className="member-card">
     <div className="member-card-heading">
       {member.photoUrl ? (
@@ -11,7 +11,10 @@ const MemberCard = ({ member, positions, onViewProfile }) => (
 
       )}
       <div className="member-identity">
-        <h2>{member.name || 'Airost member'}</h2>
+        <h2>
+          {member.name || 'Airost member'}
+          {isCurrentUser && <span className="member-current-user">(You)</span>}
+        </h2>
         <p>{positions[0] || 'Airost member'}</p>
       </div>
     </div>

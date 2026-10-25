@@ -110,6 +110,10 @@
     @apply m-0 overflow-hidden text-ellipsis whitespace-nowrap text-[15px] font-bold leading-tight tracking-[-0.01em] text-[#17233b];
   }
 
+  .member-current-user {
+    @apply font-semibold text-[#1269a9] ml-1;
+  }
+
   .member-identity p,
   .member-dialog-identity p {
     @apply mt-1 text-[10px] font-semibold text-[#47728a];
@@ -136,7 +140,7 @@
   }
 
   .member-description {
-    @apply mt-[13px] min-h-[34px] overflow-hidden text-[11px] leading-relaxed text-[#66758a];
+    @apply ml-2 mt-[13px] min-h-[34px] overflow-hidden text-[13px] leading-relaxed text-[#3a557b];
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;

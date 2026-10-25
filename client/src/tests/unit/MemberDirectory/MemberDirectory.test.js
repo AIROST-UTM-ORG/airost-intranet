@@ -4,8 +4,10 @@ import userEvent from '@testing-library/user-event';
 import { useNavigate } from 'react-router-dom';
 import MemberDirectory from '../../../pages/MemberDirectory/MemberDirectory';
 import useFetchUsers from '../../../hooks/useFetchUsers';
+import useAuth from '../../../hooks/useAuth';
 
 jest.mock('../../../hooks/useFetchUsers', () => jest.fn());
+jest.mock('../../../hooks/useAuth', () => jest.fn());
 jest.mock('react-router-dom', () => ({
   ...jest.requireActual('react-router-dom'),
   useNavigate: jest.fn(),
@@ -40,6 +42,7 @@ const sampleUsers = [
 
 const renderDirectory = (fetchResult = { data: sampleUsers }) => {
   useFetchUsers.mockReturnValue(fetchResult);
+  useAuth.mockReturnValue({ user: null });
   return render(<MemberDirectory />);
 };
 
@@ -72,6 +75,15 @@ describe('MemberDirectory', () => {
     expect(screen.getByLabelText('Filter by year')).toHaveTextContent('Year 3');
   });
 
+  test('marks the signed-in member with a You label and leaves other cards unchanged', () => {
+    useFetchUsers.mockReturnValue({ data: sampleUsers });
+    useAuth.mockReturnValue({ user: { _id: 'user-1', email: 'alice@example.com' } });
+    render(<MemberDirectory />);
+
+    expect(screen.getByRole('heading', { name: 'Alice Tan (You)' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Ben Lee' })).toBeInTheDocument();
+  });
+
   test('searches member names, email, course, year, and role and can clear the search', async () => {
     renderDirectory();
     const search = screen.getByRole('searchbox', { name: /Search members/ });
@@ -101,6 +113,21 @@ describe('MemberDirectory', () => {
 
     await userEvent.type(search, 'Alice');
     await userEvent.click(screen.getByRole('option', { name: /Alice Tan/ }));
+
+    expect(navigate).toHaveBeenCalledWith('/members/alice%40example.com', {
+      state: { member: sampleUsers[0] },
+    });
+  });
+
+  test('search suggestions include the signed-in member and match directory fields beyond name', async () => {
+    renderDirectory();
+    const search = screen.getByRole('searchbox', { name: /Search members/ });
+
+    await userEvent.type(search, 'Computer Science');
+
+    const aliceOption = screen.getByRole('option', { name: /Alice Tan/ });
+    expect(aliceOption).toBeInTheDocument();
+    await userEvent.click(aliceOption);
 
     expect(navigate).toHaveBeenCalledWith('/members/alice%40example.com', {
       state: { member: sampleUsers[0] },
