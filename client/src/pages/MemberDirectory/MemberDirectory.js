@@ -7,10 +7,12 @@ import ProfileSearch from './components/ProfileSearch';
 import './styles/member-directory.css';
 import './styles/shared.css';
 import useFetchUsers from '../../hooks/useFetchUsers';
+import useAuth from '../../hooks/useAuth';
 import { getPositions } from './utils/memberUtils';
 
 const MemberDirectory = () => {
   const { data: users = [], isLoading, isError } = useFetchUsers();
+  const { user: currentUser } = useAuth();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [selectedRole, setSelectedRole] = useState('all');
@@ -93,6 +95,10 @@ const MemberDirectory = () => {
                 key={member.email || member.name}
                 member={member}
                 positions={positions}
+                isCurrentUser={Boolean(currentUser && (
+                  (currentUser._id && member._id === currentUser._id)
+                  || (currentUser.email && member.email?.toLowerCase() === currentUser.email.toLowerCase())
+                ))}
                 onViewProfile={() => navigate(`/members/${encodeURIComponent(member.email)}`, { state: { member } })}
               />
             );
