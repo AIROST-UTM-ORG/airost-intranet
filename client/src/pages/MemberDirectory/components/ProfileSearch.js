@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { FiSearch, FiX } from 'react-icons/fi';
 import '../styles/shared.css';
+import { getPositions } from '../utils/memberUtils';
 
 const ProfileSearch = ({
   users = [],
@@ -22,8 +23,16 @@ const ProfileSearch = ({
   const normalizedQuery = query.trim().toLowerCase();
   const matches = normalizedQuery
     ? users
-      .filter((user) => (user.email !== currentMemberEmail || !currentMemberEmail)
-        && user.name?.toLowerCase().includes(normalizedQuery))
+      .filter((user) => {
+        const positions = getPositions(user.positions);
+        const searchable = [user.name, user.email, user.course, user.year, ...positions]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+
+        return (user.email !== currentMemberEmail || !currentMemberEmail)
+          && searchable.includes(normalizedQuery);
+      })
       .slice(0, 6)
     : [];
 
