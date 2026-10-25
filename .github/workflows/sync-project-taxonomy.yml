@@ -47,6 +47,7 @@ jobs:
           ITEM_TYPE: ${{ github.event.pull_request && 'pr' || 'issue' }}
           ITEM_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
           EVENT_ACTION: ${{ github.event.action }}
+          EVENT_LABEL_NAME: ${{ github.event.label.name }}
           PROJECT_ID: "PVT_kwDOE_DQyc4BoRy3"
           TARGET_PHASE_FIELD_ID: "PVTSSF_lADOE_DQyc4BoRy3zhmyohY"
           MODULE_FIELD_ID: "PVTSSF_lADOE_DQyc4BoRy3zhmyobA"

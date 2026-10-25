@@ -36,6 +36,7 @@ const repo = process.env.REPO_NAME || (process.env.GITHUB_REPOSITORY ? process.e
 const itemType = (process.env.ITEM_TYPE || 'pr').toLowerCase(); // 'pr' or 'issue'
 const itemNumber = parseInt(process.env.ITEM_NUMBER || process.env.PR_NUMBER || process.env.ISSUE_NUMBER, 10);
 const eventAction = process.env.EVENT_ACTION || '';
+const eventLabelName = process.env.EVENT_LABEL_NAME || '';
 
 if (!token) {
   console.warn('::warning::No authentication token provided. Skipping taxonomy sync.');
@@ -45,6 +46,33 @@ if (!token) {
 if (!owner || !repo || isNaN(itemNumber)) {
   console.error(`::error::Missing required params: owner=${owner}, repo=${repo}, itemNumber=${itemNumber}, itemType=${itemType}`);
   process.exit(1);
+}
+
+function isProjectPermissionError(err) {
+  if (!err) return false;
+  const msg = (err.message || String(err)).toLowerCase();
+  if (!process.env.PROJECT_AUTOMATION_TOKEN) {
+    if (
+      msg.includes('resource not accessible') ||
+      msg.includes('permission') ||
+      msg.includes('forbidden') ||
+      msg.includes('unauthorized') ||
+      msg.includes('scope') ||
+      msg.includes('project') ||
+      msg.includes('could not resolve')
+    ) {
+      return true;
+    }
+  }
+  return (
+    msg.includes('resource not accessible') ||
+    msg.includes('viewer does not have permission') ||
+    msg.includes('not have permission') ||
+    msg.includes('insufficient_scopes') ||
+    msg.includes('could not resolve to a projectv2') ||
+    msg.includes('must have push access to this repository to add items to this project') ||
+    (msg.includes('project') && (msg.includes('permission') || msg.includes('access') || msg.includes('forbidden') || msg.includes('scope') || msg.includes('unauthorized')))
+  );
 }
 
 async function request(url, options = {}) {
@@ -112,19 +140,19 @@ function inferLabelsFromMetadata(title, files = []) {
   const hasModule = Array.from(inferred).some(l => l.startsWith('module:'));
   if (!hasModule && files.length > 0) {
     for (const f of files) {
-      if (/server\/routes\/auth|server\/middleware\/auth|server\/models\/User/i.test(f)) {
+      if (/server\/routes\/auth|server\/middleware\/auth|server\/passport|server\/models\/User|client\/src\/context\/authContext|client\/src\/hooks\/useAuth|client\/src\/pages\/Login/i.test(f)) {
         inferred.add('module:auth');
         break;
       }
-      if (/client\/src\/features\/members|server\/routes\/users|server\/controller\/user/i.test(f)) {
+      if (/client\/src\/pages\/(?:Admin|Members)|client\/src\/hooks\/useFetchUsers|server\/routes\/user|server\/controller\/user/i.test(f)) {
         inferred.add('module:members');
         break;
       }
-      if (/client\/src\/features\/projects|server\/routes\/project|server\/controller\/project|server\/models\/Project|server\/models\/Task/i.test(f)) {
+      if (/client\/src\/pages\/(?:Projects|ProjectTracking)|server\/routes\/project|server\/controller\/project|server\/models\/Project|server\/models\/Task/i.test(f)) {
         inferred.add('module:projects');
         break;
       }
-      if (/client\/src\/features\/docs|server\/routes\/doc|server\/controller\/doc|server\/models\/Doc/i.test(f)) {
+      if (/client\/src\/pages\/Documentation|server\/routes\/doc|server\/controller\/doc|server\/models\/Doc/i.test(f)) {
         inferred.add('module:docs');
         break;
       }
@@ -172,6 +200,7 @@ async function run() {
   let labels = [];
   let files = [];
   let projectItem;
+  let skipProjectSync = false;
 
   if (itemType === 'pr') {
     const prQuery = `
@@ -203,7 +232,40 @@ async function run() {
       }
     `;
 
-    const data = await graphql(prQuery, { owner, repo, number: itemNumber });
+    let data;
+    try {
+      data = await graphql(prQuery, { owner, repo, number: itemNumber });
+    } catch (err) {
+      if (isProjectPermissionError(err)) {
+        console.warn('::warning::Project #6 automation token not configured or lacks permissions. Skipping custom field sync.');
+        // Retry querying without projectItems so label inference can still execute
+        try {
+          const fallbackPrQuery = `
+            query($owner: String!, $repo: String!, $number: Int!) {
+              repository(owner: $owner, name: $repo) {
+                pullRequest(number: $number) {
+                  id
+                  title
+                  labels(first: 30) {
+                    nodes { name }
+                  }
+                  files(first: 100) {
+                    nodes { path }
+                  }
+                }
+              }
+            }
+          `;
+          data = await graphql(fallbackPrQuery, { owner, repo, number: itemNumber });
+          skipProjectSync = true;
+        } catch (fallbackErr) {
+          process.exit(0);
+        }
+      } else {
+        throw err;
+      }
+    }
+
     const pr = data?.repository?.pullRequest;
     if (!pr) {
       console.error(`::error::PR #${itemNumber} not found.`);
@@ -267,7 +329,17 @@ async function run() {
       }
     `;
 
-    const data = await graphql(issueQuery, { owner, repo, number: itemNumber });
+    let data;
+    try {
+      data = await graphql(issueQuery, { owner, repo, number: itemNumber });
+    } catch (err) {
+      if (isProjectPermissionError(err)) {
+        console.warn('::warning::Project #6 automation token not configured or lacks permissions. Skipping custom field sync.');
+        process.exit(0);
+      }
+      throw err;
+    }
+
     const issue = data?.repository?.issue;
     if (!issue) {
       console.error(`::error::Issue #${itemNumber} not found.`);
@@ -278,6 +350,11 @@ async function run() {
     title = issue.title;
     labels = (issue.labels?.nodes || []).map(l => l.name);
     projectItem = issue.projectItems?.nodes?.find(item => item.project?.id === projectId);
+  }
+
+  if (skipProjectSync) {
+    console.log(`Taxonomy synchronization complete (labels only) for ${itemType.toUpperCase()} #${itemNumber}.`);
+    process.exit(0);
   }
 
   // Ensure item is added to Project #6
@@ -294,9 +371,72 @@ async function run() {
       `;
       const addResult = await graphql(addMutation, { projectId, contentId });
       itemId = addResult?.addProjectV2ItemById?.item?.id;
-      console.log(`✓ Added to Project #6 (Item ID: ${itemId}).`);
+      if (itemId) {
+        console.log(`✓ Added to Project #6 (Item ID: ${itemId}).`);
+      }
     } catch (err) {
+      if (isProjectPermissionError(err)) {
+        console.warn('::warning::Project #6 automation token not configured or lacks permissions. Skipping custom field sync.');
+        process.exit(0);
+      }
       console.warn(`::warning::Could not add ${itemType.toUpperCase()} #${itemNumber} to Project #6: ${err.message}`);
+    }
+
+    if (!itemId) {
+      console.log(`Attempting to query item ID for ${itemType.toUpperCase()} #${itemNumber} in Project #6...`);
+      try {
+        const queryItem = `
+          query($contentId: ID!) {
+            node(id: $contentId) {
+              ... on PullRequest {
+                projectItems(first: 20) {
+                  nodes {
+                    id
+                    project { id }
+                    phaseField: fieldValueByName(name: "Target Phase") {
+                      ... on ProjectV2ItemFieldSingleSelectValue { optionId name }
+                    }
+                    moduleField: fieldValueByName(name: "Module") {
+                      ... on ProjectV2ItemFieldSingleSelectValue { optionId name }
+                    }
+                  }
+                }
+              }
+              ... on Issue {
+                projectItems(first: 20) {
+                  nodes {
+                    id
+                    project { id }
+                    phaseField: fieldValueByName(name: "Target Phase") {
+                      ... on ProjectV2ItemFieldSingleSelectValue { optionId name }
+                    }
+                    moduleField: fieldValueByName(name: "Module") {
+                      ... on ProjectV2ItemFieldSingleSelectValue { optionId name }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        `;
+        const itemData = await graphql(queryItem, { contentId });
+        const found = itemData?.node?.projectItems?.nodes?.find(item => item.project?.id === projectId);
+        if (found) {
+          projectItem = found;
+          itemId = found.id;
+          console.log(`✓ Located existing Project #6 item ID: ${itemId}`);
+        }
+      } catch (queryErr) {
+        if (isProjectPermissionError(queryErr)) {
+          console.warn('::warning::Project #6 automation token not configured or lacks permissions. Skipping custom field sync.');
+          process.exit(0);
+        }
+        console.warn(`::warning::Failed to query Project #6 item ID: ${queryErr.message}`);
+      }
+    }
+
+    if (!itemId) {
+      console.warn(`::warning::Could not find or create Project #6 item for ${itemType.toUpperCase()} #${itemNumber}. Skipping custom field sync.`);
       return;
     }
   }
@@ -309,6 +449,9 @@ async function run() {
       break;
     }
   }
+
+  const isPhaseUnlabeled = eventAction === 'unlabeled' &&
+    (!eventLabelName || eventLabelName.startsWith('phase:') || !!PHASE_OPTION_MAP[eventLabelName]);
 
   if (targetPhaseOption) {
     const currentOptionId = projectItem?.phaseField?.optionId;
@@ -337,8 +480,39 @@ async function run() {
         });
         console.log(`✓ Successfully updated Target Phase to "${targetPhaseOption.name}".`);
       } catch (err) {
+        if (isProjectPermissionError(err)) {
+          console.warn('::warning::Project #6 automation token not configured or lacks permissions. Skipping custom field sync.');
+          process.exit(0);
+        }
         console.warn(`::warning::Failed to update Target Phase on Project #6: ${err.message}`);
       }
+    }
+  } else if (isPhaseUnlabeled) {
+    console.log(`Clearing Target Phase on Project #6 (no phase labels remaining)...`);
+    try {
+      const clearMutation = `
+        mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!) {
+          clearProjectV2ItemFieldValue(input: {
+            projectId: $projectId
+            itemId: $itemId
+            fieldId: $fieldId
+          }) {
+            projectV2Item { id }
+          }
+        }
+      `;
+      await graphql(clearMutation, {
+        projectId,
+        itemId,
+        fieldId: TARGET_PHASE_FIELD_ID
+      });
+      console.log(`✓ Successfully cleared Target Phase on Project #6.`);
+    } catch (err) {
+      if (isProjectPermissionError(err)) {
+        console.warn('::warning::Project #6 automation token not configured or lacks permissions. Skipping custom field sync.');
+        process.exit(0);
+      }
+      console.warn(`::warning::Failed to clear Target Phase on Project #6: ${err.message}`);
     }
   }
 
@@ -350,6 +524,9 @@ async function run() {
       break;
     }
   }
+
+  const isModuleUnlabeled = eventAction === 'unlabeled' &&
+    (!eventLabelName || eventLabelName.startsWith('module:') || !!MODULE_OPTION_MAP[eventLabelName]);
 
   if (targetModuleOption) {
     const currentOptionId = projectItem?.moduleField?.optionId;
@@ -378,8 +555,39 @@ async function run() {
         });
         console.log(`✓ Successfully updated Module to "${targetModuleOption.name}".`);
       } catch (err) {
+        if (isProjectPermissionError(err)) {
+          console.warn('::warning::Project #6 automation token not configured or lacks permissions. Skipping custom field sync.');
+          process.exit(0);
+        }
         console.warn(`::warning::Failed to update Module on Project #6: ${err.message}`);
       }
+    }
+  } else if (isModuleUnlabeled) {
+    console.log(`Clearing Module on Project #6 (no module labels remaining)...`);
+    try {
+      const clearMutation = `
+        mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!) {
+          clearProjectV2ItemFieldValue(input: {
+            projectId: $projectId
+            itemId: $itemId
+            fieldId: $fieldId
+          }) {
+            projectV2Item { id }
+          }
+        }
+      `;
+      await graphql(clearMutation, {
+        projectId,
+        itemId,
+        fieldId: MODULE_FIELD_ID
+      });
+      console.log(`✓ Successfully cleared Module on Project #6.`);
+    } catch (err) {
+      if (isProjectPermissionError(err)) {
+        console.warn('::warning::Project #6 automation token not configured or lacks permissions. Skipping custom field sync.');
+        process.exit(0);
+      }
+      console.warn(`::warning::Failed to clear Module on Project #6: ${err.message}`);
     }
   }
 
@@ -387,6 +595,10 @@ async function run() {
 }
 
 run().catch(err => {
+  if (isProjectPermissionError(err)) {
+    console.warn('::warning::Project #6 automation token not configured or lacks permissions. Skipping custom field sync.');
+    process.exit(0);
+  }
   console.error(`::error::Unexpected failure during taxonomy sync: ${err.message}`);
   process.exit(1);
 });
