@@ -1,0 +1,52 @@
+name: Sync Project Taxonomy & Labels
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - edited
+      - synchronize
+      - labeled
+      - unlabeled
+  issues:
+    types:
+      - opened
+      - edited
+      - labeled
+      - unlabeled
+
+concurrency:
+  group: project-taxonomy-${{ github.event.pull_request.number || github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  sync-taxonomy:
+    name: Sync Project Custom Fields and Labels
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run Taxonomy Synchronization
+        run: node .github/scripts/sync-project-taxonomy.js
+        env:
+          PROJECT_AUTOMATION_TOKEN: ${{ secrets.PROJECT_AUTOMATION_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO_OWNER: ${{ github.repository_owner }}
+          REPO_NAME: ${{ github.event.repository.name }}
+          ITEM_TYPE: ${{ github.event.pull_request && 'pr' || 'issue' }}
+          ITEM_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
+          EVENT_ACTION: ${{ github.event.action }}
+          PROJECT_ID: "PVT_kwDOE_DQyc4BoRy3"
+          TARGET_PHASE_FIELD_ID: "PVTSSF_lADOE_DQyc4BoRy3zhmyohY"
+          MODULE_FIELD_ID: "PVTSSF_lADOE_DQyc4BoRy3zhmyobA"
