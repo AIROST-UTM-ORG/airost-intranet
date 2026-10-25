@@ -10,7 +10,7 @@
  * 2. Determines required review approvals (1 vs 2) based on the risk matrix.
  * 3. Updates GitHub Project #6 custom field "Approvals Required" (with graceful degradation).
  * 4. Automatically assigns eligible reviewers from the maintainer team pool,
- *    strictly excluding the PR author and external commenters/bots.
+ *    strictly excluding the PR author and external commenters/bots, with fair randomized selection.
  */
 
 const token = process.env.PROJECT_AUTOMATION_TOKEN || process.env.GH_TOKEN || process.env.GITHUB_TOKEN;
@@ -36,6 +36,15 @@ if (!token) {
 if (!owner || !repo || isNaN(prNumber)) {
   console.error(`::error::Missing required params: owner=${owner}, repo=${repo}, prNumber=${prNumber}`);
   process.exit(1);
+}
+
+function shuffle(array) {
+  const arr = [...array];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
 }
 
 async function request(url, options = {}) {
@@ -288,7 +297,6 @@ async function assignReviewers(pr, requiredApprovals, labels) {
   const currentMaintainerReviewers = new Set(
     rawReviewers.filter(login => eligibleSet.has(login))
   );
-  const existingReviewers = currentMaintainerReviewers;
 
   const neededCount = Math.max(0, requiredApprovals - currentMaintainerReviewers.size);
   console.log(`Eligible maintainer pool (excluding author @${authorLogin}): ${eligibleReviewers.join(', ')}`);
@@ -300,22 +308,22 @@ async function assignReviewers(pr, requiredApprovals, labels) {
       cand => !currentMaintainerReviewers.has(cand.toLowerCase())
     );
 
-    // Heuristic preference:
+    // Randomize unassigned candidates to distribute review workload fairly across maintainers
+    const shuffledCandidates = shuffle(unassignedCandidates);
+
+    // Maintain domain affinity tiers while randomizing within each tier:
     // Backend/Infra/Auth: prioritize Gan0117, leehom22, HoeZhiWan
     // Frontend/Projects: prioritize zping-926, leehom22
-    let sortedCandidates = [...unassignedCandidates];
     const isBackendOrInfra = requiredApprovals === 2 || labels.some(l => ['module:infra', 'module:auth'].includes(l));
-    if (isBackendOrInfra) {
-      sortedCandidates.sort((a, b) => {
-        const order = ['Gan0117', 'leehom22', 'HoeZhiWan', 'zping-926'];
-        return order.indexOf(a) - order.indexOf(b);
-      });
-    } else {
-      sortedCandidates.sort((a, b) => {
-        const order = ['zping-926', 'leehom22', 'Gan0117', 'HoeZhiWan'];
-        return order.indexOf(a) - order.indexOf(b);
-      });
-    }
+    const domainSpecialists = isBackendOrInfra
+      ? ['gan0117', 'leehom22', 'hoezhiwan']
+      : ['zping-926', 'leehom22'];
+
+    const sortedCandidates = [...shuffledCandidates].sort((a, b) => {
+      const aRank = domainSpecialists.includes(a.toLowerCase()) ? 0 : 1;
+      const bRank = domainSpecialists.includes(b.toLowerCase()) ? 0 : 1;
+      return aRank - bRank;
+    });
 
     const toAssign = sortedCandidates.slice(0, neededCount);
     if (toAssign.length > 0) {
