@@ -4,13 +4,18 @@
  * sync-project-status.js
  *
  * Synchronizes the status of a Pull Request and all linked closing issues
- * to "In review" on GitHub Project #6 (AIROST Intranet).
+ * between "In review" and "In progress" on GitHub Project #6 (AIROST Intranet).
  */
 
 const token = process.env.PROJECT_AUTOMATION_TOKEN || process.env.GH_TOKEN || process.env.GITHUB_TOKEN;
 const projectId = process.env.PROJECT_ID || 'PVT_kwDOE_DQyc4BoRy3'; // AIROST Intranet (Project #6)
 const statusFieldId = process.env.STATUS_FIELD_ID || 'PVTSSF_lADOE_DQyc4BoRy3zhmyoEg';
 const inReviewOptionId = process.env.IN_REVIEW_OPTION_ID || '1d8543f0'; // Option ID for "In review"
+const inProgressOptionId = process.env.IN_PROGRESS_OPTION_ID || '2b5d76b7'; // Option ID for "In progress"
+
+const eventName = process.env.EVENT_NAME || '';
+const eventAction = process.env.EVENT_ACTION || '';
+const reviewState = (process.env.REVIEW_STATE || '').toLowerCase();
 
 const owner = process.env.REPO_OWNER || process.env.GITHUB_REPOSITORY_OWNER;
 const repo = process.env.REPO_NAME || (process.env.GITHUB_REPOSITORY ? process.env.GITHUB_REPOSITORY.split('/')[1] : null);
@@ -46,6 +51,7 @@ async function graphql(query, variables = {}) {
 
 async function run() {
   console.log(`Starting project status sync for PR #${prNumber} in ${owner}/${repo}...`);
+  console.log(`Context: eventName=${eventName}, eventAction=${eventAction}, reviewState=${reviewState}`);
 
   const query = `
     query($owner: String!, $repo: String!, $prNumber: Int!) {
@@ -53,10 +59,23 @@ async function run() {
         pullRequest(number: $prNumber) {
           id
           isDraft
+          state
+          latestReviews(first: 20) {
+            nodes {
+              state
+              author { login }
+            }
+          }
           projectItems(first: 10) {
             nodes {
               id
               project { id }
+              fieldValueByName(name: "Status") {
+                ... on ProjectV2ItemFieldSingleSelectValue {
+                  optionId
+                  name
+                }
+              }
             }
           }
           closingIssuesReferences(first: 20) {
@@ -68,6 +87,12 @@ async function run() {
                 nodes {
                   id
                   project { id }
+                  fieldValueByName(name: "Status") {
+                    ... on ProjectV2ItemFieldSingleSelectValue {
+                      optionId
+                      name
+                    }
+                  }
                 }
               }
             }
@@ -91,9 +116,38 @@ async function run() {
     return;
   }
 
-  if (pr.isDraft) {
-    console.log(`PR #${prNumber} is a draft. Skipping status transition to "In review".`);
+  if (pr.state === 'CLOSED' || pr.state === 'MERGED') {
+    console.log(`PR #${prNumber} is ${pr.state}. Leaving status unchanged.`);
     return;
+  }
+
+  // Determine target status
+  let targetOptionId = inReviewOptionId;
+  let targetStatusName = 'In review';
+
+  if (pr.isDraft || eventAction === 'converted_to_draft') {
+    targetOptionId = inProgressOptionId;
+    targetStatusName = 'In progress';
+    console.log(`PR #${prNumber} is a draft or converted to draft. Setting target status to "In progress".`);
+  } else if (eventName === 'pull_request_review' && reviewState === 'changes_requested') {
+    targetOptionId = inProgressOptionId;
+    targetStatusName = 'In progress';
+    console.log(`Review changes requested on PR #${prNumber}. Setting target status to "In progress".`);
+  } else if (eventAction === 'review_requested' || eventAction === 'ready_for_review') {
+    targetOptionId = inReviewOptionId;
+    targetStatusName = 'In review';
+    console.log(`Review requested or marked ready for review for PR #${prNumber}. Setting target status to "In review".`);
+  } else {
+    const hasChangesRequested = pr.latestReviews?.nodes?.some(r => r.state === 'CHANGES_REQUESTED');
+    if (hasChangesRequested) {
+      targetOptionId = inProgressOptionId;
+      targetStatusName = 'In progress';
+      console.log(`PR #${prNumber} has unresolved changes requested. Setting target status to "In progress".`);
+    } else {
+      targetOptionId = inReviewOptionId;
+      targetStatusName = 'In review';
+      console.log(`PR #${prNumber} is ready for review with no changes requested. Setting target status to "In review".`);
+    }
   }
 
   const targets = [];
@@ -104,7 +158,7 @@ async function run() {
     type: 'PR',
     number: prNumber,
     contentId: pr.id,
-    itemId: prProjectItem?.id
+    item: prProjectItem
   });
 
   // Closing issues targets
@@ -115,15 +169,15 @@ async function run() {
       type: 'Issue',
       number: issue.number,
       contentId: issue.id,
-      itemId: issueProjectItem?.id
+      item: issueProjectItem
     });
   }
 
-  console.log(`Found ${targets.length} item(s) to synchronize (1 PR, ${closingIssues.length} closing issue(s)).`);
+  console.log(`Found ${targets.length} item(s) to synchronize (1 PR, ${closingIssues.length} closing issue(s)). Target Status: "${targetStatusName}".`);
 
   for (const target of targets) {
     try {
-      let itemId = target.itemId;
+      let itemId = target.item?.id;
       if (!itemId) {
         console.log(`${target.type} #${target.number} is not in Project #6. Adding it...`);
         const addMutation = `
@@ -138,7 +192,13 @@ async function run() {
       }
 
       if (itemId) {
-        console.log(`Updating ${target.type} #${target.number} (Project Item ${itemId}) to "In review"...`);
+        const currentOptionId = target.item?.fieldValueByName?.optionId;
+        if (currentOptionId === targetOptionId) {
+          console.log(`✓ ${target.type} #${target.number} is already "${targetStatusName}". Skipping update.`);
+          continue;
+        }
+
+        console.log(`Updating ${target.type} #${target.number} (Project Item ${itemId}) to "${targetStatusName}"...`);
         const updateMutation = `
           mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
             updateProjectV2ItemFieldValue(input: {
@@ -155,9 +215,9 @@ async function run() {
           projectId,
           itemId,
           fieldId: statusFieldId,
-          optionId: inReviewOptionId
+          optionId: targetOptionId
         });
-        console.log(`✓ Successfully updated ${target.type} #${target.number} to "In review".`);
+        console.log(`✓ Successfully updated ${target.type} #${target.number} to "${targetStatusName}".`);
       }
     } catch (err) {
       console.warn(`::warning::Could not update status for ${target.type} #${target.number}: ${err.message}. If this is a permissions error, verify PROJECT_AUTOMATION_TOKEN secret is configured with org project access.`);
