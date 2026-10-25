@@ -49,11 +49,11 @@ describe('Passport Serialization & Deserialization', () => {
 
   test('deserializeUser fetches the User document from DB by ID', async () => {
     const createdUser = await User.create({
-      googleID: 'gid-12345',
+      googleId: 'gid-12345',
       name: 'Bob',
       email: 'bob@example.com',
-      photo: 'https://example.com/bob.jpg',
-      position: ['Member'],
+      photoUrl: 'https://example.com/bob.jpg',
+      positions: ['Member'],
     });
 
     const deserializer = passport._deserializers[0];
@@ -63,7 +63,7 @@ describe('Passport Serialization & Deserialization', () => {
       deserializer(createdUser._id, (err, user) => {
         expect(err).toBeNull();
         expect(user).not.toBeNull();
-        expect(user.googleID).toBe('gid-12345');
+        expect(user.googleId).toBe('gid-12345');
         expect(user.email).toBe('bob@example.com');
         resolve();
       });
@@ -72,11 +72,11 @@ describe('Passport Serialization & Deserialization', () => {
 
   test('deserializeUser handles object with _id', async () => {
     const createdUser = await User.create({
-      googleID: 'gid-67890',
+      googleId: 'gid-67890',
       name: 'Charlie',
       email: 'charlie@example.com',
-      photo: 'https://example.com/charlie.jpg',
-      position: ['Member'],
+      photoUrl: 'https://example.com/charlie.jpg',
+      positions: ['Member'],
     });
 
     const deserializer = passport._deserializers[0];
@@ -84,7 +84,7 @@ describe('Passport Serialization & Deserialization', () => {
       deserializer({ _id: createdUser._id }, (err, user) => {
         expect(err).toBeNull();
         expect(user).not.toBeNull();
-        expect(user.googleID).toBe('gid-67890');
+        expect(user.googleId).toBe('gid-67890');
         resolve();
       });
     });

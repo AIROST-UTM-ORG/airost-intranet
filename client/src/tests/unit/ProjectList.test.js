@@ -43,25 +43,25 @@ describe('ProjectList', () => {
   });
 
   test('renders all project titles', () => {
-    renderProjectList({ user: { position: ['member'] } });
+    renderProjectList({ user: { positions: ['member'] } });
     expect(screen.getByText('Alpha Project')).toBeInTheDocument();
     expect(screen.getByText('Beta Project')).toBeInTheDocument();
   });
 
   test('does NOT show delete buttons for non-admin users', () => {
-    renderProjectList({ user: { position: ['member'] } });
+    renderProjectList({ user: { positions: ['member'] } });
     expect(screen.queryAllByText(/delete project/i).length).toBe(0);
   });
 
   test('shows delete buttons for admin users', () => {
-    renderProjectList({ user: { position: ['admin'] } });
+    renderProjectList({ user: { positions: ['admin'] } });
     const deleteButtons = screen.getAllByText(/delete project/i);
     expect(deleteButtons.length).toBe(sampleProjects.length);
   });
 
   test('calls onDeleteProject with the correct projectId after confirmation', async () => {
     const onDeleteProject = jest.fn();
-    renderProjectList({ user: { position: ['admin'] } }, onDeleteProject);
+    renderProjectList({ user: { positions: ['admin'] } }, onDeleteProject);
 
     const deleteButtons = screen.getAllByText(/delete project/i);
     await userEvent.click(deleteButtons[0]);
@@ -74,7 +74,7 @@ describe('ProjectList', () => {
     window.confirm.mockReturnValue(false);
 
     const onDeleteProject = jest.fn();
-    renderProjectList({ user: { position: ['admin'] } }, onDeleteProject);
+    renderProjectList({ user: { positions: ['admin'] } }, onDeleteProject);
 
     const deleteButtons = screen.getAllByText(/delete project/i);
     await userEvent.click(deleteButtons[0]);
@@ -83,7 +83,7 @@ describe('ProjectList', () => {
   });
 
   test('renders lead information in the project description', () => {
-    renderProjectList({ user: { position: ['member'] } });
+    renderProjectList({ user: { positions: ['member'] } });
     expect(screen.getByText(/lead by alice/i)).toBeInTheDocument();
   });
 

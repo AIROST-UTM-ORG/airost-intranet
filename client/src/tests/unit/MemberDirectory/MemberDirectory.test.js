@@ -18,7 +18,7 @@ const sampleUsers = [
     email: 'alice@example.com',
     course: 'Computer Science',
     year: 'Year 2',
-    position: ['Developer', '', ' '],
+    positions: ['Developer', '', ' '],
   },
   {
     _id: 'user-2',
@@ -26,7 +26,7 @@ const sampleUsers = [
     email: 'ben@example.com',
     course: 'Mechanical Engineering',
     year: 'Year 3',
-    position: 'Designer',
+    positions: ['Designer'],
   },
   {
     _id: 'user-3',
@@ -34,7 +34,7 @@ const sampleUsers = [
     email: 'cara@example.com',
     course: 'Computer Science',
     year: 'Year 2',
-    position: ['Designer', 'Treasurer'],
+    positions: ['Designer', 'Treasurer'],
   },
 ];
 
