@@ -43,6 +43,10 @@ async function graphql(query, variables = {}) {
   });
 
   const body = await res.json();
+  if (!res.ok) {
+    const errorMsg = body.message || (body.errors && body.errors.length > 0 ? body.errors.map(e => e.message).join(' | ') : `HTTP ${res.status}`);
+    throw new Error(errorMsg);
+  }
   if (body.errors && body.errors.length > 0) {
     throw new Error(body.errors.map(e => e.message).join(' | '));
   }
@@ -83,6 +87,7 @@ async function run() {
               id
               number
               title
+              state
               projectItems(first: 10) {
                 nodes {
                   id
@@ -106,6 +111,22 @@ async function run() {
   try {
     data = await graphql(query, { owner, repo, prNumber });
   } catch (err) {
+    const msg = (err.message || '').toLowerCase();
+    const isPermissionOrTokenError =
+      msg.includes('resource not accessible') ||
+      msg.includes('token') ||
+      msg.includes('permission') ||
+      msg.includes('scope') ||
+      msg.includes('bad credentials') ||
+      msg.includes('unauthorized') ||
+      msg.includes('forbidden') ||
+      msg.includes('not have permission');
+
+    if (isPermissionOrTokenError) {
+      console.warn('::warning::Project #6 automation token not configured or lacks permissions. Skipping status sync.');
+      process.exit(0);
+    }
+
     console.error(`::error::Failed to query PR and linked issues: ${err.message}`);
     process.exit(1);
   }
@@ -121,6 +142,8 @@ async function run() {
     return;
   }
 
+  const hasChangesRequested = pr.latestReviews?.nodes?.some(r => r.state === 'CHANGES_REQUESTED');
+
   // Determine target status
   let targetOptionId = inReviewOptionId;
   let targetStatusName = 'In review';
@@ -133,12 +156,21 @@ async function run() {
     targetOptionId = inProgressOptionId;
     targetStatusName = 'In progress';
     console.log(`Review changes requested on PR #${prNumber}. Setting target status to "In progress".`);
-  } else if (eventAction === 'review_requested' || eventAction === 'ready_for_review') {
+  } else if (eventAction === 'review_requested') {
+    if (hasChangesRequested) {
+      targetOptionId = inProgressOptionId;
+      targetStatusName = 'In progress';
+      console.log(`Review requested for PR #${prNumber}, but unresolved changes are requested. Keeping status as "In progress".`);
+    } else {
+      targetOptionId = inReviewOptionId;
+      targetStatusName = 'In review';
+      console.log(`Review requested for PR #${prNumber}. Setting target status to "In review".`);
+    }
+  } else if (eventAction === 'ready_for_review') {
     targetOptionId = inReviewOptionId;
     targetStatusName = 'In review';
-    console.log(`Review requested or marked ready for review for PR #${prNumber}. Setting target status to "In review".`);
+    console.log(`PR #${prNumber} marked ready for review. Setting target status to "In review".`);
   } else {
-    const hasChangesRequested = pr.latestReviews?.nodes?.some(r => r.state === 'CHANGES_REQUESTED');
     if (hasChangesRequested) {
       targetOptionId = inProgressOptionId;
       targetStatusName = 'In progress';
@@ -164,6 +196,11 @@ async function run() {
   // Closing issues targets
   const closingIssues = pr.closingIssuesReferences?.nodes || [];
   for (const issue of closingIssues) {
+    if (issue.state === 'CLOSED' || issue.state !== 'OPEN') {
+      console.log(`Issue #${issue.number} is ${issue.state}. Leaving status unchanged.`);
+      continue;
+    }
+
     const issueProjectItem = issue.projectItems?.nodes?.find(item => item.project?.id === projectId);
     targets.push({
       type: 'Issue',
