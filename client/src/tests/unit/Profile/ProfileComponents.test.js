@@ -89,11 +89,11 @@ describe('ProfileHero', () => {
         member={{
           name: '',
           email: 'member@example.com',
-          photo: 'https://example.com/photo.jpg',
+          photoUrl: 'https://example.com/photo.jpg',
           description: 'Member bio',
-          instagram: 'https://instagram.com/member',
-          github: 'member',
-          linkedin: 'member',
+          instagramUrl: 'https://instagram.com/member',
+          githubUrl: 'member',
+          linkedinUrl: 'member',
         }}
         location="Kuala Lumpur"
         onEdit={onEdit}
@@ -137,7 +137,7 @@ describe('MemberCard', () => {
           course: 'Aerospace Engineering',
           year: 'Year 3',
           description: 'Designing aircraft.',
-          photo: 'https://example.com/alex.jpg',
+          photoUrl: 'https://example.com/alex.jpg',
           verified: true,
         }}
         positions={['Engineer', 'Team lead']}

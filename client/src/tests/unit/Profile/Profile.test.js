@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import axios from 'axios';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -10,7 +10,7 @@ import useAuth from '../../../hooks/useAuth';
 import useFetchUsers from '../../../hooks/useFetchUsers';
 import { makeSquarePhoto } from '../../../pages/Profile/utils/photo';
 
-jest.mock('axios', () => ({ patch: jest.fn() }));
+jest.mock('axios', () => ({ get: jest.fn(), patch: jest.fn() }));
 jest.mock('@tanstack/react-query', () => ({
   ...jest.requireActual('@tanstack/react-query'),
   useQueryClient: jest.fn(),
@@ -21,28 +21,24 @@ jest.mock('../../../pages/Profile/utils/photo', () => ({
   makeSquarePhoto: jest.fn(),
 }));
 
+const featuredProjects = [
+  { _id: 'project-1', title: 'Airost Portal', description: 'A community portal.', lead: 'Jess' },
+  { _id: 'project-2', title: 'Analytics App', description: 'A data dashboard.', lead: 'Ben' },
+];
+
 const member = {
   _id: 'member-1',
   name: 'Alice Tan',
   email: 'alice@example.com',
-  profileTitle: '',
-  position: ['Developer', '', ' '],
+  positions: ['Developer', '', ' '],
   year: 'Year 2',
   course: 'Computer Science',
-  state: 'Selangor',
-  country: 'Malaysia',
-  phonenum: '+60123456789',
+  origin: { state: 'Selangor', country: 'Malaysia' },
   description: 'Building helpful technology.',
-  instagram: '@alice',
-  github: 'https://github.com/alice',
-  linkedin: 'https://linkedin.com/in/alice',
-  featuredProject: {
-    title: 'Airost Portal',
-    description: 'A community portal.',
-    role: 'Frontend developer',
-    status: 'In progress',
-    technologies: ['React', 'Node.js'],
-  },
+  instagramUrl: 'https://instagram.com/alice',
+  githubUrl: 'https://github.com/alice',
+  linkedinUrl: 'https://linkedin.com/in/alice',
+  featuredProjectIds: featuredProjects,
 };
 
 const renderProfileRoutes = (initialEntry = '/profile', state) => render(
@@ -62,6 +58,9 @@ describe('Member profile', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    axios.patch.mockReset();
+    axios.get.mockReset();
+    axios.get.mockReturnValue(new Promise(() => {}));
     useAuth.mockReturnValue({ user: member, setUser });
     useFetchUsers.mockReturnValue({ data: [member] });
     invalidateQueries.mockResolvedValue(undefined);
@@ -96,10 +95,9 @@ describe('Member profile', () => {
     expect(screen.getByText('Developer')).toBeInTheDocument();
     expect(screen.queryByText('  ')).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Airost Portal' })).toBeInTheDocument();
-    expect(screen.getByText('Frontend developer')).toBeInTheDocument();
-    expect(screen.getByText('In progress')).toBeInTheDocument();
-    expect(screen.getByText('React')).toBeInTheDocument();
-    expect(screen.getByText('Node.js')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Analytics App' })).toBeInTheDocument();
+    expect(screen.getByText('Jess')).toBeInTheDocument();
+    expect(screen.getByText('Ben')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Edit profile' })).not.toBeInTheDocument();
   });
 
@@ -168,16 +166,22 @@ describe('Member profile', () => {
   });
 
   test('edits and saves the current profile, updates auth state, and returns to profile', async () => {
+    useAuth.mockReturnValue({
+      user: { ...member, featuredProjectIds: [featuredProjects[0]] },
+      setUser,
+    });
+    axios.get.mockResolvedValueOnce({ data: featuredProjects });
     axios.patch.mockResolvedValue({ data: { ...member, name: 'Alice Tan Updated' } });
     renderProfileRoutes('/profile');
 
-    await userEvent.click(screen.getByRole('button', { name: 'Edit profile' }));
+    await act(async () => {
+      await userEvent.click(screen.getByRole('button', { name: 'Edit profile' }));
+    });
     expect(screen.getByRole('heading', { name: 'Edit profile' })).toBeInTheDocument();
 
     await userEvent.clear(screen.getByLabelText('Name'));
     await userEvent.type(screen.getByLabelText('Name'), ' Alice Tan Updated ');
-    await userEvent.clear(screen.getByLabelText('Technologies'));
-    await userEvent.type(screen.getByLabelText('Technologies'), 'React, , TypeScript, ');
+    await userEvent.click(await screen.findByRole('checkbox', { name: 'Analytics App' }));
     await userEvent.click(screen.getByRole('button', { name: 'Save changes' }));
 
     await waitFor(() => {
@@ -185,9 +189,9 @@ describe('Member profile', () => {
         'http://localhost:4000/user/member-1',
         expect.objectContaining({
           name: 'Alice Tan Updated',
-          featuredProject: expect.objectContaining({
-            technologies: ['React', 'TypeScript'],
-          }),
+          featuredProjectIds: ['project-1', 'project-2'],
+          origin: { state: 'Selangor', country: 'Malaysia' },
+          instagramUrl: 'https://instagram.com/alice',
         }),
         { withCredentials: true },
       );
@@ -328,9 +332,9 @@ describe('Member profile', () => {
     expect(axios.patch).not.toHaveBeenCalled();
   });
 
-  test('clears an empty featured project when saving', async () => {
+  test('clears all featured projects when saving an empty selection', async () => {
     useAuth.mockReturnValue({
-      user: { ...member, featuredProject: null },
+      user: { ...member, featuredProjectIds: [] },
       setUser,
     });
     axios.patch.mockResolvedValue({ data: member });
@@ -341,7 +345,7 @@ describe('Member profile', () => {
     await waitFor(() => {
       expect(axios.patch).toHaveBeenCalledWith(
         'http://localhost:4000/user/member-1',
-        expect.objectContaining({ featuredProject: null }),
+        expect.objectContaining({ featuredProjectIds: [] }),
         { withCredentials: true },
       );
     });
@@ -375,7 +379,7 @@ describe('Member profile', () => {
   });
 
   test('renders a fallback project state when no featured project exists', () => {
-    useAuth.mockReturnValue({ user: { ...member, featuredProject: null }, setUser });
+    useAuth.mockReturnValue({ user: { ...member, featuredProjectIds: [] }, setUser });
     renderProfileRoutes('/profile');
 
     const projectPanel = screen.getByRole('complementary', { name: 'Project' });

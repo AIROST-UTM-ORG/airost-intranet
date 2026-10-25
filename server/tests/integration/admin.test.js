@@ -11,7 +11,7 @@ const request = require('supertest');
 const { connect, clearDatabase, closeDatabase } = require('../setup/mongoSetup');
 const { createApp } = require('../../app');
 const User = require('../../models/User');
-const VerifiedUser = require('../../models/VerifiedUser');
+require('../../models/Project');
 
 let app;
 
@@ -32,25 +32,17 @@ afterAll(async () => {
 
 const seedUser = (overrides = {}) =>
   User.create({
-    googleID: 'google-id-001',
+    googleId: 'google-id-001',
     name: 'Alice',
     email: 'alice@airost.com',
-    photo: 'https://example.com/photo.png',
-    position: ['member'],
-    ...overrides,
-  });
-
-const seedVerifiedUser = (overrides = {}) =>
-  VerifiedUser.create({
-    name: 'Bob',
-    email: 'bob@airost.com',
-    position: ['admin'],
+    photoUrl: 'https://example.com/photo.png',
+    positions: ['member'],
     ...overrides,
   });
 
 // ── GET /user/users ──────────────────────────────────────────────────────────
 
-describe.skip('GET /user/users', () => {
+describe('GET /user/users', () => {
   test('returns 200 and an empty array when no users exist', async () => {
     const res = await request(app).get('/user/users');
     expect(res.status).toBe(200);
@@ -58,10 +50,9 @@ describe.skip('GET /user/users', () => {
     expect(res.body.length).toBe(0);
   });
 
-  test('merges logged-in users with verified-only users', async () => {
+  test('returns logged-in users and User placeholders from one collection', async () => {
     await seedUser({ email: 'alice@airost.com' });
-    await seedVerifiedUser({ email: 'alice@airost.com' }); // same email → loggedIn + verified
-    await seedVerifiedUser({ email: 'charlie@airost.com', name: 'Charlie', position: ['member'] });
+    await User.create({ email: 'charlie@airost.com', name: 'Charlie', positions: ['member'] });
 
     const res = await request(app).get('/user/users');
     expect(res.status).toBe(200);
@@ -75,10 +66,11 @@ describe.skip('GET /user/users', () => {
     expect(charlie).toBeDefined();
     expect(charlie.loggedIn).toBe(false);
     expect(charlie.verified).toBe(true);
+    expect(charlie).not.toHaveProperty('googleId');
   });
 
   test('marks a logged-in user as not verified when no VerifiedUser record exists', async () => {
-    await seedUser({ email: 'unverified@airost.com', googleID: 'gid-002' });
+    await seedUser({ email: 'unverified@airost.com', googleId: 'gid-002', positions: [] });
 
     const res = await request(app).get('/user/users');
     const user = res.body.find((u) => u.email === 'unverified@airost.com');
@@ -89,39 +81,44 @@ describe.skip('GET /user/users', () => {
 
 // ── POST /admin/users/verified ─────────────────────────────────────────────
 
-describe.skip('POST /admin/users/verified', () => {
-  test('creates a new verified user and returns 201 with createStatus=success', async () => {
+describe('POST /admin/users/verified', () => {
+  test('creates a placeholder User for a verified member', async () => {
     const payload = { name: 'Dave', email: 'dave@airost.com', position: 'member' };
     const res = await request(app).post('/admin/users/verified').send(payload);
 
     expect(res.status).toBe(201);
     expect(res.body.createStatus).toBe('success');
 
-    // Verify it is actually persisted
-    const saved = await VerifiedUser.findOne({ email: 'dave@airost.com' });
+    const saved = await User.findOne({ email: 'dave@airost.com' });
     expect(saved).not.toBeNull();
     expect(saved.name).toBe('Dave');
+    expect(saved.googleId).toBeUndefined();
+    expect(saved.positions).toEqual(['member']);
   });
 
-  test('returns createStatus=exist when the email is already verified', async () => {
-    await seedVerifiedUser({ email: 'existing@airost.com', name: 'Existing', position: ['member'] });
+  test('approves an existing User without duplicating its record', async () => {
+    const existing = await seedUser({ email: 'existing@airost.com', name: 'Existing', positions: [] });
 
     const res = await request(app)
       .post('/admin/users/verified')
       .send({ name: 'Duplicate', email: 'existing@airost.com', position: 'member' });
 
     expect(res.status).toBe(200);
-    expect(res.body.createStatus).toBe('exist');
+    expect(res.body.createStatus).toBe('success');
+    const updated = await User.find({ email: 'existing@airost.com' });
+    expect(updated).toHaveLength(1);
+    expect(updated[0].positions).toContain('member');
+    expect(updated[0]._id.toString()).toBe(existing._id.toString());
   });
 
-  test('updates the corresponding User position when creating a verified user', async () => {
-    await seedUser({ email: 'promote@airost.com', googleID: 'gid-003' });
+  test('adds the selected position to an existing User', async () => {
+    await seedUser({ email: 'promote@airost.com', googleId: 'gid-003' });
 
     await request(app)
       .post('/admin/users/verified')
       .send({ name: 'Promote', email: 'promote@airost.com', position: 'admin' });
 
     const updatedUser = await User.findOne({ email: 'promote@airost.com' });
-    expect(updatedUser.position).toContain('admin');
+    expect(updatedUser.positions).toContain('admin');
   });
 });
