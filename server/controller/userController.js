@@ -10,7 +10,7 @@ const getUsers = async (req, res) => {
       .sort({ name: 1 })
       .lean();
 
-    return res.json(users.map(({ googleId, ...user }) => ({
+    return res.json(users.map(({ googleId, isActive, ...user }) => ({
       ...user,
       positions: user.positions || [],
       year: user.year || '',
