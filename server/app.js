@@ -24,7 +24,7 @@ const userRoutes = require('./routes/userRoutes');
 const eventRoutes = require('./routes/eventRoutes');
 const projectRoutes = require('./routes/projectsRoutes');
 
-const createApp = () => {
+const createApp = ({ sessionStore } = {}) => {
   const app = express();
 
   app.set('trust proxy', 1);
@@ -60,6 +60,7 @@ const createApp = () => {
   app.use(
     session({
       secret: process.env.PASSPORT_SECRET || 'airost-intranet-test-secret',
+      ...(sessionStore ? { store: sessionStore } : {}),
       resave: false,
       saveUninitialized: false,
       cookie: {
@@ -79,7 +80,7 @@ const createApp = () => {
 
   app.use('/airost/doc', DocRoutes);
   app.use('/admin', adminRoutes);
-  app.use('/user', userRoutes);
+  app.use('/api/user', userRoutes);
   app.use('/projects', projectRoutes);
   app.use('/calendar', eventRoutes);
 
