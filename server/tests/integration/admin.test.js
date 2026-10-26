@@ -3,7 +3,7 @@
  * Uses mongodb-memory-server — never touches the production database.
  *
  * Routes tested:
- *   GET  /user/users
+ *   GET  /api/user/users
  *   POST /admin/users/verified
  */
 
@@ -40,11 +40,11 @@ const seedUser = (overrides = {}) =>
     ...overrides,
   });
 
-// ── GET /user/users ──────────────────────────────────────────────────────────
+// ── GET /api/user/users ──────────────────────────────────────────────────────
 
-describe('GET /user/users', () => {
+describe('GET /api/user/users', () => {
   test('returns 200 and an empty array when no users exist', async () => {
-    const res = await request(app).get('/user/users');
+    const res = await request(app).get('/api/user/users');
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
     expect(res.body.length).toBe(0);
@@ -54,7 +54,7 @@ describe('GET /user/users', () => {
     await seedUser({ email: 'alice@airost.com' });
     await User.create({ email: 'charlie@airost.com', name: 'Charlie', positions: ['member'] });
 
-    const res = await request(app).get('/user/users');
+    const res = await request(app).get('/api/user/users');
     expect(res.status).toBe(200);
 
     const alice = res.body.find((u) => u.email === 'alice@airost.com');
@@ -72,7 +72,7 @@ describe('GET /user/users', () => {
   test('marks a logged-in user as not verified when no VerifiedUser record exists', async () => {
     await seedUser({ email: 'unverified@airost.com', googleId: 'gid-002', positions: [] });
 
-    const res = await request(app).get('/user/users');
+    const res = await request(app).get('/api/user/users');
     const user = res.body.find((u) => u.email === 'unverified@airost.com');
     expect(user.verified).toBe(false);
     expect(user.loggedIn).toBe(true);

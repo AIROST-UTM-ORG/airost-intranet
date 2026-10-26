@@ -92,7 +92,7 @@ const EditProfile = () => {
     setIsSaving(true);
     setErrorMessage('');
     try {
-      const response = await axios.patch(`${API_URL}/user/${userId}`, payload, {
+      const response = await axios.patch(`${API_URL}/api/user/${userId}`, payload, {
         withCredentials: true,
       });
       setUser((current) => ({ ...current, ...response.data }));
