@@ -5,8 +5,6 @@ require('dotenv').config();
 
 router.get('/login/success', async (req, res) => {
   try {
-    console.log(req.user);
-    console.log(req.isAuthenticated());
     if (req.user) {
       await req.user.populate({ path: 'featuredProjectIds', select: '_id projectId title description lead' });
       const user = req.user.toObject();
