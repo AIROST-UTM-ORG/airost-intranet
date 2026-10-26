@@ -32,7 +32,8 @@ const authenticatedCookie = async (userId) => {
     },
     passport: { user: userId.toString() },
   }, (error) => error ? reject(error) : resolve()));
-  const signedSessionId = cookieSignature.sign(sessionId, 'airost-intranet-test-secret');
+  const secret = process.env.PASSPORT_SECRET || 'airost-intranet-test-secret';
+  const signedSessionId = cookieSignature.sign(sessionId, secret);
   return `connect.sid=${encodeURIComponent(`s:${signedSessionId}`)}`;
 };
 
