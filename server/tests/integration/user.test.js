@@ -262,4 +262,82 @@ describe('User directory and profile API', () => {
       .send({ origin: null });
     expect(res.status).toBe(400);
   });
+
+  test('rejects malicious or invalid social URLs', async () => {
+    const user = await User.create({ name: 'Alice', email: 'alice@example.com' });
+    const cookie = await authenticatedCookie(user._id);
+
+    const scriptUrl = await request(app)
+      .patch(`/api/user/${user._id}`)
+      .set('Cookie', cookie)
+      .send({ instagramUrl: 'javascript:alert(1)' });
+    expect(scriptUrl.status).toBe(400);
+
+    const ftpUrl = await request(app)
+      .patch(`/api/user/${user._id}`)
+      .set('Cookie', cookie)
+      .send({ photoUrl: 'ftp://example.com/avatar.png' });
+    expect(ftpUrl.status).toBe(400);
+
+    const wrongPlatformUrl = await request(app)
+      .patch(`/api/user/${user._id}`)
+      .set('Cookie', cookie)
+      .send({ linkedinUrl: 'https://leehom.com' });
+    expect(wrongPlatformUrl.status).toBe(400);
+    expect(wrongPlatformUrl.body.error).toMatch(/linkedinUrl/);
+
+    const wrongInstagramDomain = await request(app)
+      .patch(`/api/user/${user._id}`)
+      .set('Cookie', cookie)
+      .send({ instagramUrl: 'https://www.linkedin.com/in/alice' });
+    expect(wrongInstagramDomain.status).toBe(400);
+
+    const wrongGithubDomain = await request(app)
+      .patch(`/api/user/${user._id}`)
+      .set('Cookie', cookie)
+      .send({ githubUrl: 'https://www.linkedin.com/in/alice' });
+    expect(wrongGithubDomain.status).toBe(400);
+
+    const malformedLinkedinUrl = await request(app)
+      .patch(`/api/user/${user._id}`)
+      .set('Cookie', cookie)
+      .send({ linkedinUrl: 'https:leehom.com' });
+    expect(malformedLinkedinUrl.status).toBe(400);
+  });
+
+  test('accepts valid social URLs, handles, and data URIs', async () => {
+    const user = await User.create({ name: 'Alice', email: 'alice@example.com' });
+    const cookie = await authenticatedCookie(user._id);
+
+    const res = await request(app)
+      .patch(`/api/user/${user._id}`)
+      .set('Cookie', cookie)
+      .send({
+        instagramUrl: '@alice',
+        githubUrl: 'https://github.com/alice-dev',
+        linkedinUrl: 'https://linkedin.com/in/alice',
+        photoUrl: 'data:image/jpeg;base64,samplebase64',
+      });
+    expect(res.status).toBe(200);
+    expect(res.body.instagramUrl).toBe('https://www.instagram.com/alice/');
+    expect(res.body.githubUrl).toBe('https://github.com/alice-dev');
+    expect(res.body.linkedinUrl).toBe('https://www.linkedin.com/in/alice');
+  });
+
+  test('rejects fields exceeding maximum length constraints', async () => {
+    const user = await User.create({ name: 'Alice', email: 'alice@example.com' });
+    const cookie = await authenticatedCookie(user._id);
+
+    const longDesc = await request(app)
+      .patch(`/api/user/${user._id}`)
+      .set('Cookie', cookie)
+      .send({ description: 'a'.repeat(1001) });
+    expect(longDesc.status).toBe(400);
+
+    const longYear = await request(app)
+      .patch(`/api/user/${user._id}`)
+      .set('Cookie', cookie)
+      .send({ year: 'a'.repeat(51) });
+    expect(longYear.status).toBe(400);
+  });
 });
