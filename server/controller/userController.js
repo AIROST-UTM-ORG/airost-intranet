@@ -79,11 +79,44 @@ const updateUser = async (req, res) => {
     }
     updates.featuredProjectIds = [...new Set(updates.featuredProjectIds.map(String))];
   }
-  if (updates.origin !== undefined && (updates.origin === null || typeof updates.origin !== 'object' || Array.isArray(updates.origin))) {
+  if (
+    updates.origin !== undefined &&
+    (updates.origin === null ||
+      typeof updates.origin !== 'object' ||
+      Array.isArray(updates.origin) ||
+      (updates.origin.state !== undefined && (typeof updates.origin.state !== 'string' || updates.origin.state.length > 100)) ||
+      (updates.origin.country !== undefined && (typeof updates.origin.country !== 'string' || updates.origin.country.length > 100)))
+  ) {
     return res.status(400).json({ error: 'origin must contain state and country fields.' });
   }
-  if (updates.name !== undefined && (typeof updates.name !== 'string' || !updates.name.trim())) {
+  if (updates.name !== undefined && (typeof updates.name !== 'string' || !updates.name.trim() || updates.name.trim().length > 100)) {
     return res.status(400).json({ error: 'Name must be a non-empty string.' });
+  }
+  if (updates.year !== undefined && (typeof updates.year !== 'string' || updates.year.length > 50)) {
+    return res.status(400).json({ error: 'Year must be a string under 50 characters.' });
+  }
+  if (updates.course !== undefined && (typeof updates.course !== 'string' || updates.course.length > 120)) {
+    return res.status(400).json({ error: 'Course must be a string under 120 characters.' });
+  }
+  if (updates.description !== undefined && (typeof updates.description !== 'string' || updates.description.length > 1000)) {
+    return res.status(400).json({ error: 'Description must be a string under 1000 characters.' });
+  }
+  if (updates.photoUrl !== undefined) {
+    if (!userService.isValidPhotoUrl(updates.photoUrl)) {
+      return res.status(400).json({ error: 'photoUrl must be a valid HTTP/HTTPS URL or supported image data URI.' });
+    }
+    updates.photoUrl = updates.photoUrl.trim();
+  }
+  for (const socialField of ['instagramUrl', 'linkedinUrl', 'githubUrl']) {
+    if (updates[socialField] !== undefined) {
+      const normalizedUrl = userService.normalizeSocialUrl(updates[socialField], socialField.replace('Url', ''));
+      if (normalizedUrl === null) {
+        return res.status(400).json({
+          error: `${socialField} must be an HTTPS profile URL for the correct platform or a valid handle.`,
+        });
+      }
+      updates[socialField] = normalizedUrl;
+    }
   }
 
   try {
