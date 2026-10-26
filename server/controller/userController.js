@@ -1,35 +1,11 @@
-const User = require('../models/User');
 const mongoose = require('mongoose');
-
-const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-const formatUsers = (users) => users.map(({ googleId, isActive, ...user }) => ({
-  ...user,
-  positions: user.positions || [],
-  year: user.year || '',
-  course: user.course || '',
-  origin: user.origin || { state: '', country: '' },
-  description: user.description || '',
-  photoUrl: user.photoUrl || '',
-  instagramUrl: user.instagramUrl || '',
-  linkedinUrl: user.linkedinUrl || '',
-  githubUrl: user.githubUrl || '',
-  featuredProjectIds: user.featuredProjectIds || [],
-  loggedIn: Boolean(googleId),
-  verified: Boolean(user.positions?.length),
-}));
-
-const userDirectoryQuery = (filter) => User.find(filter)
-  .select('_id email name photoUrl positions year course origin description instagramUrl linkedinUrl githubUrl featuredProjectIds googleId isActive')
-  .populate({ path: 'featuredProjectIds', select: '_id projectId title description lead' })
-  .sort({ name: 1 })
-  .lean();
+const userService = require('../services/userService');
 
 // Return all users from the canonical User collection using the directory-safe fields.
 const getUsers = async (req, res) => {
   try {
-    const users = await userDirectoryQuery({});
-    return res.json(formatUsers(users));
+    const users = await userService.getAllUsers();
+    return res.json(users);
   } catch (error) {
     console.error('Unable to fetch users:', error);
     return res.status(500).json({ error: 'Unable to fetch users.' });
@@ -59,26 +35,15 @@ const filterUsers = async (req, res) => {
       return res.status(400).json({ error: 'Invalid limit parameter.' });
     }
 
-    const filter = { isActive: true };
-    if (search?.trim()) {
-      const term = new RegExp(escapeRegExp(search.trim()), 'i');
-      filter.$or = [{ name: term }, { email: term }, { course: term }, { description: term }];
-    }
-    if (role !== undefined) filter.positions = role.trim();
-    if (year !== undefined) filter.year = year.trim();
-
-    const users = await userDirectoryQuery(filter)
-      .skip((page - 1) * limit)
-      .limit(limit);
-
-    return res.json(formatUsers(users));
+    const users = await userService.getFilteredUsers({ search, role, year, page, limit });
+    return res.json(users);
   } catch (error) {
     console.error('Unable to filter member directory:', error);
     return res.status(500).json({ error: 'Unable to filter member directory.' });
   }
-}
+};
 
-//update a User
+// Update a User profile
 const updateUser = async (req, res) => {
   const { id } = req.params;
 
@@ -108,29 +73,25 @@ const updateUser = async (req, res) => {
   }
   const updates = Object.fromEntries(requestEntries);
 
+  if (updates.featuredProjectIds !== undefined) {
+    if (!Array.isArray(updates.featuredProjectIds) || updates.featuredProjectIds.some((projectId) => !mongoose.Types.ObjectId.isValid(projectId))) {
+      return res.status(400).json({ error: 'featuredProjectIds must be an array of valid project ids.' });
+    }
+    updates.featuredProjectIds = [...new Set(updates.featuredProjectIds.map(String))];
+  }
+  if (updates.origin !== undefined && (updates.origin === null || typeof updates.origin !== 'object' || Array.isArray(updates.origin))) {
+    return res.status(400).json({ error: 'origin must contain state and country fields.' });
+  }
+  if (updates.name !== undefined && (typeof updates.name !== 'string' || !updates.name.trim())) {
+    return res.status(400).json({ error: 'Name must be a non-empty string.' });
+  }
+
   try {
-    const user = await User.findById(id);
-    if (!user) return res.status(404).json({ error: 'Not found' });
-
-    if (updates.featuredProjectIds !== undefined) {
-      if (!Array.isArray(updates.featuredProjectIds) || updates.featuredProjectIds.some((projectId) => !mongoose.Types.ObjectId.isValid(projectId))) {
-        return res.status(400).json({ error: 'featuredProjectIds must be an array of valid project ids.' });
-      }
-      updates.featuredProjectIds = [...new Set(updates.featuredProjectIds.map(String))];
+    const updatedUser = await userService.updateUser(id, updates);
+    if (!updatedUser) {
+      return res.status(404).json({ error: 'Not found' });
     }
-    if (updates.origin !== undefined && (updates.origin === null || typeof updates.origin !== 'object' || Array.isArray(updates.origin))) {
-      return res.status(400).json({ error: 'origin must contain state and country fields.' });
-    }
-    if (updates.name !== undefined && (typeof updates.name !== 'string' || !updates.name.trim())) {
-      return res.status(400).json({ error: 'Name must be a non-empty string.' });
-    }
-
-    Object.assign(user, updates);
-    await user.save();
-    const safeUser = await User.findById(user._id)
-      .select('-googleId -__v')
-      .populate({ path: 'featuredProjectIds', select: '_id projectId title description lead' });
-    return res.status(200).json(safeUser);
+    return res.status(200).json(updatedUser);
   } catch (error) {
     console.error('Unable to update user profile:', error);
     return res.status(500).json({ error: 'Unable to update user profile.' });
