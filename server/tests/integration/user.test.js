@@ -3,9 +3,9 @@
  * Uses mongodb-memory-server — never touches the production database.
  *
  * Routes tested:
- *   GET   /user/users
- *   GET   /user/filter
- *   PATCH /user/:id
+ *   GET   /api/user/users
+ *   GET   /api/user/filter
+ *   PATCH /api/user/:id
  */
 
 const request = require('supertest');
@@ -72,7 +72,7 @@ describe('User directory and profile API', () => {
       isActive: true,
     });
 
-    const res = await request(app).get('/user/filter');
+    const res = await request(app).get('/api/user/filter');
 
     expect(res.status).toBe(200);
     expect(res.body).toHaveLength(2);
@@ -100,7 +100,7 @@ describe('User directory and profile API', () => {
       { name: 'Bob', email: 'bob@example.com', positions: ['admin'], year: 'Year 3' },
     ]);
 
-    const res = await request(app).get('/user/filter?search=ali&role=member&year=Year%202&page=1&limit=1');
+    const res = await request(app).get('/api/user/filter?search=ali&role=member&year=Year%202&page=1&limit=1');
 
     expect(res.status).toBe(200);
     expect(res.body).toHaveLength(1);
@@ -108,14 +108,14 @@ describe('User directory and profile API', () => {
   });
 
   test('returns 400 for malformed directory query parameters', async () => {
-    const res = await request(app).get('/user/filter?page=0&limit=not-a-number');
+    const res = await request(app).get('/api/user/filter?page=0&limit=not-a-number');
     expect(res.status).toBe(400);
     expect(res.body.error).toBe('Invalid page parameter.');
   });
 
   test('returns all users from the unfiltered users route', async () => {
     await User.create({ name: 'Inactive', email: 'inactive@example.com', isActive: false });
-    const res = await request(app).get('/user/users');
+    const res = await request(app).get('/api/user/users');
     expect(res.status).toBe(200);
     expect(res.body).toHaveLength(1);
     expect(res.body[0].name).toBe('Inactive');
@@ -123,14 +123,14 @@ describe('User directory and profile API', () => {
 
   test('does not return inactive users from the filtered directory route', async () => {
     await User.create({ name: 'Inactive', email: 'inactive@example.com', isActive: false });
-    const res = await request(app).get('/user/filter');
+    const res = await request(app).get('/api/user/filter');
     expect(res.status).toBe(200);
     expect(res.body).toEqual([]);
   });
 
   test('returns 404 when id is not a valid ObjectId', async () => {
     const res = await request(app)
-      .patch('/user/not-a-valid-id')
+      .patch('/api/user/not-a-valid-id')
       .send({ name: 'New Name' });
 
     expect(res.status).toBe(404);
@@ -142,7 +142,7 @@ describe('User directory and profile API', () => {
     const fakeId = new mongoose.Types.ObjectId().toString();
     const cookie = await authenticatedCookie(caller._id);
     const res = await request(app)
-      .patch(`/user/${fakeId}`)
+      .patch(`/api/user/${fakeId}`)
       .set('Cookie', cookie)
       .send({ name: 'Nonexistent User' });
 
@@ -162,7 +162,7 @@ describe('User directory and profile API', () => {
     const cookie = await authenticatedCookie(createdUser._id);
 
     const res = await request(app)
-      .patch(`/user/${createdUser._id}`)
+      .patch(`/api/user/${createdUser._id}`)
       .set('Cookie', cookie)
       .send({
         name: 'Updated Name',
@@ -187,7 +187,7 @@ describe('User directory and profile API', () => {
     const cookie = await authenticatedCookie(user._id);
 
     const res = await request(app)
-      .patch(`/user/${user._id}`)
+      .patch(`/api/user/${user._id}`)
       .set('Cookie', cookie)
       .send({ featuredProjectIds: [firstProject._id.toString(), secondProject._id.toString()] });
 
@@ -205,13 +205,13 @@ describe('User directory and profile API', () => {
     const cookie = await authenticatedCookie(user._id);
 
     const invalidProject = await request(app)
-      .patch(`/user/${user._id}`)
+      .patch(`/api/user/${user._id}`)
       .set('Cookie', cookie)
       .send({ featuredProjectIds: ['not-an-object-id'] });
     expect(invalidProject.status).toBe(400);
 
     const protectedField = await request(app)
-      .patch(`/user/${user._id}`)
+      .patch(`/api/user/${user._id}`)
       .set('Cookie', cookie)
       .send({ positions: ['admin'] });
     expect(protectedField.status).toBe(400);
@@ -220,7 +220,7 @@ describe('User directory and profile API', () => {
 
   test('returns 401 when updating a profile without a session', async () => {
     const user = await User.create({ name: 'Alice', email: 'alice@example.com' });
-    const res = await request(app).patch(`/user/${user._id}`).send({ name: 'New Name' });
+    const res = await request(app).patch(`/api/user/${user._id}`).send({ name: 'New Name' });
     expect(res.status).toBe(401);
   });
 
@@ -230,7 +230,7 @@ describe('User directory and profile API', () => {
     const cookie = await authenticatedCookie(caller._id);
 
     const res = await request(app)
-      .patch(`/user/${target._id}`)
+      .patch(`/api/user/${target._id}`)
       .set('Cookie', cookie)
       .send({ name: 'Changed Name' });
 
@@ -244,7 +244,7 @@ describe('User directory and profile API', () => {
     const cookie = await authenticatedCookie(admin._id);
 
     const res = await request(app)
-      .patch(`/user/${target._id}`)
+      .patch(`/api/user/${target._id}`)
       .set('Cookie', cookie)
       .send({ name: 'Updated by Admin' });
 
@@ -256,7 +256,7 @@ describe('User directory and profile API', () => {
     const user = await User.create({ name: 'Alice', email: 'alice@example.com' });
     const cookie = await authenticatedCookie(user._id);
     const res = await request(app)
-      .patch(`/user/${user._id}`)
+      .patch(`/api/user/${user._id}`)
       .set('Cookie', cookie)
       .send({ origin: null });
     expect(res.status).toBe(400);

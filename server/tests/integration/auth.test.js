@@ -88,8 +88,8 @@ describe.skip('Security: unauthenticated requests', () => {
   // These tests document the current behaviour so that any future middleware
   // addition is caught as a test failure.
 
-  test('GET /user/users returns 200 without any session (no server-side guard)', async () => {
-    const res = await request(app).get('/user/users');
+  test('GET /api/user/users returns 200 without any session (no server-side guard)', async () => {
+    const res = await request(app).get('/api/user/users');
     // If auth middleware is added later, this will break and force a test update.
     expect(res.status).toBe(200);
   });

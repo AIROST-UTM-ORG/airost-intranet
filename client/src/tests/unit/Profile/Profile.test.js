@@ -186,7 +186,7 @@ describe('Member profile', () => {
 
     await waitFor(() => {
       expect(axios.patch).toHaveBeenCalledWith(
-        'http://localhost:4000/user/member-1',
+        'http://localhost:4000/api/user/member-1',
         expect.objectContaining({
           name: 'Alice Tan Updated',
           featuredProjectIds: ['project-1', 'project-2'],
@@ -344,7 +344,7 @@ describe('Member profile', () => {
 
     await waitFor(() => {
       expect(axios.patch).toHaveBeenCalledWith(
-        'http://localhost:4000/user/member-1',
+        'http://localhost:4000/api/user/member-1',
         expect.objectContaining({ featuredProjectIds: [] }),
         { withCredentials: true },
       );
@@ -363,7 +363,7 @@ describe('Member profile', () => {
 
     await waitFor(() => {
       expect(axios.patch).toHaveBeenCalledWith(
-        'http://localhost:4000/user/fallback-id',
+        'http://localhost:4000/api/user/fallback-id',
         expect.any(Object),
         { withCredentials: true },
       );
