@@ -406,7 +406,7 @@ async function run() {
   const lineWarnings = [];
   for (const f of pr.files?.nodes || []) {
     // Check additions as conservative estimate of large files
-    if (f.additions > 400 && !/\.json$|\.lock$|package-lock\.json|test|spec|fixtures/i.test(f.path)) {
+    if (f.additions > 400 && !/\.json$|\.lock$|package-lock\.json|\.md$|test|spec|fixtures/i.test(f.path)) {
       lineWarnings.push(`File \`${f.path}\` has ${f.additions} added lines (> 400 line guideline). Consider splitting into smaller modules.`);
     }
   }
