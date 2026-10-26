@@ -6,6 +6,4 @@ env.yaml
 
 Dockerfile
 
-package-lock.json
-
 /coverage
