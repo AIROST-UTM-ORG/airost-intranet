@@ -13,7 +13,8 @@
  *    strictly excluding the PR author and external commenters/bots, with fair randomized selection.
  */
 
-const token = process.env.PROJECT_AUTOMATION_TOKEN || process.env.GH_TOKEN || process.env.GITHUB_TOKEN;
+const githubToken = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+const projectToken = process.env.PROJECT_AUTOMATION_TOKEN;
 const projectId = process.env.PROJECT_ID || 'PVT_kwDOE_DQyc4BoRy3'; // AIROST Intranet (Project #6)
 const approvalsFieldId = process.env.APPROVALS_FIELD_ID || 'PVTSSF_lADOE_DQyc4BoRy3zhmyojE';
 
@@ -28,9 +29,9 @@ const owner = process.env.REPO_OWNER || process.env.GITHUB_REPOSITORY_OWNER;
 const repo = process.env.REPO_NAME || (process.env.GITHUB_REPOSITORY ? process.env.GITHUB_REPOSITORY.split('/')[1] : null);
 const prNumber = parseInt(process.env.PR_NUMBER, 10);
 
-if (!token) {
-  console.warn('::warning::No authentication token provided. Skipping reviewer assignment and validation.');
-  process.exit(0);
+if (!githubToken) {
+  console.error('::error::GITHUB_TOKEN is missing. GITHUB_TOKEN is required for PR validation and reviewer assignment.');
+  process.exit(1);
 }
 
 if (!owner || !repo || isNaN(prNumber)) {
@@ -47,11 +48,11 @@ function shuffle(array) {
   return arr;
 }
 
-async function request(url, options = {}) {
+async function request(url, options = {}, authToken = githubToken) {
   const res = await fetch(url, {
     ...options,
     headers: {
-      'Authorization': `Bearer ${token}`,
+      'Authorization': `Bearer ${authToken}`,
       'Content-Type': 'application/json',
       'User-Agent': 'validate-and-assign-reviewers',
       ...(options.headers || {})
@@ -59,13 +60,7 @@ async function request(url, options = {}) {
   });
 
   const contentType = res.headers.get('content-type') || '';
-  let body;
-  if (contentType.includes('application/json')) {
-    body = await res.json();
-  } else {
-    body = await res.text();
-  }
-
+  const body = contentType.includes('application/json') ? await res.json() : await res.text();
   if (!res.ok) {
     const errorMsg = typeof body === 'object' && body.message ? body.message : body;
     throw new Error(`HTTP ${res.status}: ${errorMsg}`);
@@ -73,11 +68,11 @@ async function request(url, options = {}) {
   return body;
 }
 
-async function graphql(query, variables = {}) {
+async function graphql(query, variables = {}, authToken = githubToken) {
   const body = await request('https://api.github.com/graphql', {
     method: 'POST',
     body: JSON.stringify({ query, variables })
-  });
+  }, authToken);
 
   if (body.errors && body.errors.length > 0) {
     throw new Error(body.errors.map(e => e.message).join(' | '));
@@ -86,38 +81,25 @@ async function graphql(query, variables = {}) {
 }
 
 function evaluateRisk(files, labels, title) {
-  // Sensitive 2-approval criteria:
-  // 1. Auth, sessions, passwords, permissions
-  // 2. Docker, CI/CD actions, reverse-proxy, deployment configs
-  // 3. Database models and schema migrations
-  // 4. Shared server architecture & critical admin routes
-  // 5. Automation & GitHub scripts
-  for (const f of files) {
-    if (
-      /\.github\/workflows\//i.test(f) ||
-      /\.github\/scripts\//i.test(f) ||
-      /docker/i.test(f) ||
-      /nginx/i.test(f) ||
-      /server\/passport\.js/i.test(f) ||
-      /server\/routes\/adminRoutes/i.test(f) ||
-      /server\/routes\/auth/i.test(f) ||
-      /server\/middleware\/auth/i.test(f) ||
-      /server\/models\//i.test(f) ||
-      /server\/app\.js/i.test(f) ||
-      /server\/server\.js/i.test(f)
-    ) {
-      return 2;
-    }
-  }
+  const sensitivePatterns = [
+    /\.github\/(?:workflows|scripts)\//i,
+    /docker/i,
+    /nginx/i,
+    /server\/(?:passport\.js|app\.js|server\.js)/i,
+    /server\/routes\/(?:adminRoutes|auth)/i,
+    /server\/middleware\/auth/i,
+    /server\/models\//i
+  ];
 
+  if (files.some(f => sensitivePatterns.some(p => p.test(f)))) {
+    return 2;
+  }
   if (labels.some(l => ['module:auth', 'module:infra'].includes(l))) {
     return 2;
   }
-
   if (/\b(?:auth|jwt|security|permission|session|docker|deploy|ingress)\b/i.test(title)) {
     return 2;
   }
-
   return 1;
 }
 
@@ -131,17 +113,10 @@ async function validatePrTemplate(body) {
     return { errors, warnings, validIssues };
   }
 
-  if (!/##\s*What changed/i.test(body)) {
-    errors.push('Missing required section: `## What changed`');
-  }
-  if (!/##\s*Why/i.test(body)) {
-    errors.push('Missing required section: `## Why`');
-  }
-  if (!/##\s*Testing/i.test(body)) {
-    errors.push('Missing required section: `## Testing`');
-  }
+  if (!/##\s*What changed/i.test(body)) errors.push('Missing required section: `## What changed`');
+  if (!/##\s*Why/i.test(body)) errors.push('Missing required section: `## Why`');
+  if (!/##\s*Testing/i.test(body)) errors.push('Missing required section: `## Testing`');
 
-  // Restrict issue closing regex search specifically to the ## Related issue(s) section
   const relatedSectionMatch = body.match(/(?:^|\r?\n)#{2,3}\s*Related issues?(?:\(s\))?\s*:?([\s\S]*?)(?=(?:\r?\n#{1,6}\s+|$))/i);
   if (!relatedSectionMatch) {
     errors.push('Missing required section: `## Related issue`');
@@ -159,7 +134,7 @@ async function validatePrTemplate(body) {
   const issueNumbers = [...new Set(issueMatches.map(m => parseInt(m[1], 10)))];
   for (const issueNum of issueNumbers) {
     try {
-      const issue = await request(`https://api.github.com/repos/${owner}/${repo}/issues/${issueNum}`);
+      const issue = await request(`https://api.github.com/repos/${owner}/${repo}/issues/${issueNum}`, {}, githubToken);
       if (issue.pull_request) {
         errors.push(`Issue #${issueNum} is actually a pull request, not an issue.`);
       } else if (issue.state !== 'open') {
@@ -176,38 +151,12 @@ async function validatePrTemplate(body) {
   return { errors, warnings, validIssues };
 }
 
-// Keep backward-compatible helpers
-function validatePRBody(body) {
-  const errors = [];
-  const warnings = [];
-
-  if (!body || body.trim().length === 0) {
-    errors.push('Pull request description is empty. Please fill in the required PR template.');
-    return { errors, warnings };
-  }
-
-  if (!/##\s*What changed/i.test(body)) {
-    errors.push('Missing required section: `## What changed`');
-  }
-  if (!/##\s*Why/i.test(body)) {
-    errors.push('Missing required section: `## Why`');
-  }
-  if (!/##\s*Testing/i.test(body)) {
-    errors.push('Missing required section: `## Testing`');
-  }
-  if (!/(?:^|\r?\n)#{2,3}\s*Related issues?(?:\(s\))?\b/i.test(body)) {
-    errors.push('Missing required section: `## Related issue`');
-  }
-
-  return { errors, warnings };
-}
-
-async function checkLinkedIssues(body) {
-  const result = await validatePrTemplate(body);
-  return { errors: result.errors, validIssues: result.validIssues };
-}
-
 async function updateProjectApprovals(prId, approvalOption) {
+  if (!projectToken) {
+    console.warn('::warning::PROJECT_AUTOMATION_TOKEN is not configured. Skipping Project #6 Approvals Required field update.');
+    return;
+  }
+
   try {
     const projectQuery = `
       query($prId: ID!) {
@@ -227,9 +176,8 @@ async function updateProjectApprovals(prId, approvalOption) {
       }
     `;
 
-    const projectData = await graphql(projectQuery, { prId });
-    const prNode = projectData?.node;
-    let projectItem = prNode?.projectItems?.nodes?.find(item => item.project?.id === projectId);
+    const projectData = await graphql(projectQuery, { prId }, projectToken);
+    let projectItem = projectData?.node?.projectItems?.nodes?.find(item => item.project?.id === projectId);
     let itemId = projectItem?.id;
 
     if (!itemId) {
@@ -241,7 +189,7 @@ async function updateProjectApprovals(prId, approvalOption) {
           }
         }
       `;
-      const addResult = await graphql(addMutation, { projectId, contentId: prId });
+      const addResult = await graphql(addMutation, { projectId, contentId: prId }, projectToken);
       itemId = addResult?.addProjectV2ItemById?.item?.id;
     }
 
@@ -268,32 +216,28 @@ async function updateProjectApprovals(prId, approvalOption) {
           itemId,
           fieldId: approvalsFieldId,
           optionId: approvalOption.id
-        });
+        }, projectToken);
         console.log(`✓ Successfully updated "Approvals Required" to "${approvalOption.name}".`);
       }
     }
   } catch (err) {
-    console.warn('::warning::Project #6 automation token not configured or lacks permissions. Skipping Approvals Required field update.');
+    console.warn(`::warning::Could not update Project #6 Approvals Required field: ${err.message}`);
   }
 }
 
 async function assignReviewers(pr, requiredApprovals, labels) {
   const authorLogin = pr.author?.login || '';
 
-  // Strictly filter out PR author from maintainer pool
   const eligibleReviewers = MAINTAINER_POOL.filter(
     m => m.toLowerCase() !== authorLogin.toLowerCase()
   );
   const eligibleSet = new Set(eligibleReviewers.map(m => m.toLowerCase()));
 
-  // Collect all assigned review requests and completed reviews
   const rawReviewers = [
     ...(pr.reviewRequests?.nodes || []).map(r => r.requestedReviewer?.login?.toLowerCase()),
     ...(pr.reviews?.nodes || []).map(r => r.author?.login?.toLowerCase())
   ].filter(Boolean);
 
-  // Must NOT treat authorLogin, bots, or arbitrary external commenters as maintainer reviewers
-  // Only count reviewers who are in eligibleReviewers (which already excludes authorLogin)
   const currentMaintainerReviewers = new Set(
     rawReviewers.filter(login => eligibleSet.has(login))
   );
@@ -303,17 +247,11 @@ async function assignReviewers(pr, requiredApprovals, labels) {
   console.log(`Current maintainer reviewers: ${Array.from(currentMaintainerReviewers).join(', ') || 'none'}. Needed: ${neededCount}`);
 
   if (neededCount > 0 && !pr.isDraft) {
-    // Prioritize candidates not yet assigned
     const unassignedCandidates = eligibleReviewers.filter(
       cand => !currentMaintainerReviewers.has(cand.toLowerCase())
     );
-
-    // Randomize unassigned candidates to distribute review workload fairly across maintainers
     const shuffledCandidates = shuffle(unassignedCandidates);
 
-    // Maintain domain affinity tiers while randomizing within each tier:
-    // Backend/Infra/Auth: prioritize Gan0117, leehom22, HoeZhiWan
-    // Frontend/Projects: prioritize zping-926, leehom22
     const isBackendOrInfra = requiredApprovals === 2 || labels.some(l => ['module:infra', 'module:auth'].includes(l));
     const domainSpecialists = isBackendOrInfra
       ? ['gan0117', 'leehom22', 'hoezhiwan']
@@ -332,7 +270,7 @@ async function assignReviewers(pr, requiredApprovals, labels) {
         await request(`https://api.github.com/repos/${owner}/${repo}/pulls/${prNumber}/requested_reviewers`, {
           method: 'POST',
           body: JSON.stringify({ reviewers: toAssign })
-        });
+        }, githubToken);
         console.log(`✓ Successfully assigned reviewers: ${toAssign.join(', ')}.`);
       } catch (err) {
         console.warn(`::warning::Could not assign reviewers: ${err.message}`);
@@ -382,7 +320,7 @@ async function run() {
 
   let data;
   try {
-    data = await graphql(query, { owner, repo, prNumber });
+    data = await graphql(query, { owner, repo, prNumber }, githubToken);
   } catch (err) {
     console.error(`::error::Failed to query PR details: ${err.message}`);
     process.exit(1);
@@ -405,21 +343,17 @@ async function run() {
   // 2. Modularity check (400-line guideline)
   const lineWarnings = [];
   for (const f of pr.files?.nodes || []) {
-    // Check additions as conservative estimate of large files
     if (f.additions > 400 && !/\.json$|\.lock$|package-lock\.json|\.md$|test|spec|fixtures/i.test(f.path)) {
       lineWarnings.push(`File \`${f.path}\` has ${f.additions} added lines (> 400 line guideline). Consider splitting into smaller modules.`);
     }
   }
 
-  if (lineWarnings.length > 0) {
-    for (const warn of lineWarnings) {
-      console.warn(`::warning::${warn}`);
-    }
+  for (const warn of lineWarnings) {
+    console.warn(`::warning::${warn}`);
   }
 
   if (allErrors.length > 0) {
     console.error(`::error::PR Quality Gate Failed:\n- ${allErrors.join('\n- ')}`);
-    // Fail check if template or issue link is invalid
     process.exit(1);
   }
   console.log('✓ PR description and issue link validation passed.');
