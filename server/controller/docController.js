@@ -603,6 +603,10 @@ const deleteDocumentPermanent = async (req, res) => {
 
 // get all Docs (legacy)
 const getDocs = async (req, res) => {
+  if (!req.user) {
+    return sendError(res, 401, 'UNAUTHENTICATED', 'User session is not authenticated');
+  }
+
   try {
     const Docs = await Doc.find({}).sort({ createdAt: -1 });
     res.status(200).json(Docs);
@@ -613,6 +617,10 @@ const getDocs = async (req, res) => {
 
 // get a single Doc (legacy)
 const getDoc = async (req, res) => {
+  if (!req.user) {
+    return sendError(res, 401, 'UNAUTHENTICATED', 'User session is not authenticated');
+  }
+
   const { id } = req.params;
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -632,6 +640,14 @@ const getDoc = async (req, res) => {
 
 // create new Doc (legacy)
 const createDoc = async (req, res) => {
+  if (!req.user) {
+    return sendError(res, 401, 'UNAUTHENTICATED', 'User session is not authenticated');
+  }
+
+  if (!isAdmin(req.user)) {
+    return sendError(res, 403, 'FORBIDDEN', 'Only platform admins can create legacy documents');
+  }
+
   const { image, title, profile, author, date, type, description, content } = req.body;
 
   let emptyFields = [];
@@ -658,6 +674,14 @@ const createDoc = async (req, res) => {
 
 // delete a Doc (legacy)
 const deleteDoc = async (req, res) => {
+  if (!req.user) {
+    return sendError(res, 401, 'UNAUTHENTICATED', 'User session is not authenticated');
+  }
+
+  if (!isAdmin(req.user)) {
+    return sendError(res, 403, 'FORBIDDEN', 'Only platform admins can delete legacy documents');
+  }
+
   const { id } = req.params;
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -677,6 +701,14 @@ const deleteDoc = async (req, res) => {
 
 // update a Doc (legacy)
 const updateDoc = async (req, res) => {
+  if (!req.user) {
+    return sendError(res, 401, 'UNAUTHENTICATED', 'User session is not authenticated');
+  }
+
+  if (!isAdmin(req.user)) {
+    return sendError(res, 403, 'FORBIDDEN', 'Only platform admins can update legacy documents');
+  }
+
   const { id } = req.params;
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
