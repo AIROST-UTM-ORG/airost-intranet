@@ -699,5 +699,159 @@ describe('Documentation Backend API Tests', () => {
       expect(res.body.projectId).toBeNull();
     });
   });
+
+  describe('12. Legacy Doc Routes Security Guards (Authentication & Admin Authorization)', () => {
+    const Doc = require('../models/docModel');
+    let legacyDoc;
+
+    beforeAll(async () => {
+      legacyDoc = await Doc.create({
+        image: 'https://example.com/test.jpg',
+        title: 'Legacy Title',
+        profile: 'https://example.com/profile.jpg',
+        author: 'Legacy Author',
+        date: '2026-10-29',
+        type: 'General',
+        description: 'Legacy Description',
+        content: 'Legacy Content',
+      });
+    });
+
+    describe('Unauthenticated access (401 UNAUTHENTICATED)', () => {
+      it('rejects unauthenticated GET /doc', async () => {
+        const res = await request(app).get('/doc');
+        expect(res.status).toBe(401);
+        expect(res.body.error.code).toBe('UNAUTHENTICATED');
+      });
+
+      it('rejects unauthenticated GET /airost/doc', async () => {
+        const res = await request(app).get('/airost/doc');
+        expect(res.status).toBe(401);
+        expect(res.body.error.code).toBe('UNAUTHENTICATED');
+      });
+
+      it('rejects unauthenticated GET /doc/:id', async () => {
+        const res = await request(app).get(`/doc/${legacyDoc._id}`);
+        expect(res.status).toBe(401);
+        expect(res.body.error.code).toBe('UNAUTHENTICATED');
+      });
+
+      it('rejects unauthenticated POST /doc', async () => {
+        const res = await request(app).post('/doc').send({
+          image: 'https://example.com/test.jpg',
+          title: 'Unauth Post',
+          profile: 'https://example.com/profile.jpg',
+          author: 'Unauth',
+          date: '2026-10-29',
+          type: 'General',
+          description: 'Desc',
+          content: 'Content',
+        });
+        expect(res.status).toBe(401);
+        expect(res.body.error.code).toBe('UNAUTHENTICATED');
+      });
+
+      it('rejects unauthenticated PATCH /doc/:id', async () => {
+        const res = await request(app).patch(`/doc/${legacyDoc._id}`).send({
+          title: 'Unauth Update',
+        });
+        expect(res.status).toBe(401);
+        expect(res.body.error.code).toBe('UNAUTHENTICATED');
+      });
+
+      it('rejects unauthenticated DELETE /doc/:id', async () => {
+        const res = await request(app).delete(`/doc/${legacyDoc._id}`);
+        expect(res.status).toBe(401);
+        expect(res.body.error.code).toBe('UNAUTHENTICATED');
+      });
+    });
+
+    describe('Authenticated non-admin member access (read allowed, write 403 FORBIDDEN)', () => {
+      it('allows authenticated non-admin to GET /doc (200)', async () => {
+        const res = await memberAgent.get('/doc');
+        expect(res.status).toBe(200);
+        expect(Array.isArray(res.body)).toBe(true);
+        expect(res.body.length).toBeGreaterThanOrEqual(1);
+      });
+
+      it('allows authenticated non-admin to GET /airost/doc (200)', async () => {
+        const res = await memberAgent.get('/airost/doc');
+        expect(res.status).toBe(200);
+        expect(Array.isArray(res.body)).toBe(true);
+      });
+
+      it('allows authenticated non-admin to GET /doc/:id (200)', async () => {
+        const res = await memberAgent.get(`/doc/${legacyDoc._id}`);
+        expect(res.status).toBe(200);
+        expect(res.body._id).toBe(String(legacyDoc._id));
+      });
+
+      it('rejects authenticated non-admin from POST /doc (403 FORBIDDEN)', async () => {
+        const res = await memberAgent.post('/doc').send({
+          image: 'https://example.com/test.jpg',
+          title: 'Member Post',
+          profile: 'https://example.com/profile.jpg',
+          author: 'Member',
+          date: '2026-10-29',
+          type: 'General',
+          description: 'Desc',
+          content: 'Content',
+        });
+        expect(res.status).toBe(403);
+        expect(res.body.error.code).toBe('FORBIDDEN');
+      });
+
+      it('rejects authenticated non-admin from PATCH /doc/:id (403 FORBIDDEN)', async () => {
+        const res = await memberAgent.patch(`/doc/${legacyDoc._id}`).send({
+          title: 'Member Update Attempt',
+        });
+        expect(res.status).toBe(403);
+        expect(res.body.error.code).toBe('FORBIDDEN');
+      });
+
+      it('rejects authenticated non-admin from DELETE /doc/:id (403 FORBIDDEN)', async () => {
+        const res = await memberAgent.delete(`/doc/${legacyDoc._id}`);
+        expect(res.status).toBe(403);
+        expect(res.body.error.code).toBe('FORBIDDEN');
+      });
+    });
+
+    describe('Authenticated platform admin access (write allowed: 200)', () => {
+      let createdDocId;
+
+      it('allows platform admin to POST /doc (200)', async () => {
+        const res = await adminAgent.post('/doc').send({
+          image: 'https://example.com/test.jpg',
+          title: 'Admin Created Doc',
+          profile: 'https://example.com/profile.jpg',
+          author: 'Admin User',
+          date: '2026-10-29',
+          type: 'General',
+          description: 'Created by admin',
+          content: 'Admin content',
+        });
+        expect(res.status).toBe(200);
+        expect(res.body.title).toBe('Admin Created Doc');
+        createdDocId = res.body._id;
+      });
+
+      it('allows platform admin to PATCH /doc/:id (200)', async () => {
+        const res = await adminAgent.patch(`/doc/${createdDocId}`).send({
+          title: 'Updated Admin Doc',
+        });
+        expect(res.status).toBe(200);
+        expect(res.body.title).toBe('Updated Admin Doc');
+      });
+
+      it('allows platform admin to DELETE /doc/:id (200)', async () => {
+        const res = await adminAgent.delete(`/doc/${createdDocId}`);
+        expect(res.status).toBe(200);
+        expect(res.body.message).toBe('Doc deleted');
+
+        const check = await Doc.findById(createdDocId);
+        expect(check).toBeNull();
+      });
+    });
+  });
 });
 
