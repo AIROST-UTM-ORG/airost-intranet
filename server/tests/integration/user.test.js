@@ -4,7 +4,6 @@
  *
  * Routes tested:
  *   GET   /api/user/users
- *   GET   /api/user/filter
  *   PATCH /api/user/:id
  */
 
@@ -73,7 +72,7 @@ describe('User directory and profile API', () => {
       isActive: true,
     });
 
-    const res = await request(app).get('/api/user/filter');
+    const res = await request(app).get('/api/user/users');
 
     expect(res.status).toBe(200);
     expect(res.body).toHaveLength(2);
@@ -101,32 +100,40 @@ describe('User directory and profile API', () => {
       { name: 'Bob', email: 'bob@example.com', positions: ['admin'], year: 'Year 3' },
     ]);
 
-    const res = await request(app).get('/api/user/filter?search=ali&role=member&year=Year%202&page=1&limit=1');
+    const res = await request(app).get('/api/user/users?search=ali&role=member&year=Year%202&page=1&limit=1');
 
     expect(res.status).toBe(200);
     expect(res.body).toHaveLength(1);
     expect(res.body[0].name).toBe('Alice');
   });
 
+  test('applies pagination defaults when only one pagination parameter is provided', async () => {
+    await User.create([
+      { name: 'Alice', email: 'alice@example.com', isActive: true },
+      { name: 'Bob', email: 'bob@example.com', isActive: true },
+    ]);
+
+    const res = await request(app).get('/api/user/users?page=1');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveLength(2);
+  });
+
   test('returns 400 for malformed directory query parameters', async () => {
-    const res = await request(app).get('/api/user/filter?page=0&limit=not-a-number');
+    const res = await request(app).get('/api/user/users?page=0&limit=not-a-number');
     expect(res.status).toBe(400);
     expect(res.body.error).toBe('Invalid page parameter.');
   });
 
-  test('returns all users from the unfiltered users route', async () => {
-    await User.create({ name: 'Inactive', email: 'inactive@example.com', isActive: false });
+  test('returns all active directory users when no query or pagination is provided', async () => {
+    await User.create([
+      { name: 'Active', email: 'active@example.com', isActive: true },
+      { name: 'Inactive', email: 'inactive@example.com', isActive: false },
+    ]);
     const res = await request(app).get('/api/user/users');
     expect(res.status).toBe(200);
     expect(res.body).toHaveLength(1);
-    expect(res.body[0].name).toBe('Inactive');
-  });
-
-  test('does not return inactive users from the filtered directory route', async () => {
-    await User.create({ name: 'Inactive', email: 'inactive@example.com', isActive: false });
-    const res = await request(app).get('/api/user/filter');
-    expect(res.status).toBe(200);
-    expect(res.body).toEqual([]);
+    expect(res.body[0].name).toBe('Active');
   });
 
   test('returns 404 when id is not a valid ObjectId', async () => {
