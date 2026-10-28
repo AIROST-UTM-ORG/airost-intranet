@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import InfoBanner from "./InfoBanner";
 import DocumentLinkPreview from "./DocumentLinkPreview";
 import AreaSelectDropdown from "./AreaSelectDropdown";
-import { AREA_LABELS } from "../api";
+import { AREA_LABELS } from "../../../services/documentation";
 
 /**
  * DocumentFormScreen - Covers Screen 12 (Add Document) and Screen 13 (Edit Document)

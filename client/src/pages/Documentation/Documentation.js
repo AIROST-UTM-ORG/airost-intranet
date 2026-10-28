@@ -17,7 +17,7 @@ import {
   updateSpace,
   createDocument,
   updateDocument,
-} from "./api";
+} from "../../services/documentation";
 import "./Documentation.css";
 
 export { ViewModes, parseDocPath };

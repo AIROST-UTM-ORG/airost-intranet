@@ -4,7 +4,7 @@ import InfoBanner from "./InfoBanner";
 import SpaceHeader from "./SpaceHeader";
 import AreaTabs from "./AreaTabs";
 import DocumentCard from "./DocumentCard";
-import { AREA_LABELS } from "../api";
+import { AREA_LABELS } from "../../../services/documentation";
 
 /**
  * SpaceDetailScreen - Covers Screens 8, 9, 10, and 11

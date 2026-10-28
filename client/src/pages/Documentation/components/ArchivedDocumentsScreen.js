@@ -1,7 +1,7 @@
 import React from "react";
 import { FiFileText, FiRotateCcw } from "react-icons/fi";
 import InfoBanner from "./InfoBanner";
-import { getProviderDisplayName, AREA_LABELS } from "../api";
+import { getProviderDisplayName, AREA_LABELS } from "../../../services/documentation";
 
 /**
  * ArchivedDocumentsScreen - Covers Screen 14
