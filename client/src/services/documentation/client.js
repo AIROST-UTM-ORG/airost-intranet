@@ -1,5 +1,5 @@
 import axios from "axios";
-import { API_URL } from "../../../config/api";
+import { API_URL } from "../../config/api";
 
 /**
  * Shared real API axios client with unified error normalization.
