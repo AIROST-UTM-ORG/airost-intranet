@@ -283,7 +283,7 @@
 
   .profile-save-button:disabled,
   .profile-cancel-button:disabled {
-    @apply cursor-wait opacity-[0.65];
+    @apply opacity-[0.65];
   }
 
   .profile-cancel-button {

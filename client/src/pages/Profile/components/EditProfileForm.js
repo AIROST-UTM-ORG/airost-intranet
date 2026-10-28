@@ -7,6 +7,8 @@ import '../../MemberDirectory/styles/shared.css';
 const EditProfileForm = ({
   form,
   errorMessage,
+  socialErrors = {},
+  hasSocialErrors = false,
   isSaving,
   onBack,
   onSubmit,
@@ -54,15 +56,39 @@ const EditProfileForm = ({
           </label>
           <label className="profile-edit-field">
             <span>Instagram</span>
-            <input name="instagramUrl" value={form.instagramUrl} onChange={onFieldChange} placeholder="https://instagram.com/…" />
+            <input
+              name="instagramUrl"
+              value={form.instagramUrl}
+              onChange={onFieldChange}
+              placeholder="https://www.instagram.com/user_id"
+              aria-invalid={Boolean(socialErrors.instagramUrl)}
+              aria-describedby={socialErrors.instagramUrl ? 'instagram-url-error' : undefined}
+            />
+            {socialErrors.instagramUrl && <span className="profile-edit-field-error" id="instagram-url-error" role="alert">{socialErrors.instagramUrl}</span>}
           </label>
           <label className="profile-edit-field">
             <span>LinkedIn</span>
-            <input name="linkedinUrl" value={form.linkedinUrl} onChange={onFieldChange} type="url" placeholder="https://linkedin.com/in/…" />
+            <input
+              name="linkedinUrl"
+              value={form.linkedinUrl}
+              onChange={onFieldChange}
+              placeholder="https://www.linkedin.com/in/user-id"
+              aria-invalid={Boolean(socialErrors.linkedinUrl)}
+              aria-describedby={socialErrors.linkedinUrl ? 'linkedin-url-error' : undefined}
+            />
+            {socialErrors.linkedinUrl && <span className="profile-edit-field-error" id="linkedin-url-error" role="alert">{socialErrors.linkedinUrl}</span>}
           </label>
           <label className="profile-edit-field">
             <span>GitHub</span>
-            <input name="githubUrl" value={form.githubUrl} onChange={onFieldChange} type="url" placeholder="https://github.com/…" />
+            <input
+              name="githubUrl"
+              value={form.githubUrl}
+              onChange={onFieldChange}
+              placeholder="GitHub handle or https://github.com/user-id"
+              aria-invalid={Boolean(socialErrors.githubUrl)}
+              aria-describedby={socialErrors.githubUrl ? 'github-url-error' : undefined}
+            />
+            {socialErrors.githubUrl && <span className="profile-edit-field-error" id="github-url-error" role="alert">{socialErrors.githubUrl}</span>}
           </label>
           <label className="profile-edit-field profile-edit-field-wide">
             <span>Short description</span>
@@ -91,7 +117,7 @@ const EditProfileForm = ({
         </fieldset>
 
         <div className="profile-edit-actions">
-          <button className="profile-save-button" type="submit" disabled={isSaving}>
+          <button className="profile-save-button" type="submit" disabled={isSaving || hasSocialErrors}>
             {isSaving ? 'Saving…' : 'Save changes'}
           </button>
           <button className="profile-cancel-button" type="button" onClick={onBack} disabled={isSaving}>

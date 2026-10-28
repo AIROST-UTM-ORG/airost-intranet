@@ -110,7 +110,7 @@ describe('ProfileHero', () => {
     expect(screen.getByText('Kuala Lumpur')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Instagram' })).toHaveAttribute(
       'href',
-      'https://instagram.com/member',
+      'https://www.instagram.com/member',
     );
     expect(screen.getByRole('link', { name: 'GitHub' })).toHaveAttribute(
       'href',
@@ -118,11 +118,27 @@ describe('ProfileHero', () => {
     );
     expect(screen.getByRole('link', { name: 'LinkedIn' })).toHaveAttribute(
       'href',
-      'https://linkedin.com/member',
+      'https://www.linkedin.com/in/member/',
     );
 
     await userEvent.click(screen.getByRole('button', { name: 'Edit profile' }));
     expect(onEdit).toHaveBeenCalledTimes(1);
+  });
+
+  test('does not render legacy social links with unsafe or malformed schemes', () => {
+    render(
+      <ProfileHero
+        member={{
+          instagramUrl: 'javascript:alert(1)',
+          githubUrl: 'ftp://github.com/member',
+          linkedinUrl: 'https://leehom.com',
+        }}
+      />,
+    );
+
+    expect(screen.queryByRole('link', { name: 'Instagram' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'GitHub' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'LinkedIn' })).not.toBeInTheDocument();
   });
 });
 

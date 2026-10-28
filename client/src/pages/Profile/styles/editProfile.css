@@ -21,6 +21,10 @@
     @apply col-span-full;
   }
 
+  .profile-edit-field > .profile-edit-field-error {
+    @apply mt-1 text-xs text-red-700;
+  }
+
   .profile-edit-actions {
     @apply mt-4 flex gap-[10px];
   }

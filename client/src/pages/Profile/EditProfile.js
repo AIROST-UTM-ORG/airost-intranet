@@ -7,6 +7,7 @@ import useAuth from '../../hooks/useAuth.js';
 import EditProfileForm from './components/EditProfileForm.js';
 import { makeSquarePhoto } from './utils/photo.js';
 import { getInitialForm } from './utils/profileForm.js';
+import { getSocialErrors } from './utils/socialUrl.js';
 
 const EditProfile = () => {
   const { user, setUser } = useAuth();
@@ -16,6 +17,8 @@ const EditProfile = () => {
   const [projects, setProjects] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const socialErrors = getSocialErrors(form);
+  const hasSocialErrors = Object.values(socialErrors).some(Boolean);
 
   useEffect(() => {
     setForm(getInitialForm(user));
@@ -30,6 +33,7 @@ const EditProfile = () => {
   const updateField = (event) => {
     const { name, value } = event.target;
     setForm((current) => ({ ...current, [name]: value }));
+    setErrorMessage('');
   };
 
   const toggleFeaturedProject = (projectId) => {
@@ -66,6 +70,10 @@ const EditProfile = () => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    if (hasSocialErrors) {
+      setErrorMessage('Correct the highlighted social links before saving.');
+      return;
+    }
     const userId = user?._id || user?.id;
     if (!userId) {
       setErrorMessage('Your account could not be identified. Refresh the page and try again.');
@@ -119,6 +127,8 @@ const EditProfile = () => {
     <EditProfileForm
       form={form}
       errorMessage={errorMessage}
+      socialErrors={socialErrors}
+      hasSocialErrors={hasSocialErrors}
       isSaving={isSaving}
       onBack={() => navigate('/profile')}
       onSubmit={handleSubmit}

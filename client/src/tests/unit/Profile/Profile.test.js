@@ -82,7 +82,7 @@ describe('Member profile', () => {
     );
     expect(screen.getByRole('link', { name: 'Instagram' })).toHaveAttribute(
       'href',
-      'https://instagram.com/alice',
+      'https://www.instagram.com/alice',
     );
     expect(screen.getByRole('link', { name: 'GitHub' })).toHaveAttribute(
       'href',
@@ -90,7 +90,7 @@ describe('Member profile', () => {
     );
     expect(screen.getByRole('link', { name: 'LinkedIn' })).toHaveAttribute(
       'href',
-      'https://linkedin.com/in/alice',
+      'https://www.linkedin.com/in/alice',
     );
     expect(screen.getByText('Developer')).toBeInTheDocument();
     expect(screen.queryByText('  ')).not.toBeInTheDocument();
@@ -218,6 +218,27 @@ describe('Member profile', () => {
     expect(screen.getByRole('button', { name: 'Save changes' })).toBeEnabled();
     expect(invalidateQueries).not.toHaveBeenCalled();
     consoleError.mockRestore();
+  });
+
+  test.each([
+    ['Instagram', 'https://www.linkedin.com/in/alice'],
+    ['LinkedIn', 'https:leehom.com'],
+    ['GitHub', 'https://leehom.com'],
+  ])('warns and blocks saving an invalid %s link', async (label, value) => {
+    renderProfileRoutes('/profile/edit');
+
+    const input = screen.getByLabelText(label);
+    await userEvent.clear(input);
+    await userEvent.type(input, value);
+
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByText(/HTTPS|valid .* link/i)).toBeInTheDocument();
+    const saveButton = screen.getByRole('button', { name: 'Save changes' });
+    expect(saveButton).toBeDisabled();
+
+    fireEvent.submit(saveButton.closest('form'));
+    expect(axios.patch).not.toHaveBeenCalled();
+    expect(screen.getByText('Correct the highlighted social links before saving.')).toBeInTheDocument();
   });
 
   test.each([
