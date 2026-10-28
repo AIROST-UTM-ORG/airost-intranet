@@ -1,6 +1,6 @@
 import React from "react";
 import { FiFileText } from "react-icons/fi";
-import { getProviderDisplayName } from "../api";
+import { getProviderDisplayName } from "../../../services/documentation";
 
 /**
  * DocumentLinkPreview component for DocumentFormScreen (Screen 13 - Edit Document).
