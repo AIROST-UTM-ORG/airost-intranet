@@ -1,5 +1,5 @@
 /**
  * Documentation API Service
- * Re-exports modularized API modules from ./api/
+ * Re-exports modularized API modules from services/documentation/
  */
-export * from "./api";
+export * from "../../services/documentation";
