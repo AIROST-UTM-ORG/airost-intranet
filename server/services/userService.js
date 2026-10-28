@@ -56,7 +56,7 @@ const getAllUsers = async () => {
 /**
  * Fetch active users matching search, role, and year criteria with pagination.
  */
-const getFilteredUsers = async ({ search, role, year, page = 1, limit = 20 }) => {
+const getFilteredUsers = async ({ search, role, year, page, limit }) => {
   const filter = { isActive: true };
 
   if (search?.trim()) {
@@ -70,11 +70,14 @@ const getFilteredUsers = async ({ search, role, year, page = 1, limit = 20 }) =>
     filter.year = year.trim();
   }
 
-  const users = await userDirectoryQuery(filter)
-    .skip((page - 1) * limit)
-    .limit(limit);
+  let query = userDirectoryQuery(filter);
+  if (page !== undefined || limit !== undefined) {
+    const effectivePage = page ?? 1;
+    const effectiveLimit = limit ?? 20;
+    query = query.skip((effectivePage - 1) * effectiveLimit).limit(effectiveLimit);
+  }
 
-  return formatUsers(users);
+  return formatUsers(await query);
 };
 
 /**

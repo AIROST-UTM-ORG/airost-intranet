@@ -1,23 +1,12 @@
 const mongoose = require('mongoose');
 const userService = require('../services/userService');
 
-// Return all users from the canonical User collection using the directory-safe fields.
+// Return directory users with optional search, role, year, and pagination filters.
 const getUsers = async (req, res) => {
   try {
-    const users = await userService.getAllUsers();
-    return res.json(users);
-  } catch (error) {
-    console.error('Unable to fetch users:', error);
-    return res.status(500).json({ error: 'Unable to fetch users.' });
-  }
-};
-
-// Return active directory users with optional search, role, year, and pagination filters.
-const filterUsers = async (req, res) => {
-  try {
     const { search, role, year } = req.query;
-    const page = req.query.page === undefined ? 1 : Number(req.query.page);
-    const limit = req.query.limit === undefined ? 20 : Number(req.query.limit);
+    const page = req.query.page === undefined ? undefined : Number(req.query.page);
+    const limit = req.query.limit === undefined ? undefined : Number(req.query.limit);
 
     if (search !== undefined && (typeof search !== 'string' || search.trim().length > 100)) {
       return res.status(400).json({ error: 'Invalid search parameter.' });
@@ -28,18 +17,18 @@ const filterUsers = async (req, res) => {
     if (year !== undefined && (typeof year !== 'string' || !year.trim() || year.length > 40)) {
       return res.status(400).json({ error: 'Invalid year parameter.' });
     }
-    if (!Number.isInteger(page) || page < 1) {
+    if (page !== undefined && (!Number.isInteger(page) || page < 1)) {
       return res.status(400).json({ error: 'Invalid page parameter.' });
     }
-    if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+    if (limit !== undefined && (!Number.isInteger(limit) || limit < 1 || limit > 100)) {
       return res.status(400).json({ error: 'Invalid limit parameter.' });
     }
 
     const users = await userService.getFilteredUsers({ search, role, year, page, limit });
     return res.json(users);
   } catch (error) {
-    console.error('Unable to filter member directory:', error);
-    return res.status(500).json({ error: 'Unable to filter member directory.' });
+    console.error('Unable to fetch users:', error);
+    return res.status(500).json({ error: 'Unable to fetch users.' });
   }
 };
 
@@ -134,5 +123,4 @@ const updateUser = async (req, res) => {
 module.exports = {
   updateUser,
   getUsers,
-  filterUsers,
 };
