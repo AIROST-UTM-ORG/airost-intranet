@@ -68,7 +68,7 @@ function Dashboard() {
 
     try {
       const response = await axios.patch(
-        `${API_URL}/user/${userId}`,
+        `${API_URL}/api/user/${userId}`,
         {
           description,
           year,

@@ -3,6 +3,20 @@ const passport = require("passport");
 
 require('dotenv').config();
 
+/**
+ * Resolves redirect target based on optional REACT_APP_URL.
+ * If REACT_APP_URL is unset or empty (such as in production behind Nginx reverse proxy),
+ * falls back to root ('/') or the relative path (e.g. '/login').
+ */
+const getClientUrl = (path = '') => {
+  const baseUrl = (process.env.REACT_APP_URL || '').trim().replace(/\/+$/, '');
+  const cleanPath = path ? (path.startsWith('/') ? path : `/${path}`) : '';
+  if (!baseUrl) {
+    return cleanPath || '/';
+  }
+  return cleanPath ? `${baseUrl}${cleanPath}` : baseUrl;
+};
+
 router.get('/login/success', (req, res) => {
   try {
     console.log(req.user);
@@ -53,6 +67,7 @@ router.get('/logout', (req, res) => {
           message: "Error during logout process",
         });
       }
+      const redirectUrl = getClientUrl('/login');
       if (req.session) {
         req.session.destroy((destroyErr) => {
           if (destroyErr) {
@@ -64,10 +79,10 @@ router.get('/logout', (req, res) => {
             secure: isProduction,
             sameSite: isProduction ? "none" : "lax",
           });
-          res.redirect(process.env.REACT_APP_URL + "/login");
+          res.redirect(redirectUrl);
         });
       } else {
-        res.redirect(process.env.REACT_APP_URL + "/login");
+        res.redirect(redirectUrl);
       }
     });
   } catch (error) {
@@ -96,10 +111,12 @@ router.get('/google', (req, res, next) => {
 
 router.get('/google/callback', (req, res, next) => {
   passport.authenticate('google', {
-    successRedirect: process.env.REACT_APP_URL,
-    failureRedirect: '/login',
+    successRedirect: getClientUrl(),
+    failureRedirect: getClientUrl('/login'),
     failureFlash: true
   })(req, res, next);
 });
+
+router.getClientUrl = getClientUrl;
 
 module.exports = router;

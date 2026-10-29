@@ -105,7 +105,14 @@ jobs:
         with:
           context: client
           file: client/Dockerfile
-          push: false
+          load: true
           tags: airost-client:test
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Run Nginx SPA deep-link routing smoke tests
+        run: |
+          docker run -d --name test-client --add-host=server:127.0.0.1 -p 8089:80 airost-client:test
+          sleep 3
+          node client/scripts/smoke-test.js http://localhost:8089
+          docker stop test-client && docker rm test-client
