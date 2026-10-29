@@ -21,6 +21,10 @@ const userSchema = new mongoose.Schema({
         type:Array,
         required:true,
     },
+    isActive:{
+        type:Boolean,
+        default:true,
+    },
     description:{
         type:String,
         required:false,

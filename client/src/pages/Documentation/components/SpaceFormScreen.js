@@ -34,8 +34,15 @@ const SpaceFormScreen = ({
     (initialSpace?.updateMembers || []).map((m) => (typeof m === "object" ? m._id : m))
   );
 
-  // Validation state
   const [errors, setErrors] = useState({});
+
+  useEffect(() => {
+    const nextProjectId =
+      initialSpace?.projectId?._id || (initialSpace?.projectId ? initialSpace.projectId : "");
+    if (nextProjectId && !projectId) {
+      setProjectId(nextProjectId);
+    }
+  }, [initialSpace?.projectId, projectId]);
 
   const hasProject = Boolean(projectId && projectId !== "");
 

@@ -540,6 +540,165 @@ const validateDocumentUpdate = (body, currentDocument) => {
   };
 };
 
+/**
+ * Validates query parameters for GET /doc/search.
+ * q: required string, trimmed between 2 and 100 characters.
+ * limit: optional integer between 1 and 20, default 10.
+ */
+const validateDocSearch = (query) => {
+  const details = [];
+
+  // q validation
+  if (!query || query.q === undefined || query.q === null) {
+    details.push({ field: 'q', message: 'Search query q is required' });
+  } else if (typeof query.q !== 'string') {
+    details.push({ field: 'q', message: 'Search query q must be a string' });
+  } else {
+    const trimmed = query.q.trim();
+    if (trimmed.length < 2 || trimmed.length > 100) {
+      details.push({
+        field: 'q',
+        message: 'Search query q must be between 2 and 100 characters in length',
+      });
+    }
+  }
+
+  // limit validation (optional, default 10, range 1..20)
+  let limit = 10;
+  if (query && query.limit !== undefined && query.limit !== null && query.limit !== '') {
+    const parsed = Number(query.limit);
+    if (!Number.isInteger(parsed) || parsed < 1 || parsed > 20 || String(parsed) !== String(query.limit).trim()) {
+      details.push({
+        field: 'limit',
+        message: 'limit must be an integer between 1 and 20',
+      });
+    } else {
+      limit = parsed;
+    }
+  }
+
+  return {
+    valid: details.length === 0,
+    details,
+    data: details.length === 0 ? { q: query.q.trim(), limit } : null,
+  };
+};
+
+/**
+ * Validates query parameters for GET /doc/admin/spaces.
+ * page: optional integer >= 1, default 1.
+ * limit: optional integer 1..100, default 25.
+ * q: optional string, trimmed. If omitted, default empty string.
+ */
+const validateAdminSpacesQuery = (query = {}) => {
+  const details = [];
+
+  // page validation
+  let page = 1;
+  if (query && query.page !== undefined && query.page !== null && query.page !== '') {
+    const parsedPage = Number(query.page);
+    if (
+      !Number.isInteger(parsedPage) ||
+      parsedPage < 1 ||
+      String(parsedPage) !== String(query.page).trim()
+    ) {
+      details.push({
+        field: 'page',
+        message: 'page must be a positive integer greater than or equal to 1',
+      });
+    } else {
+      page = parsedPage;
+    }
+  }
+
+  // limit validation
+  let limit = 25;
+  if (query && query.limit !== undefined && query.limit !== null && query.limit !== '') {
+    const parsedLimit = Number(query.limit);
+    if (
+      !Number.isInteger(parsedLimit) ||
+      parsedLimit < 1 ||
+      parsedLimit > 100 ||
+      String(parsedLimit) !== String(query.limit).trim()
+    ) {
+      details.push({
+        field: 'limit',
+        message: 'limit must be an integer between 1 and 100',
+      });
+    } else {
+      limit = parsedLimit;
+    }
+  }
+
+  // q validation
+  let q = '';
+  if (query && query.q !== undefined && query.q !== null) {
+    if (typeof query.q !== 'string') {
+      details.push({
+        field: 'q',
+        message: 'q must be a string',
+      });
+    } else {
+      q = query.q.trim();
+    }
+  }
+
+  return {
+    valid: details.length === 0,
+    details,
+    data: details.length === 0 ? { page, limit, q } : null,
+  };
+};
+
+/**
+ * Validates body for PATCH /doc/admin/spaces/:spaceId/owner.
+ * Requires { userId: string } where userId is a valid ObjectId.
+ * Disallows unknown fields.
+ */
+const validateReassignOwner = (body) => {
+  const allowedFields = ['userId'];
+  const details = [];
+  let hasInvalidId = false;
+
+  const bodyKeys = Object.keys(body || {});
+  for (const key of bodyKeys) {
+    if (!allowedFields.includes(key)) {
+      details.push({
+        field: key,
+        message: `Unknown field '${key}' is not allowed`,
+      });
+    }
+  }
+
+  if (!body || body.userId === undefined || body.userId === null) {
+    details.push({
+      field: 'userId',
+      message: 'userId is required',
+    });
+  } else if (typeof body.userId !== 'string') {
+    details.push({
+      field: 'userId',
+      message: 'userId must be a string',
+    });
+  } else {
+    const trimmedId = body.userId.trim();
+    if (!isValidObjectId(trimmedId)) {
+      hasInvalidId = true;
+      details.push({
+        field: 'userId',
+        message: 'userId must be a valid 24-character hexadecimal ObjectId',
+      });
+    }
+  }
+
+  return {
+    valid: details.length === 0,
+    hasInvalidId,
+    details,
+    data: details.length === 0 ? { userId: body.userId.trim() } : null,
+  };
+};
+
 module.exports = {
   VALID_AREAS,
   VALID_ACCESS_TYPES,
@@ -551,4 +710,8 @@ module.exports = {
   validateSpaceUpdate,
   validateDocumentCreate,
   validateDocumentUpdate,
+  validateDocSearch,
+  validateAdminSpacesQuery,
+  validateReassignOwner,
 };
+

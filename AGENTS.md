@@ -156,6 +156,8 @@ Only address these when an issue explicitly asks:
 - `@tanstack/react-query` and `git-filter-repo` are wrongly listed in `server/package.json`.
 - Three UI libraries coexist (DaisyUI, Ant Design, MDB); `moment` and `date-fns` both installed.
 - Node version mismatch between local development and the Docker image (Node 18).
+- Project lead is stored as a plain name string in `server/models/Project.js`; name-based matching is unsafe if names are not unique (addressed in a later fix).
+- Documentation backend currently uses Mongoose directly in the controller (addressed by the service layer refactor).
 
 ## Agent Guardrails & Constraints
 - **Do not touch:** `.env` files, production credentials, deployment config (`server/Dockerfile`, Cloud Run settings), CI settings, or lockfiles by hand, without explicit user approval.
