@@ -43,7 +43,10 @@ export const AuthProvider = ({ children }) => {
   }, [fetchUser]);
 
   const logout = useCallback(() => {
-    window.open(`${API_URL}/auth/logout`, "_self");
+    setUser(null);
+    sessionStorage.clear();
+    localStorage.removeItem("user");
+    window.location.href = `${API_URL}/auth/logout`;
   }, []);
 
   const value = useMemo(

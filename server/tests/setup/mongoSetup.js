@@ -12,7 +12,14 @@ let mongoServer;
  */
 const connect = async () => {
   mongoose.set('strictQuery', false);
-  mongoServer = await MongoMemoryServer.create();
+  if (!process.env.MONGOMS_VERSION) {
+    process.env.MONGOMS_VERSION = '7.0.14';
+  }
+  mongoServer = await MongoMemoryServer.create({
+    binary: {
+      version: process.env.MONGOMS_VERSION,
+    },
+  });
   const uri = mongoServer.getUri();
   await mongoose.connect(uri);
 };
