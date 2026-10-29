@@ -15,6 +15,7 @@ const getUsers = async (req, res) => {
             verified = true;
         }
         allUsers.push({
+            _id: loggedInUser._id,
             email: loggedInUser.email,
             name: loggedInUser.name,
             photo: loggedInUser.photo,
@@ -28,6 +29,7 @@ const getUsers = async (req, res) => {
         if (allUsers.find(user => user.email == verUser.email)) continue;
         allUsers.push(
             {
+                _id: verUser._id,
                 email: verUser.email,
                 name: verUser.name,
                 photo: '',
