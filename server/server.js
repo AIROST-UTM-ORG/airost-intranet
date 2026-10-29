@@ -5,9 +5,8 @@ const { createApp } = require("./app");
 const dns = require("dns");
 
 const PORT = process.env.PORT || 4000;
-const MONGODB_URI = process.env.MONGODB_URI || process.env.MONGO_URI
+const MONGODB_URI = process.env.MONGODB_URI || process.env.MONGO_URI;
 const app = createApp();
-
 
 // MongoDB connection
 // Go to MongoDB Atlas > Security > IP Access List, click add IP Address (from the warning)
@@ -37,4 +36,8 @@ const startServer = async () => {
   }
 };
 
-startServer();
+if (require.main === module) {
+  startServer();
+}
+
+module.exports = app;
