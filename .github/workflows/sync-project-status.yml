@@ -1,0 +1,48 @@
+name: Sync Project Status
+
+on:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - reopened
+      - ready_for_review
+      - review_requested
+      - converted_to_draft
+  pull_request_review:
+    types:
+      - submitted
+      - dismissed
+
+concurrency:
+  group: project-status-sync-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  sync-status:
+    name: Synchronize PR & Linked Issues Status
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Synchronize PR & Linked Issues Status
+        run: node .github/scripts/sync-project-status.js
+        env:
+          PROJECT_AUTOMATION_TOKEN: ${{ secrets.PROJECT_AUTOMATION_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO_OWNER: ${{ github.repository_owner }}
+          REPO_NAME: ${{ github.event.repository.name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PROJECT_ID: "PVT_kwDOE_DQyc4BoRy3"
+          STATUS_FIELD_ID: "PVTSSF_lADOE_DQyc4BoRy3zhmyoEg"
+          IN_REVIEW_OPTION_ID: "1d8543f0"
+          IN_PROGRESS_OPTION_ID: "2b5d76b7"
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_ACTION: ${{ github.event.action }}
+          REVIEW_STATE: ${{ github.event.review.state }}
