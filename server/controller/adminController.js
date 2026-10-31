@@ -1,33 +1,74 @@
+const VerifiedUser = require('../models/VerifiedUser');
 const User = require('../models/User');
 
+const getUsers = async (req, res) => {
+    var verifiedUsers = await VerifiedUser.find();
+
+    var loggedInUsers = await User.find();
+
+    let allUsers = [];
+
+    for (let loggedInUser of loggedInUsers){
+        let verified = false;
+
+        if (verifiedUsers.find(verUser => verUser.email == loggedInUser.email)){
+            verified = true;
+        }
+        allUsers.push({
+            email: loggedInUser.email,
+            name: loggedInUser.name,
+            photo: loggedInUser.photo,
+            position: loggedInUser.position,
+            loggedIn: true,
+            verified: verified
+        })
+    }
+
+    for (let verUser of verifiedUsers){
+        if (allUsers.find(user => user.email == verUser.email)) continue;
+        allUsers.push(
+            {
+                email: verUser.email,
+                name: verUser.name,
+                photo: '',
+                position: verUser.position,
+                loggedIn: false,
+                verified: true,
+            }
+        )
+    }
+    res.json(allUsers)
+}
+
 const createVerifiedUser = async (req, res) => {
+    const newVerifiedUser = new VerifiedUser({
+        name : req.body.name,
+        email : req.body.email,
+        position : [req.body.position],
+    })
     try {
-        const name = typeof req.body.name === 'string' ? req.body.name.trim() : '';
-        const email = typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : '';
-        const position = typeof req.body.position === 'string' ? req.body.position.trim() : '';
-        if (!name || !email || !position) {
-            return res.status(400).json({ error: 'Name, email, and position are required.' });
-        }
+        const existingUser = await VerifiedUser.findOne({email : newVerifiedUser.email});
 
-        const existingUser = await User.findOne({ email });
-        if (existingUser) {
-            existingUser.name = name;
-            existingUser.positions = [...new Set([...(existingUser.positions || []), position])];
-            existingUser.isActive = true;
-            await existingUser.save();
-            return res.json({ createStatus: 'success', userId: existingUser._id });
+        if (existingUser){
+            res.json({createStatus : "exist"})
         }
-
-        const user = await User.create({ name, email, positions: [position], isActive: true });
-        return res.status(201).json({ createStatus: 'success', userId: user._id });
+        else {
+            await newVerifiedUser.save();
+            res.status(201).json({createStatus : "success"});
+            await User.updateOne({email: req.body.email},{
+                $set:{
+                    position: [req.body.position]
+                }
+            })
+        }
     } 
     catch(err){
         console.log(err)
-        return res.status(500).json({ error: 'Unable to create member.' });
     }
 }
 
 module.exports = {
     createVerifiedUser,
+    getUsers
 }
 
