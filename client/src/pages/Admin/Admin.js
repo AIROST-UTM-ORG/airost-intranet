@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios'
 import './Admin.css'
-import { FaCheck, FaXmark } from "react-icons/fa6";const Admin = () => {
+import { FaCheck, FaXmark } from "react-icons/fa6";
+import { API_URL } from '../../config/api';
+const Admin = () => {
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [position, setPosition] = useState("");
@@ -14,14 +16,14 @@ import { FaCheck, FaXmark } from "react-icons/fa6";const Admin = () => {
     }, [])
 
     const getUsers = async () => {
-        axios.get(`${process.env.REACT_APP_API_URL}/admin/users`)
+        axios.get(`${API_URL}/api/user/users`)
         .then(users => setUsers(users.data))
         .catch(err => console.log(err))
     }
 
     const approveUser = async (user) => {
         try {
-            const response = await axios.post(`${process.env.REACT_APP_API_URL}/admin/users/verified`, {
+            const response = await axios.post(`${API_URL}/admin/users/verified`, {
                 name: user.name,
                 email: user.email,
                 position: "member"
@@ -104,10 +106,10 @@ import { FaCheck, FaXmark } from "react-icons/fa6";const Admin = () => {
                                 users.map(
                                     (user,index) => {
                                         return <tr key={index}>
-                                            <td><img src={user.photo} alt="Profile"/></td>
+                                            <td><img src={user.photoUrl} alt="Profile"/></td>
                                             <td>{user.name}</td>
                                             <td>{user.email}</td>
-                                            <td>{user.position}</td>
+                                            <td>{user.positions?.join(', ')}</td>
                                             <td className="text-center">
                                                 <div className="flex items-center justify-center h-full w-full">
                                                     {user.verified 

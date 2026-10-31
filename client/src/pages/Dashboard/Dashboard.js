@@ -10,8 +10,7 @@ function Dashboard() {
   const [description, setDescription] = useState(user?.description || "");
   const [year, setYear] = useState(user?.year || "");
   const [course, setCourse] = useState(user?.course || "");
-  const [phonenum, setPhonenum] = useState(user?.phonenum || "");
-  const [instagram, setInstagram] = useState(user?.instagram || "");
+  const [instagramUrl, setInstagramUrl] = useState(user?.instagramUrl || "");
   const [isUpdating, setIsUpdating] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -19,8 +18,7 @@ function Dashboard() {
     description: user?.description || "",
     year: user?.year || "",
     course: user?.course || "",
-    phonenum: user?.phonenum || "",
-    instagram: user?.instagram || "",
+    instagramUrl: user?.instagramUrl || "",
   });
 
   useEffect(() => {
@@ -28,14 +26,12 @@ function Dashboard() {
       setDescription(user.description || "");
       setYear(user.year || "");
       setCourse(user.course || "");
-      setPhonenum(user.phonenum || "");
-      setInstagram(user.instagram || "");
+      setInstagramUrl(user.instagramUrl || "");
       setProfile({
         description: user.description || "",
         year: user.year || "",
         course: user.course || "",
-        phonenum: user.phonenum || "",
-        instagram: user.instagram || "",
+        instagramUrl: user.instagramUrl || "",
       });
     }
   }, [user]);
@@ -44,8 +40,7 @@ function Dashboard() {
     setDescription(profile.description || "");
     setYear(profile.year || "");
     setCourse(profile.course || "");
-    setPhonenum(profile.phonenum || "");
-    setInstagram(profile.instagram || "");
+    setInstagramUrl(profile.instagramUrl || "");
     setErrorMessage("");
     const modal = document.getElementById("my_modal_2");
     if (modal) {
@@ -68,13 +63,12 @@ function Dashboard() {
 
     try {
       const response = await axios.patch(
-        `${API_URL}/user/${userId}`,
+        `${API_URL}/api/user/${userId}`,
         {
           description,
           year,
           course,
-          phonenum,
-          instagram,
+          instagramUrl,
         },
         {
           withCredentials: true,
@@ -87,8 +81,7 @@ function Dashboard() {
           description: updated?.description ?? description,
           year: updated?.year ?? year,
           course: updated?.course ?? course,
-          phonenum: updated?.phonenum ?? phonenum,
-          instagram: updated?.instagram ?? instagram,
+          instagramUrl: updated?.instagramUrl ?? instagramUrl,
         };
         setProfile(newProfile);
         if (setUser && updated) {
@@ -123,7 +116,7 @@ function Dashboard() {
         </div>
         <div className="profile-section">
           <img
-            src={user?.photo}
+            src={user?.photoUrl}
             alt="Profile"
             className="profile-pic"
             referrerPolicy="no-referrer"
@@ -138,8 +131,7 @@ function Dashboard() {
                 </div>
               </div>
               <div className="right-section">
-                <div className="phonenum">Phone no: {profile.phonenum}</div>
-                <div className="profile-instagram">Instagram: {profile.instagram}</div>
+                <div className="profile-instagram">Instagram: {profile.instagramUrl}</div>
               </div>
             </div>
           </div>
@@ -216,31 +208,16 @@ function Dashboard() {
             </label>
             <label className="w-full max-w-xs">
               <div className="label">
-                <span className="label-text">Phone Number</span>
-              </div>
-              <input
-                id="profile-phonenum"
-                className="input input-bordered w-full max-w-xs"
-                type="text"
-                placeholder={profile.phonenum || "Phone Number"}
-                value={phonenum}
-                onChange={(e) => {
-                  setPhonenum(e.target.value);
-                }}
-              />
-            </label>
-            <label className="w-full max-w-xs">
-              <div className="label">
                 <span className="label-text">Instagram</span>
               </div>
               <input
                 id="profile-instagram"
                 className="input input-bordered w-full max-w-xs"
                 type="text"
-                placeholder={profile.instagram || "Instagram"}
-                value={instagram}
+                placeholder={profile.instagramUrl || "Instagram"}
+                value={instagramUrl}
                 onChange={(e) => {
-                  setInstagram(e.target.value);
+                  setInstagramUrl(e.target.value);
                 }}
               />
             </label>

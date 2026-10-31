@@ -4,15 +4,21 @@
  */
 const { MongoMemoryServer } = require('mongodb-memory-server');
 const mongoose = require('mongoose');
+const fs = require('fs');
+const path = require('path');
 
 let mongoServer;
+let testDbPath;
 
 /**
  * Start an in-memory MongoDB instance and connect mongoose to it.
  */
 const connect = async () => {
   mongoose.set('strictQuery', false);
-  mongoServer = await MongoMemoryServer.create();
+  testDbPath = path.resolve(__dirname, '../../node_modules/.cache/mongodb-memory-server/test-data');
+  fs.rmSync(testDbPath, { recursive: true, force: true });
+  fs.mkdirSync(testDbPath, { recursive: true });
+  mongoServer = await MongoMemoryServer.create({ instance: { dbPath: testDbPath } });
   const uri = mongoServer.getUri();
   await mongoose.connect(uri);
 };
@@ -34,6 +40,7 @@ const closeDatabase = async () => {
   await mongoose.connection.dropDatabase();
   await mongoose.connection.close();
   await mongoServer.stop();
+  fs.rmSync(testDbPath, { recursive: true, force: true });
 };
 
 module.exports = { connect, clearDatabase, closeDatabase };
