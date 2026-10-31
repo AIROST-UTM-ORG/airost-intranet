@@ -83,7 +83,11 @@ const Profile = ({ isCurrentUser = false }) => {
       <ProfileHero
         member={member}
         location={locationText}
-        onEdit={isCurrentUser ? () => navigate('/profile/edit') : undefined}
+        onEdit={
+          (isCurrentUser || (user?.email && user.email === member?.email))
+            ? () => navigate('/profile/edit')
+            : undefined
+        }
       />
       <div className={`profile-content${projects.length ? '' : ' profile-content-no-project'}`}>
         <ProfileDetails memberName={member.name} details={details} />
