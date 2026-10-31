@@ -32,11 +32,4 @@ export const Sidebar = [
     cName: 'side-text',
     hideNavItem: true,
   },
-  {
-    title: 'Documentation',
-    path: '/doc',
-    icon: <faicon.FaFilePdf />,
-    cName: 'side-text',
-    hideNavItem: true,
-  },
 ];
