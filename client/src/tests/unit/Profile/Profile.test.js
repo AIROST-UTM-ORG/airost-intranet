@@ -68,6 +68,7 @@ describe('Member profile', () => {
   });
 
   test('renders profile details, social links, location, and featured project', () => {
+    useAuth.mockReturnValue({ user: { ...member, email: 'viewer@example.com' }, setUser });
     renderProfileRoutes('/members/alice%40example.com');
 
     expect(screen.getByRole('button', { name: 'Back to members' })).toBeInTheDocument();
