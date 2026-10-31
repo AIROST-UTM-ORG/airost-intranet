@@ -18,6 +18,12 @@
     @apply min-w-0 w-full border-0 bg-transparent text-[13px] text-[#172a3a] outline-none;
   }
 
+  .profile-search input[type="search"]::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+    appearance: none;
+    display: none;
+  }
+
   .profile-search input::placeholder {
     @apply text-[#8a9aa4];
   }
@@ -62,7 +68,12 @@
   }
 
   .profile-search-results button {
-    @apply flex w-full cursor-pointer flex-col gap-[3px] border-0 bg-white px-[15px] py-[11px] text-left text-[#172a3a];
+    @apply flex w-full cursor-pointer flex-col items-start gap-[3px] border-0 bg-white px-[15px] py-[11px] text-left text-[#172a3a];
+  }
+
+  .profile-search-results button > span,
+  .profile-search-results button > small {
+    @apply m-0 p-0 text-left;
   }
 
   .profile-search-results button + button {
@@ -174,10 +185,8 @@
   }
 
   .profile-contact-pills button {
-    @apply cursor-pointer;
-    font: inherit;
+    @apply cursor-pointer text-[14px];
   }
-
   .profile-contact-pills svg,
   .profile-social-links svg {
     @apply shrink-0 text-[#a8d9d8];

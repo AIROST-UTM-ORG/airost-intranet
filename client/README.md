@@ -5,14 +5,14 @@ Run the following commands from the project root to execute the `MemberDirectory
 ```bash
 cd client
 
-npm test -- --watchAll=false --runInBand src/tests/unit/MemberDirectory/Profile.test.js
+npm test -- --watchAll=false --runInBand src/tests/unit/Profile/Profile.test.js
 ```
 
 ### Command Options
 
 - `--watchAll=false` — Run tests once without entering watch mode.
 - `--runInBand` — Execute tests sequentially in a single process.
-- `src/tests/unit/MemberDirectory/Profile.test.js` — Specify the test file to execute.
+- `src/tests/unit/Profile/Profile.test.js` — Specify the test file to execute.
 
 ### Verify the Results
 
