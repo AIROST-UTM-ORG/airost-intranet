@@ -1,4 +1,3 @@
-const VerifiedUser = require('../models/VerifiedUser');
 const User = require('../models/User');
 
 const getUsers = async (req, res) => {
@@ -41,29 +40,27 @@ const getUsers = async (req, res) => {
 }
 
 const createVerifiedUser = async (req, res) => {
-    const newVerifiedUser = new VerifiedUser({
-        name : req.body.name,
-        email : req.body.email,
-        position : [req.body.position],
-    })
-    try {
-        const existingUser = await VerifiedUser.findOne({email : newVerifiedUser.email});
+    const name = typeof req.body.name === 'string' ? req.body.name.trim() : '';
+    const email = typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+    const position = typeof req.body.position === 'string' ? req.body.position.trim() : '';
 
-        if (existingUser){
-            res.json({createStatus : "exist"})
+    if (!name || !email || !position) {
+        return res.status(400).json({ error: 'Name, email, and position are required.' });
+    }
+
+    try {
+        const existingUser = await User.findOne({ email });
+
+        if (existingUser) {
+            await User.updateOne({ _id: existingUser._id }, { $addToSet: { positions: position } });
+            return res.status(200).json({ createStatus: 'success' });
         }
-        else {
-            await newVerifiedUser.save();
-            res.status(201).json({createStatus : "success"});
-            await User.updateOne({email: req.body.email},{
-                $set:{
-                    position: [req.body.position]
-                }
-            })
-        }
-    } 
-    catch(err){
-        console.log(err)
+
+        await User.create({ name, email, positions: [position] });
+        return res.status(201).json({ createStatus: 'success' });
+    } catch (error) {
+        console.error('Unable to create verified user:', error);
+        return res.status(500).json({ error: 'Unable to create verified user.' });
     }
 }
 
@@ -71,4 +68,3 @@ module.exports = {
     createVerifiedUser,
     getUsers
 }
-
