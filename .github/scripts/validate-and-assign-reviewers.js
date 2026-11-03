@@ -240,16 +240,22 @@ async function assignReviewers(pr, requiredApprovals, labels) {
       .filter(login => login && eligibleSet.has(login))
   );
 
-  // 2. Track latest review state per maintainer
+  // 2. Track latest opinionated review state per maintainer (excluding COMMENTED)
+  const sortedReviews = [...(pr.reviews?.nodes || [])].sort(
+    (a, b) => new Date(a.submittedAt) - new Date(b.submittedAt)
+  );
+
   const latestReviewState = new Map();
-  for (const review of pr.reviews?.nodes || []) {
+  for (const review of sortedReviews) {
     const login = review.author?.login?.toLowerCase();
     if (login && eligibleSet.has(login)) {
-      latestReviewState.set(login, review.state);
+      if (['APPROVED', 'CHANGES_REQUESTED', 'DISMISSED'].includes(review.state)) {
+        latestReviewState.set(login, review.state);
+      }
     }
   }
 
-  // 3. Only count maintainers whose latest review is APPROVED
+  // 3. Only count maintainers whose latest opinionated review is APPROVED
   const approvedReviewers = new Set(
     Array.from(latestReviewState.entries())
       .filter(([_, state]) => state === 'APPROVED')
