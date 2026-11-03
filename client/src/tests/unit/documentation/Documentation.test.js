@@ -2,11 +2,16 @@ import React from "react";
 import "@testing-library/jest-dom";
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
+import axios from "axios";
+import { realApiClient } from "../../../services/documentation/client";
 import Documentation from "../../../pages/Documentation/Documentation";
 import {
   resetMockData,
   setMockScenario,
+  setUseMock,
   MockScenarios,
+  listProjects,
+  listMembers,
 } from "../../../pages/Documentation/documentationApi";
 
 jest.mock("axios", () => {
@@ -531,6 +536,159 @@ describe("Documentation Feature - All 14 Screens", () => {
     // Should return to Spaces List, NOT Space Detail
     expect(await screen.findByTestId("documentation-title")).toHaveTextContent("Documentation");
     expect(screen.queryByTestId("space-detail-screen")).not.toBeInTheDocument();
+  });
+
+  // -------------------------------------------------------------------------
+  // Project & User Fetch Failure Error Handling (No silent mock fallback)
+  // -------------------------------------------------------------------------
+  describe("Project & User Fetch Failure Error Handling", () => {
+    afterEach(() => {
+      setUseMock(true);
+    });
+
+    test("listProjects rethrows error instead of returning SEED_PROJECTS when real API fails", async () => {
+      setUseMock(false);
+      realApiClient.get.mockImplementationOnce(() =>
+        Promise.reject(new Error("Network Error"))
+      );
+      await expect(listProjects()).rejects.toThrow("Network Error");
+    });
+
+    test("listMembers rethrows error instead of returning SEED_USERS when real API fails", async () => {
+      setUseMock(false);
+      realApiClient.get.mockImplementationOnce(() =>
+        Promise.reject(new Error("Unauthorized"))
+      );
+      await expect(listMembers()).rejects.toThrow("Unauthorized");
+    });
+
+    test("projects fetch failure: error is surfaced, no seed data shown, and form submit stays blocked", async () => {
+      setUseMock(false);
+      realApiClient.get.mockImplementation((url) => {
+        if (url === "/projects") {
+          return Promise.reject(new Error("Network Error: Failed to fetch projects"));
+        }
+        if (url === "/admin/users") {
+          return Promise.resolve({ data: [] });
+        }
+        return Promise.resolve({ data: [] });
+      });
+
+      render(
+        <MemoryRouter initialEntries={["/doc/spaces/new"]}>
+          <Documentation />
+        </MemoryRouter>
+      );
+
+      // Verify error banner is surfaced
+      const errorBanner = await screen.findByTestId("projects-error-banner");
+      expect(errorBanner).toHaveTextContent("Network Error: Failed to fetch projects");
+      expect(screen.getByTestId("projects-error-text")).toHaveTextContent(
+        "Network Error: Failed to fetch projects"
+      );
+
+      // Verify no seed projects are rendered in select
+      const select = screen.getByTestId("space-project-select");
+      expect(within(select).queryByText("Airost Intranet")).not.toBeInTheDocument();
+      expect(within(select).queryByText("Property Management App")).not.toBeInTheDocument();
+      expect(select).toBeDisabled();
+
+      // Verify form submit button is disabled / blocked
+      const submitBtn = screen.getByTestId("submit-space-btn");
+      expect(submitBtn).toBeDisabled();
+    });
+
+    test("users fetch failure: error is surfaced, no seed data shown, and form submit stays blocked", async () => {
+      setUseMock(false);
+      realApiClient.get.mockImplementation((url) => {
+        if (url === "/projects") {
+          return Promise.resolve({ data: [] });
+        }
+        if (url === "/admin/users") {
+          return Promise.reject(new Error("Server Error: Failed to fetch members"));
+        }
+        return Promise.resolve({ data: [] });
+      });
+
+      render(
+        <MemoryRouter initialEntries={["/doc/spaces/new"]}>
+          <Documentation />
+        </MemoryRouter>
+      );
+
+      // Verify error banner is surfaced
+      const errorBanner = await screen.findByTestId("members-error-banner");
+      expect(errorBanner).toHaveTextContent("Server Error: Failed to fetch members");
+
+      // Verify form submit button is disabled / blocked
+      const submitBtn = screen.getByTestId("submit-space-btn");
+      expect(submitBtn).toBeDisabled();
+    });
+
+    test("spaces list initial load project failure surfaces error with retry option and renders no seed data", async () => {
+      setUseMock(false);
+      realApiClient.get.mockImplementation((url) => {
+        if (url === "/projects") {
+          return Promise.reject(new Error("Failed to load projects"));
+        }
+        return Promise.resolve({ data: [] });
+      });
+
+      render(
+        <MemoryRouter initialEntries={["/doc"]}>
+          <Documentation />
+        </MemoryRouter>
+      );
+
+      // Error surfaced on spaces list
+      const errorCard = await screen.findByTestId("spaces-error");
+      expect(errorCard).toHaveTextContent("Failed to load projects");
+      expect(within(errorCard).getByRole("button", { name: /retry/i })).toBeInTheDocument();
+
+      // No seed spaces or project data rendered
+      expect(screen.queryByText("Engineering Handbook")).not.toBeInTheDocument();
+      expect(screen.queryByText("Property App Handbook")).not.toBeInTheDocument();
+    });
+
+    test("success path: real projects and users load successfully and allow form submit", async () => {
+      setUseMock(false);
+      realApiClient.get.mockImplementation((url) => {
+        if (url === "/projects") {
+          return Promise.resolve({
+            data: [{ _id: "65f29d20c571c48201a99999", title: "Real Project Beta" }],
+          });
+        }
+        if (url === "/admin/users") {
+          return Promise.resolve({
+            data: [{ _id: "65f29d20c571c48201a88888", name: "Real User", email: "user@airost.com" }],
+          });
+        }
+        return Promise.resolve({ data: [] });
+      });
+
+      render(
+        <MemoryRouter initialEntries={["/doc/spaces/new"]}>
+          <Documentation />
+        </MemoryRouter>
+      );
+
+      // Verify no error banners
+      expect(screen.queryByTestId("projects-error-banner")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("members-error-banner")).not.toBeInTheDocument();
+
+      // Real project is loaded in select
+      const select = await screen.findByTestId("space-project-select");
+      await waitFor(() => {
+        expect(within(screen.getByTestId("space-project-select")).getByText("Real Project Beta")).toBeInTheDocument();
+      });
+      expect(select).not.toBeDisabled();
+      // No mock seeds
+      expect(within(select).queryByText("Airost Intranet")).not.toBeInTheDocument();
+
+      // Submit button is enabled
+      const submitBtn = screen.getByTestId("submit-space-btn");
+      expect(submitBtn).not.toBeDisabled();
+    });
   });
 });
 
