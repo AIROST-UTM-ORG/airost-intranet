@@ -5,4 +5,8 @@
 
 env.yaml
 
-coverage/
+Dockerfile
+
+package-lock.json
+
+/coverage
