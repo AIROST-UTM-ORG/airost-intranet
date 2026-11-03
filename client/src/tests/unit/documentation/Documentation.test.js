@@ -689,6 +689,104 @@ describe("Documentation Feature - All 14 Screens", () => {
       const submitBtn = screen.getByTestId("submit-space-btn");
       expect(submitBtn).not.toBeDisabled();
     });
+
+    test("listMembers rejects with a normalized error when real API returns a non-array response", async () => {
+      setUseMock(false);
+      realApiClient.get.mockImplementationOnce(() =>
+        Promise.resolve({ data: { message: "Invalid payload format" } })
+      );
+      await expect(listMembers()).rejects.toThrow("Failed to fetch members: invalid response format");
+    });
+
+    test("listMembers returns an empty array when real API returns an empty array (does not return seed data)", async () => {
+      setUseMock(false);
+      realApiClient.get.mockImplementationOnce(() =>
+        Promise.resolve({ data: [] })
+      );
+      const members = await listMembers();
+      expect(members).toEqual([]);
+      expect(members).not.toEqual(
+        expect.arrayContaining([expect.objectContaining({ name: "Alice Admin" })])
+      );
+    });
+
+    test("handleStartEditSpace: getSpace failure shows error alert with retry and does not open edit form", async () => {
+      setUseMock(false);
+      realApiClient.get.mockImplementation((url) => {
+        if (url === "/doc/spaces") {
+          return Promise.resolve({
+            data: [
+              {
+                _id: "space-target-1",
+                title: "Alpha Space",
+                description: "Alpha Space Description",
+                canManage: true,
+                canUpdate: true,
+              },
+            ],
+          });
+        }
+        if (url === "/projects") {
+          return Promise.resolve({ data: [] });
+        }
+        if (url === "/admin/users") {
+          return Promise.resolve({ data: [] });
+        }
+        if (url === "/doc/spaces/space-target-1") {
+          return Promise.reject(new Error("Network Error: Failed to fetch full space details"));
+        }
+        return Promise.resolve({ data: [] });
+      });
+
+      render(
+        <MemoryRouter initialEntries={["/doc"]}>
+          <Documentation />
+        </MemoryRouter>
+      );
+
+      // Wait for space card to appear on spaces list
+      expect(await screen.findByText("Alpha Space")).toBeInTheDocument();
+
+      // Open overflow menu on the space card
+      const menuBtn = screen.getByTestId("space-menu-trigger-space-target-1");
+      fireEvent.click(menuBtn);
+
+      // Click "Edit space"
+      const editBtn = await screen.findByTestId("edit-space-menu-item");
+      fireEvent.click(editBtn);
+
+      // Verify error banner is surfaced with retry button
+      const errorBanner = await screen.findByTestId("edit-space-error-banner");
+      expect(errorBanner).toHaveTextContent("Network Error: Failed to fetch full space details");
+      expect(within(errorBanner).getByTestId("retry-edit-space-btn")).toBeInTheDocument();
+
+      // Verify edit form is NOT opened and user remains on spaces list
+      expect(screen.queryByTestId("space-form-screen")).not.toBeInTheDocument();
+      expect(screen.getByTestId("spaces-list-screen")).toBeInTheDocument();
+
+      // Click retry when next attempt succeeds
+      realApiClient.get.mockImplementation((url) => {
+        if (url === "/doc/spaces/space-target-1") {
+          return Promise.resolve({
+            data: {
+              _id: "space-target-1",
+              title: "Alpha Space",
+              description: "Alpha Space Description",
+              canManage: true,
+              canUpdate: true,
+            },
+          });
+        }
+        return Promise.resolve({ data: [] });
+      });
+
+      const retryBtn = within(errorBanner).getByTestId("retry-edit-space-btn");
+      fireEvent.click(retryBtn);
+
+      // Now edit form opens successfully and error banner is cleared
+      expect(await screen.findByTestId("space-form-screen")).toBeInTheDocument();
+      expect(screen.queryByTestId("edit-space-error-banner")).not.toBeInTheDocument();
+    });
   });
 });
 
