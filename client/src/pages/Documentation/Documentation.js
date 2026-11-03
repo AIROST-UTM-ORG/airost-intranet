@@ -68,6 +68,8 @@ const Documentation = ({ initialView = ViewModes.SPACES_LIST, initialSpaceId = n
   const [editReturnMode, setEditReturnMode] = useState(ViewModes.SPACES_LIST);
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState(null);
+  const [editSpaceError, setEditSpaceError] = useState(null);
+  const [failedEditTarget, setFailedEditTarget] = useState(null);
 
   // Sync on prop change if initialSpaceId provided
   useEffect(() => {
@@ -124,15 +126,19 @@ const Documentation = ({ initialView = ViewModes.SPACES_LIST, initialSpaceId = n
 
   const handleStartEditSpace = async (space, returnMode = ViewModes.SPACES_LIST) => {
     setServerError(null);
+    setEditSpaceError(null);
+    setFailedEditTarget(null);
     setEditReturnMode(returnMode);
     try {
       const fullSpace = await getSpace(space._id);
       setSelectedSpace(fullSpace);
-    } catch {
-      setSelectedSpace(space);
+      setViewMode(ViewModes.EDIT_SPACE);
+      navigateSafe(`/doc/spaces/${space._id}/edit`);
+    } catch (err) {
+      if (handleAuthError(err)) return;
+      setEditSpaceError(extractError(err, "Failed to load space details for editing"));
+      setFailedEditTarget({ space, returnMode });
     }
-    setViewMode(ViewModes.EDIT_SPACE);
-    navigateSafe(`/doc/spaces/${space._id}/edit`);
   };
 
   const handleCreateSpaceSubmit = async (payload) => {
@@ -231,6 +237,29 @@ const Documentation = ({ initialView = ViewModes.SPACES_LIST, initialSpaceId = n
 
   return (
     <div className="doc-feature-root px-[22px] md:px-[40px] pt-[24px]">
+      {editSpaceError && (
+        <div
+          className="alert alert-error text-[13px] py-2 mb-4 max-w-[959px] mx-auto flex items-center justify-between"
+          data-testid="edit-space-error-banner"
+        >
+          <span>{typeof editSpaceError === "string" ? editSpaceError : editSpaceError?.message}</span>
+          {failedEditTarget && (
+            <button
+              type="button"
+              onClick={() =>
+                handleStartEditSpace(
+                  failedEditTarget.space,
+                  failedEditTarget.returnMode
+                )
+              }
+              className="btn btn-xs btn-outline"
+              data-testid="retry-edit-space-btn"
+            >
+              Retry
+            </button>
+          )}
+        </div>
+      )}
       {viewMode === ViewModes.SPACES_LIST && (
         <SpaceListScreen
           spaces={spaces}
