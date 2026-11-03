@@ -94,7 +94,7 @@ function evaluateRisk(files, labels, title) {
   if (files.some(f => sensitivePatterns.some(p => p.test(f)))) {
     return 2;
   }
-  if (labels.some(l => ['module:auth', 'module:infra'].includes(l))) {
+  if (labels.some(l => ['module:auth', 'module:infra', 'module:refactor', 'phase:3-architecture'].includes(l))) {
     return 2;
   }
   if (/\b(?:auth|jwt|security|permission|session|docker|deploy|ingress)\b/i.test(title)) {
@@ -233,26 +233,45 @@ async function assignReviewers(pr, requiredApprovals, labels) {
   );
   const eligibleSet = new Set(eligibleReviewers.map(m => m.toLowerCase()));
 
-  const rawReviewers = [
-    ...(pr.reviewRequests?.nodes || []).map(r => r.requestedReviewer?.login?.toLowerCase()),
-    ...(pr.reviews?.nodes || []).map(r => r.author?.login?.toLowerCase())
-  ].filter(Boolean);
-
-  const currentMaintainerReviewers = new Set(
-    rawReviewers.filter(login => eligibleSet.has(login))
+  // 1. Pending requested reviewers
+  const pendingReviewers = new Set(
+    (pr.reviewRequests?.nodes || [])
+      .map(r => r.requestedReviewer?.login?.toLowerCase())
+      .filter(login => login && eligibleSet.has(login))
   );
 
-  const neededCount = Math.max(0, requiredApprovals - currentMaintainerReviewers.size);
+  // 2. Track latest review state per maintainer
+  const latestReviewState = new Map();
+  for (const review of pr.reviews?.nodes || []) {
+    const login = review.author?.login?.toLowerCase();
+    if (login && eligibleSet.has(login)) {
+      latestReviewState.set(login, review.state);
+    }
+  }
+
+  // 3. Only count maintainers whose latest review is APPROVED
+  const approvedReviewers = new Set(
+    Array.from(latestReviewState.entries())
+      .filter(([_, state]) => state === 'APPROVED')
+      .map(([login]) => login)
+  );
+
+  // Active coverage includes pending review requests and approved maintainers
+  const activeCoverage = new Set([...pendingReviewers, ...approvedReviewers]);
+  const neededCount = Math.max(0, requiredApprovals - activeCoverage.size);
+
   console.log(`Eligible maintainer pool (excluding author @${authorLogin}): ${eligibleReviewers.join(', ')}`);
-  console.log(`Current maintainer reviewers: ${Array.from(currentMaintainerReviewers).join(', ') || 'none'}. Needed: ${neededCount}`);
+  console.log(`Approved reviewers: ${Array.from(approvedReviewers).join(', ') || 'none'}`);
+  console.log(`Pending requested reviewers: ${Array.from(pendingReviewers).join(', ') || 'none'}`);
+  console.log(`Active review coverage: ${Array.from(activeCoverage).join(', ') || 'none'}. Needed: ${neededCount}`);
 
   if (neededCount > 0 && !pr.isDraft) {
     const unassignedCandidates = eligibleReviewers.filter(
-      cand => !currentMaintainerReviewers.has(cand.toLowerCase())
+      cand => !activeCoverage.has(cand.toLowerCase())
     );
     const shuffledCandidates = shuffle(unassignedCandidates);
 
-    const isBackendOrInfra = requiredApprovals === 2 || labels.some(l => ['module:infra', 'module:auth'].includes(l));
+    const isBackendOrInfra = requiredApprovals === 2 || labels.some(l => ['module:infra', 'module:auth', 'module:refactor', 'phase:3-architecture'].includes(l));
     const domainSpecialists = isBackendOrInfra
       ? ['gan0117', 'leehom22', 'hoezhiwan']
       : ['zping-926', 'leehom22'];
@@ -308,9 +327,11 @@ async function run() {
               }
             }
           }
-          reviews(first: 20) {
+          reviews(first: 50) {
             nodes {
               author { login }
+              state
+              submittedAt
             }
           }
         }
