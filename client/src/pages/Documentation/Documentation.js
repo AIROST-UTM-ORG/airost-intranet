@@ -33,6 +33,7 @@ const Documentation = ({ initialView = ViewModes.SPACES_LIST, initialSpaceId = n
     setLoading,
     error,
     setError,
+    projectsError,
     loadInitialData,
     loadAuxData,
     handleAuthError,
@@ -247,6 +248,8 @@ const Documentation = ({ initialView = ViewModes.SPACES_LIST, initialSpaceId = n
           initialSpace={null}
           projects={projects}
           members={members}
+          projectsError={projectsError}
+          onRetryAux={loadAuxData}
           onSubmit={handleCreateSpaceSubmit}
           onCancel={() => {
             setViewMode(ViewModes.SPACES_LIST);
@@ -262,6 +265,8 @@ const Documentation = ({ initialView = ViewModes.SPACES_LIST, initialSpaceId = n
           initialSpace={selectedSpace}
           projects={projects}
           members={members}
+          projectsError={projectsError}
+          onRetryAux={loadAuxData}
           onSubmit={handleEditSpaceSubmit}
           onCancel={() => {
             setViewMode(editReturnMode);

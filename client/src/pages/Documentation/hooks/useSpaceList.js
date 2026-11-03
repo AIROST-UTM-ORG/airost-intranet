@@ -10,6 +10,7 @@ export const useSpaceList = () => {
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [projectsError, setProjectsError] = useState(null);
 
   const handleAuthError = (err) => {
     if (err.response?.status === 401 || err.response?.data?.error?.code === "UNAUTHENTICATED") {
@@ -29,10 +30,29 @@ export const useSpaceList = () => {
   };
 
   const loadAuxData = useCallback(async () => {
+    setProjectsError(null);
     try {
-      const [projData, memberData] = await Promise.all([listProjects(), listMembers()]);
-      setProjects(projData);
-      setMembers(memberData);
+      const projPromise = listProjects()
+        .then((data) => {
+          setProjects(data);
+          setProjectsError(null);
+        })
+        .catch((err) => {
+          setProjects([]);
+          setProjectsError(
+            err.response?.data?.error?.message || err.message || "Failed to load projects"
+          );
+        });
+
+      const memberPromise = listMembers()
+        .then((data) => {
+          setMembers(data);
+        })
+        .catch(() => {
+          // Ignore aux loading errors
+        });
+
+      await Promise.all([projPromise, memberPromise]);
     } catch {
       // Ignore aux loading errors
     }
@@ -41,10 +61,16 @@ export const useSpaceList = () => {
   const loadInitialData = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setProjectsError(null);
     try {
       const [spaceData, projData, memberData] = await Promise.all([
         listSpaces(),
-        listProjects(),
+        listProjects().catch((err) => {
+          setProjectsError(
+            err.response?.data?.error?.message || err.message || "Failed to load projects"
+          );
+          throw err;
+        }),
         listMembers(),
       ]);
       setSpaces(spaceData);
@@ -72,6 +98,8 @@ export const useSpaceList = () => {
     setLoading,
     error,
     setError,
+    projectsError,
+    setProjectsError,
     loadInitialData,
     loadAuxData,
     handleAuthError,

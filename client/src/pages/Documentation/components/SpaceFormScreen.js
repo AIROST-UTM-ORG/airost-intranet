@@ -12,6 +12,8 @@ const SpaceFormScreen = ({
   initialSpace = null, // null for create, object for edit
   projects = [],
   members = [],
+  projectsError = null,
+  onRetryAux = null,
   onSubmit,
   onCancel,
   submitting = false,
@@ -65,6 +67,7 @@ const SpaceFormScreen = ({
   }, [serverError]);
 
   const validate = () => {
+    if (projectsError) return false;
     const errs = {};
     if (!title.trim()) {
       errs.title = "Title is required";
@@ -92,6 +95,7 @@ const SpaceFormScreen = ({
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (projectsError) return;
     if (!validate()) return;
 
     const payload = {
@@ -131,6 +135,25 @@ const SpaceFormScreen = ({
           </div>
         )}
 
+        {projectsError && (
+          <div
+            className="alert alert-error text-[13px] py-2 mb-4 flex items-center justify-between"
+            data-testid="projects-error-banner"
+          >
+            <span>{projectsError}</span>
+            {onRetryAux && (
+              <button
+                type="button"
+                onClick={onRetryAux}
+                className="btn btn-xs btn-outline"
+                data-testid="retry-projects-btn"
+              >
+                Retry
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Row 1: Title (65%) & Project (35%) */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-[24px] mb-[20px]">
           {/* Title */}
@@ -164,7 +187,10 @@ const SpaceFormScreen = ({
               <select
                 value={projectId || ""}
                 onChange={(e) => setProjectId(e.target.value)}
-                className="doc-input h-[46px] px-[16px] pr-[36px] w-full appearance-none cursor-pointer bg-white"
+                disabled={Boolean(projectsError)}
+                className={`doc-input h-[46px] px-[16px] pr-[36px] w-full appearance-none cursor-pointer bg-white ${
+                  projectsError ? "border-red-400" : ""
+                }`}
                 data-testid="space-project-select"
               >
                 <option value="">No project</option>
@@ -178,6 +204,11 @@ const SpaceFormScreen = ({
                 <FiChevronDown className="w-[14px] h-[14px]" strokeWidth={2} />
               </div>
             </div>
+            {projectsError && (
+              <span className="text-red-500 text-[12px] mt-1" data-testid="projects-error-text">
+                {projectsError}
+              </span>
+            )}
           </div>
         </div>
 
@@ -237,7 +268,7 @@ const SpaceFormScreen = ({
           </button>
           <button
             type="submit"
-            disabled={submitting}
+            disabled={submitting || Boolean(projectsError)}
             className={`doc-btn-primary h-[42px] px-[24px] text-[14px] ${
               isEditing ? "min-w-[132px]" : "min-w-[126px]"
             }`}

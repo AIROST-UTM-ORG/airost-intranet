@@ -327,7 +327,7 @@ export const listProjects = async () => {
       title: p.title || p.name || `Project ${p.projectId || ""}`,
     }));
   } catch (err) {
-    return [...SEED_PROJECTS];
+    throw err;
   }
 };
 
