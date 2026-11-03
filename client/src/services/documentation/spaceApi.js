@@ -344,16 +344,16 @@ export const listMembers = async () => {
 
   try {
     const res = await realApiClient.get("/admin/users");
-    if (Array.isArray(res.data) && res.data.length > 0) {
-      return res.data
-        .map((u) => ({
-          _id: u._id || u.id,
-          name: u.name || u.email || "Member",
-          email: u.email,
-        }))
-        .filter((u) => u._id && /^[0-9a-fA-F]{24}$/.test(String(u._id)));
+    if (!Array.isArray(res.data)) {
+      throw createError(500, "INTERNAL_ERROR", "Failed to fetch members: invalid response format");
     }
-    return [...SEED_USERS];
+    return res.data
+      .map((u) => ({
+        _id: u._id || u.id,
+        name: u.name || u.email || "Member",
+        email: u.email,
+      }))
+      .filter((u) => u._id && /^[0-9a-fA-F]{24}$/.test(String(u._id)));
   } catch (err) {
     throw err;
   }
