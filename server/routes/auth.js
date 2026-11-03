@@ -1,12 +1,21 @@
 const router = require("express").Router();
 const passport = require("passport");
+const { requireAuth } = require("../middleware/auth");
 
 require('dotenv').config();
 
+const clearSessionCookie = (res) => {
+  const isProduction = process.env.NODE_ENV === 'production';
+  res.clearCookie('connect.sid', {
+    path: '/',
+    httpOnly: true,
+    secure: isProduction && process.env.COOKIE_SECURE !== 'false',
+    sameSite: isProduction ? "none" : "lax",
+  });
+};
+
 router.get('/login/success', (req, res) => {
   try {
-    console.log(req.user);
-    console.log(req.isAuthenticated());
     if (req.user) {
       res.status(200).json({
         success: true,
@@ -14,7 +23,7 @@ router.get('/login/success', (req, res) => {
         user: req.user,
       });
     } else {
-      res.status(403).json({
+      res.status(401).json({
         success: false,
         message: "User not authenticated",
       });
@@ -43,33 +52,51 @@ router.get('/login/failed', (req, res) => {
   }
 });
 
-router.get('/logout', (req, res) => {
+const handleLogout = (req, res) => {
   try {
-    req.logout((err) => {
-      if (err) {
-        console.error("Error during logout:", err);
-        return res.status(500).json({
-          success: false,
-          message: "Error during logout process",
+    const finishLogout = () => {
+      clearSessionCookie(res);
+      if (req.accepts('json') && !req.accepts('html')) {
+        return res.status(200).json({
+          success: true,
+          message: "Successfully logged out",
         });
       }
+      return res.redirect((process.env.REACT_APP_URL || 'http://localhost:3000') + "/login");
+    };
+
+    const destroySession = () => {
       if (req.session) {
         req.session.destroy((destroyErr) => {
           if (destroyErr) {
             console.error("Error destroying session:", destroyErr);
           }
-          const isProduction = process.env.NODE_ENV === 'production';
-          res.clearCookie('connect.sid', {
-            path: '/',
-            secure: isProduction,
-            sameSite: isProduction ? "none" : "lax",
-          });
-          res.redirect(process.env.REACT_APP_URL + "/login");
+          finishLogout();
         });
       } else {
-        res.redirect(process.env.REACT_APP_URL + "/login");
+        finishLogout();
       }
-    });
+    };
+
+    if (typeof req.logout === 'function') {
+      if (req.logout.length > 0) {
+        req.logout((err) => {
+          if (err) {
+            console.error("Error during logout:", err);
+            return res.status(500).json({
+              success: false,
+              message: "Error during logout process",
+            });
+          }
+          destroySession();
+        });
+      } else {
+        req.logout();
+        destroySession();
+      }
+    } else {
+      destroySession();
+    }
   } catch (error) {
     console.error("Error in logout route:", error);
     res.status(500).json({
@@ -77,7 +104,10 @@ router.get('/logout', (req, res) => {
       message: "Internal server error during logout",
     });
   }
-});
+};
+
+router.get('/logout', handleLogout);
+router.post('/logout', handleLogout);
 
 router.get('/google', (req, res, next) => {
   try {
