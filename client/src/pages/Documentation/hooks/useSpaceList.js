@@ -11,6 +11,7 @@ export const useSpaceList = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [projectsError, setProjectsError] = useState(null);
+  const [membersError, setMembersError] = useState(null);
 
   const handleAuthError = (err) => {
     if (err.response?.status === 401 || err.response?.data?.error?.code === "UNAUTHENTICATED") {
@@ -31,6 +32,7 @@ export const useSpaceList = () => {
 
   const loadAuxData = useCallback(async () => {
     setProjectsError(null);
+    setMembersError(null);
     try {
       const projPromise = listProjects()
         .then((data) => {
@@ -47,9 +49,13 @@ export const useSpaceList = () => {
       const memberPromise = listMembers()
         .then((data) => {
           setMembers(data);
+          setMembersError(null);
         })
-        .catch(() => {
-          // Ignore aux loading errors
+        .catch((err) => {
+          setMembers([]);
+          setMembersError(
+            err.response?.data?.error?.message || err.message || "Failed to load members"
+          );
         });
 
       await Promise.all([projPromise, memberPromise]);
@@ -62,6 +68,7 @@ export const useSpaceList = () => {
     setLoading(true);
     setError(null);
     setProjectsError(null);
+    setMembersError(null);
     try {
       const [spaceData, projData, memberData] = await Promise.all([
         listSpaces(),
@@ -71,7 +78,12 @@ export const useSpaceList = () => {
           );
           throw err;
         }),
-        listMembers(),
+        listMembers().catch((err) => {
+          setMembersError(
+            err.response?.data?.error?.message || err.message || "Failed to load members"
+          );
+          throw err;
+        }),
       ]);
       setSpaces(spaceData);
       setProjects(projData);
@@ -100,6 +112,8 @@ export const useSpaceList = () => {
     setError,
     projectsError,
     setProjectsError,
+    membersError,
+    setMembersError,
     loadInitialData,
     loadAuxData,
     handleAuthError,

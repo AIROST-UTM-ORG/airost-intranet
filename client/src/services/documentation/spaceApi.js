@@ -355,6 +355,6 @@ export const listMembers = async () => {
     }
     return [...SEED_USERS];
   } catch (err) {
-    return [...SEED_USERS];
+    throw err;
   }
 };

@@ -13,6 +13,7 @@ const SpaceFormScreen = ({
   projects = [],
   members = [],
   projectsError = null,
+  membersError = null,
   onRetryAux = null,
   onSubmit,
   onCancel,
@@ -67,7 +68,7 @@ const SpaceFormScreen = ({
   }, [serverError]);
 
   const validate = () => {
-    if (projectsError) return false;
+    if (projectsError || membersError) return false;
     const errs = {};
     if (!title.trim()) {
       errs.title = "Title is required";
@@ -95,7 +96,7 @@ const SpaceFormScreen = ({
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (projectsError) return;
+    if (projectsError || membersError) return;
     if (!validate()) return;
 
     const payload = {
@@ -147,6 +148,25 @@ const SpaceFormScreen = ({
                 onClick={onRetryAux}
                 className="btn btn-xs btn-outline"
                 data-testid="retry-projects-btn"
+              >
+                Retry
+              </button>
+            )}
+          </div>
+        )}
+
+        {membersError && (
+          <div
+            className="alert alert-error text-[13px] py-2 mb-4 flex items-center justify-between"
+            data-testid="members-error-banner"
+          >
+            <span>{membersError}</span>
+            {onRetryAux && (
+              <button
+                type="button"
+                onClick={onRetryAux}
+                className="btn btn-xs btn-outline"
+                data-testid="retry-members-btn"
               >
                 Retry
               </button>
@@ -268,7 +288,7 @@ const SpaceFormScreen = ({
           </button>
           <button
             type="submit"
-            disabled={submitting || Boolean(projectsError)}
+            disabled={submitting || Boolean(projectsError) || Boolean(membersError)}
             className={`doc-btn-primary h-[42px] px-[24px] text-[14px] ${
               isEditing ? "min-w-[132px]" : "min-w-[126px]"
             }`}
