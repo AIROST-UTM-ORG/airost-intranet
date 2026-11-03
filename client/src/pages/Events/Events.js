@@ -1,5 +1,6 @@
 import './Events.css'
 import { useState, useEffect } from 'react'
+import { API_URL } from '../../config/api';
 // import Modal from 'react-bootstrap/Modal';
 // import Spinner from 'react-bootstrap/Spinner';
 const { format, parseISO } = require('date-fns');
@@ -32,7 +33,7 @@ const dateTimeForCalander = (dateStr, timeStr) => {
 
 async function fetchEvents() {
     try {
-        const response = await fetch('/calendar/upcoming-events');
+        const response = await fetch(`${API_URL}/api/calendar/upcoming-events`);
         const data = await response.json();
         return data;
     } catch (error) {
@@ -42,7 +43,7 @@ async function fetchEvents() {
 
 async function addEvent(event) {
     try {
-        const response = await fetch('/calendar/add', {
+        const response = await fetch(`${API_URL}/api/calendar/add`, {
             method: 'POST',
             body: JSON.stringify(event),
             headers: {
@@ -114,7 +115,7 @@ function Events() {
 
     async function deleteEvent(eventId) {
         try {
-            const response = await fetch('/calendar/' + eventId, {
+            const response = await fetch(`${API_URL}/api/calendar/` + eventId, {
                 method: 'DELETE',
             });
             const data = await response.json();
@@ -221,7 +222,7 @@ function Events() {
           <div className="modal-box">
             <form className="form grid grid-cols-1 gap-2" id='userForm' onSubmit={handleSubmit}>
             <h3 className="font-bold text-lg">Add Event</h3>
-                                <label class="input input-bordered flex items-center gap-2">
+                                <label className="input input-bordered flex items-center gap-2">
                                     Date
                                     <input 
                                         id="name" className="grow" required
@@ -229,7 +230,7 @@ function Events() {
                                         onChange={(e) => {setDate(e.target.value)}}/>
                                 </label>
 
-                                <label class="input input-bordered flex items-center gap-2">
+                                <label className="input input-bordered flex items-center gap-2">
                                     Time
                                     <input 
                                         id="name" className="grow" required
@@ -237,7 +238,7 @@ function Events() {
                                         onChange={(e) => {setTime(e.target.value)}}/>
                                 </label>
                                 
-                                <label class="input input-bordered flex items-center gap-2">
+                                <label className="input input-bordered flex items-center gap-2">
                                     Event Name
                                     <input 
                                         id="name" className="grow" required
@@ -246,7 +247,7 @@ function Events() {
                                         onChange={(e) => {setEventName(e.target.value)}}/>
                                 </label>
                 
-                                <label class="input input-bordered flex items-center gap-2">
+                                <label className="input input-bordered flex items-center gap-2">
                                     Venue
                                     <input 
                                         id="name" className="grow" required

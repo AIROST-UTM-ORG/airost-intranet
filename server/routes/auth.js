@@ -14,6 +14,20 @@ const clearSessionCookie = (res) => {
   });
 };
 
+/**
+ * Resolves redirect target based on optional REACT_APP_URL.
+ * If REACT_APP_URL is unset or empty (such as in production behind Nginx reverse proxy),
+ * falls back to root ('/') or the relative path (e.g. '/login').
+ */
+const getClientUrl = (path = '') => {
+  const baseUrl = (process.env.REACT_APP_URL || '').trim().replace(/\/+$/, '');
+  const cleanPath = path ? (path.startsWith('/') ? path : `/${path}`) : '';
+  if (!baseUrl) {
+    return cleanPath || '/';
+  }
+  return cleanPath ? `${baseUrl}${cleanPath}` : baseUrl;
+};
+
 router.get('/login/success', (req, res) => {
   try {
     if (req.user) {
@@ -62,7 +76,7 @@ const handleLogout = (req, res) => {
           message: "Successfully logged out",
         });
       }
-      return res.redirect((process.env.REACT_APP_URL || 'http://localhost:3000') + "/login");
+      return res.redirect(getClientUrl('/login'));
     };
 
     const destroySession = () => {
@@ -126,10 +140,12 @@ router.get('/google', (req, res, next) => {
 
 router.get('/google/callback', (req, res, next) => {
   passport.authenticate('google', {
-    successRedirect: process.env.REACT_APP_URL,
-    failureRedirect: '/login',
+    successRedirect: getClientUrl(),
+    failureRedirect: getClientUrl('/login'),
     failureFlash: true
   })(req, res, next);
 });
+
+router.getClientUrl = getClientUrl;
 
 module.exports = router;

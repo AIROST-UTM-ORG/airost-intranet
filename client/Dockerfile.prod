@@ -12,8 +12,8 @@ RUN npm install --legacy-peer-deps
 # Copy application source
 COPY . .
 
-# Build arguments for environment variables embedded at build time
-ARG REACT_APP_API_URL=http://localhost:4000
+# Optional build arguments for environment variables embedded at build time (defaults to relative routing)
+ARG REACT_APP_API_URL=""
 ENV REACT_APP_API_URL=$REACT_APP_API_URL
 ENV GENERATE_SOURCEMAP=false
 

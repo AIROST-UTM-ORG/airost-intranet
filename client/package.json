@@ -35,6 +35,7 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "test:ci": "cross-env CI=true react-scripts test --watchAll=false",
+    "test:smoke": "node scripts/smoke-test.js",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {

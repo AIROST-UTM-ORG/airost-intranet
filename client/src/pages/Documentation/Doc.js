@@ -1,9 +1,8 @@
-import React, { useEffect } from 'react';
-import { Link, Route, Router } from "react-router-dom";
+import React, { useEffect, useState } from 'react';
 import DocCard from './component/Doc-card';
 import TopBar from './component/TopBar';
-import { useState} from 'react';
 import './style/global.css';
+import { API_URL } from '../../config/api';
 
 const Doc = () => {
   const [articleType, setArticleType] = useState('All');
@@ -17,7 +16,7 @@ const Doc = () => {
 
   useEffect(() => {
     const fetchDocs = async () => {
-      const response = await fetch('/airost/doc')
+      const response = await fetch(`${API_URL}/api/airost/doc`)
       const json = await response.json()
 
       if (response.ok) {
