@@ -1,6 +1,6 @@
 import React from "react";
 import { FiSearch, FiX, FiCheck } from "react-icons/fi";
-import useAdminSpaces, { isUserAdmin } from "./useAdminSpaces";
+import useAdminSpaces, { isUserAdmin } from "./hooks/useAdminSpaces";
 import AdminDocumentationStats from "./AdminDocumentationStats";
 import AdminDocumentationTable from "./AdminDocumentationTable";
 import AdminTransferModal from "./AdminTransferModal";

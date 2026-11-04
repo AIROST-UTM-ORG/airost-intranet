@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import useAuth from "../../hooks/useAuth";
+import useAuth from "../../../hooks/useAuth";
 import {
   getAdminSpaces,
   reassignSpaceOwner,
   deleteSpace,
   listMembers,
   extractError,
-} from "../Documentation/documentationApi";
+} from "../../Documentation/documentationApi";
 
 export const isUserAdmin = (user) => {
   if (!user || !user.position) return false;

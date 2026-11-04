@@ -8,30 +8,7 @@ import {
   FiTrash2,
   FiMoreHorizontal,
 } from "react-icons/fi";
-
-const formatAccessType = (type) => {
-  switch (type) {
-    case "project_members":
-      return "Project Members";
-    case "selected":
-      return "Selected";
-    case "all":
-    default:
-      return "All Members";
-  }
-};
-
-const formatUpdateType = (type) => {
-  switch (type) {
-    case "project_members":
-      return "Project Members";
-    case "selected":
-      return "Selected";
-    case "all":
-    default:
-      return "All Members";
-  }
-};
+import { formatAccessType, formatUpdateType } from "./utils/formatters";
 
 const AdminDocumentationTable = ({
   spaces,
