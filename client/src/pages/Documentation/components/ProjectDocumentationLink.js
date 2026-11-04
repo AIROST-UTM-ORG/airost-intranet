@@ -5,8 +5,6 @@ import useAuth from "../../../hooks/useAuth";
 import { listSpaces, extractError } from "../documentationApi";
 import { resolveProjectId } from "../utils/projectUtils";
 
-export { resolveProjectId };
-
 /**
  * ProjectDocumentationLink
  * Self-contained component that fetches and renders dynamic documentation space link(s)
