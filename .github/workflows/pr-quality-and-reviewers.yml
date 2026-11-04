@@ -1,0 +1,41 @@
+name: PR Quality Gate & Reviewer Routing
+
+on:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - synchronize
+      - ready_for_review
+
+concurrency:
+  group: pr-quality-reviewers-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  validate-and-route:
+    name: Validate PR Template & Assign Reviewers
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run Quality Verification & Reviewer Routing
+        run: node .github/scripts/validate-and-assign-reviewers.js
+        env:
+          PROJECT_AUTOMATION_TOKEN: ${{ secrets.PROJECT_AUTOMATION_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO_OWNER: ${{ github.repository_owner }}
+          REPO_NAME: ${{ github.event.repository.name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PROJECT_ID: "PVT_kwDOE_DQyc4BoRy3"
+          APPROVALS_FIELD_ID: "PVTSSF_lADOE_DQyc4BoRy3zhmyojE"
