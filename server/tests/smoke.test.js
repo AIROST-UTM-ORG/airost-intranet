@@ -59,9 +59,9 @@ describe('Server Test Setup Smoke Tests', () => {
     });
   });
 
-  it('GET /auth/login/success returns 403 when session is unauthenticated', async () => {
+  it('GET /auth/login/success returns 401 when session is unauthenticated', async () => {
     const res = await request(app).get('/auth/login/success');
-    expect(res.statusCode).toBe(403);
+    expect(res.statusCode).toBe(401);
     expect(res.body).toEqual({
       success: false,
       message: 'User not authenticated',
