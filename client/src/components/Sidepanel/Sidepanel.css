@@ -56,6 +56,12 @@
   .side-text a:hover {
     background-color: #a3a3a3;
   }
+
+  .side-text a.active {
+    background-color: #27272a;
+    color: #0dc414;
+    font-weight: 500;
+  }
   
   .side-menu-items {
     width: 100%;
