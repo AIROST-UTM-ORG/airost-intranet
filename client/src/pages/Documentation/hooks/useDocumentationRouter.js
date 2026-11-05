@@ -61,6 +61,7 @@ export const useDocumentationRouter = () => {
 
   return {
     pathname: location?.pathname,
+    search: location?.search,
     navigateSafe,
     lastPathRef,
     parseCurrentPath: () => parseDocPath(location?.pathname),

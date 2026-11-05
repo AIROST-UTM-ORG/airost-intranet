@@ -70,3 +70,12 @@ export const createError = (status, code, message, details = []) => {
   };
   return err;
 };
+
+export const extractError = (err, defaultMsg = "Operation failed") => {
+  const errData = err?.response?.data?.error;
+  return {
+    message: errData?.message || err?.message || defaultMsg,
+    code: errData?.code,
+    details: errData?.details || [],
+  };
+};

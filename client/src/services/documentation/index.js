@@ -6,3 +6,4 @@ export * from "./client";
 export * from "./mockData";
 export * from "./spaceApi";
 export * from "./documentApi";
+export * from "./adminApi";

@@ -22,6 +22,9 @@ export const setUseMock = (value) => {
   USE_MOCK = Boolean(value);
 };
 
+export const isMockMode = () => Boolean(USE_MOCK);
+export const setIsMockData = (value) => setUseMock(value);
+
 let currentScenario = MockScenarios.DEFAULT;
 let artificialDelayMs = 0; // 0 for fast tests by default, configurable
 
