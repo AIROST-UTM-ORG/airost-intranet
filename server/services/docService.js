@@ -278,7 +278,6 @@ const getUserProjectRolesMap = async (user) => {
  * Rewrites the viewable logic as ONE database filter instead of a loop.
  * For non-admins uses an $or over:
  * - accessType: 'all'
- * - updateType: 'all'
  * - createdBy: user
  * - accessType: 'selected' and user in accessMembers
  * - updateType: 'selected' and user in updateMembers
@@ -316,7 +315,6 @@ const buildViewableSpacesQuery = (user, rolesMap, filter = {}) => {
 
   const orConditions = [
     { accessType: 'all' },
-    { updateType: 'all' },
     { createdBy: userId },
     { accessType: 'selected', accessMembers: userId },
     { updateType: 'selected', updateMembers: userId },
@@ -556,8 +554,11 @@ const getSpaceDetail = async (space, user, projectRole) => {
     updateMembers: space.updateMembers,
     canUpdate,
     canManage,
+    isManager: canManage,
     documentCount: activeCount,
+    activeDocumentCount: activeCount,
     archivedCount,
+    archivedDocumentCount: archivedCount,
     areaCounts,
     createdAt: space.createdAt,
     updatedAt: space.updatedAt,

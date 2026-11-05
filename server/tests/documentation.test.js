@@ -389,7 +389,11 @@ describe('Documentation Backend API Tests', () => {
       const res = await adminAgent.get(`/doc/spaces/${space._id}`);
       expect(res.status).toBe(200);
       expect(res.body.documentCount).toBe(3);
+      expect(res.body.activeDocumentCount).toBe(3);
       expect(res.body.archivedCount).toBe(2);
+      expect(res.body.archivedDocumentCount).toBe(2);
+      expect(res.body.canManage).toBe(true);
+      expect(res.body.isManager).toBe(true);
       expect(res.body.areaCounts).toEqual({
         general: 0,
         requirements: 0,
@@ -2203,5 +2207,103 @@ describe('Documentation Backend API Tests', () => {
         expect(filterSpaceIds).toEqual(helperSpaceIds);
       });
     }
+  });
+
+  describe("Visibility: updateType 'all' does not grant view access (#74)", () => {
+    let restrictedSpace;
+    let restrictedDoc;
+    let publicSpace;
+
+    beforeAll(async () => {
+      restrictedSpace = await DocumentationSpace.create({
+        title: 'Selected View Update All Space',
+        description: 'Only selected users can view, but updateType is all',
+        projectId: null,
+        createdBy: creatorUser._id,
+        accessType: 'selected',
+        updateType: 'all',
+        accessMembers: [selectedUser._id],
+        updateMembers: [],
+      });
+
+      restrictedDoc = await Document.create({
+        spaceId: restrictedSpace._id,
+        title: 'Restricted Space Document',
+        url: 'https://docs.google.com/restricted-doc',
+        provider: 'google_doc',
+        area: 'general',
+        createdBy: creatorUser._id,
+        archived: false,
+      });
+
+      publicSpace = await DocumentationSpace.create({
+        title: 'Public Space All All',
+        description: 'Everyone can view and update',
+        projectId: null,
+        createdBy: creatorUser._id,
+        accessType: 'all',
+        updateType: 'all',
+        accessMembers: [],
+        updateMembers: [],
+      });
+    });
+
+    it('a. non-member authenticated user cannot view or update a space with restricted view and updateType all', async () => {
+      // GET /doc/spaces/:id returns 404 (View Stealth Rule)
+      const getRes = await outsiderAgent.get(`/doc/spaces/${restrictedSpace._id}`);
+      expect(getRes.status).toBe(404);
+      expect(getRes.body.error.code).toBe('NOT_FOUND');
+
+      // Space is not in outsider's GET /doc/spaces list
+      const listRes = await outsiderAgent.get('/doc/spaces');
+      expect(listRes.status).toBe(200);
+      const found = listRes.body.find((s) => String(s._id) === String(restrictedSpace._id));
+      expect(found).toBeUndefined();
+
+      // Document create attempt is denied (404 View Stealth Rule)
+      const createRes = await outsiderAgent.post(`/doc/spaces/${restrictedSpace._id}/documents`).send({
+        title: 'Outsider Forbidden Doc',
+        url: 'https://docs.google.com/outsider-doc',
+      });
+      expect(createRes.status).toBe(404);
+
+      // Document update attempt is denied (404 View Stealth Rule)
+      const updateRes = await outsiderAgent.patch(`/doc/documents/${restrictedDoc._id}`).send({
+        title: 'Outsider Renamed Doc',
+      });
+      expect(updateRes.status).toBe(404);
+    });
+
+    it('b. user in accessMembers CAN view and (since updateType is all) CAN update', async () => {
+      // GET /doc/spaces/:id returns 200 with canUpdate=true
+      const getRes = await selectedAgent.get(`/doc/spaces/${restrictedSpace._id}`);
+      expect(getRes.status).toBe(200);
+      expect(getRes.body.canUpdate).toBe(true);
+
+      // Space is in selected member's GET /doc/spaces list
+      const listRes = await selectedAgent.get('/doc/spaces');
+      expect(listRes.status).toBe(200);
+      const found = listRes.body.find((s) => String(s._id) === String(restrictedSpace._id));
+      expect(found).toBeDefined();
+
+      // Selected user can create document (201)
+      const createRes = await selectedAgent.post(`/doc/spaces/${restrictedSpace._id}/documents`).send({
+        title: 'Selected Member Added Doc',
+        url: 'https://docs.google.com/selected-added-doc',
+      });
+      expect(createRes.status).toBe(201);
+    });
+
+    it('c. any authenticated user can view and update a space with accessType all and updateType all', async () => {
+      const getRes = await outsiderAgent.get(`/doc/spaces/${publicSpace._id}`);
+      expect(getRes.status).toBe(200);
+      expect(getRes.body.canUpdate).toBe(true);
+
+      const createRes = await outsiderAgent.post(`/doc/spaces/${publicSpace._id}/documents`).send({
+        title: 'Public Space New Doc',
+        url: 'https://docs.google.com/public-new-doc',
+      });
+      expect(createRes.status).toBe(201);
+    });
   });
 });

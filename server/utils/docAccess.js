@@ -99,10 +99,7 @@ const canViewSpace = async (user, space, projectRole) => {
     role = await getUserProjectRole(user._id, space.projectId);
   }
 
-  // Implicit View Grant: If user has direct update permission via selected or project_members or all
-  if (space.updateType === 'all') {
-    return true;
-  }
+  // Implicit View Grant: If user has direct update permission via selected or project_members
   if (space.updateType === 'selected' && isUserInList(user._id, space.updateMembers)) {
     return true;
   }
