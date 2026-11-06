@@ -1,3 +1,15 @@
+const MAX_PROFILE_PHOTO_DATA_URL_LENGTH = 85000;
+const PHOTO_QUALITIES = [0.78, 0.68, 0.58, 0.48, 0.38, 0.28];
+
+export const toUploadablePhoto = (canvas) => {
+  for (const quality of PHOTO_QUALITIES) {
+    const photo = canvas.toDataURL('image/jpeg', quality);
+    if (photo.length <= MAX_PROFILE_PHOTO_DATA_URL_LENGTH) return photo;
+  }
+
+  throw new Error('This image could not be compressed to the upload size. Choose another image.');
+};
+
 export const makeSquarePhoto = (file) => new Promise((resolve, reject) => {
   const reader = new FileReader();
   reader.onerror = () => reject(new Error('The selected image could not be read.'));
@@ -21,12 +33,11 @@ export const makeSquarePhoto = (file) => new Promise((resolve, reject) => {
       context.fillStyle = '#fff';
       context.fillRect(0, 0, size, size);
       context.drawImage(image, cropX, cropY, cropSize, cropSize, 0, 0, size, size);
-      const photo = canvas.toDataURL('image/jpeg', 0.78);
-      if (photo.length > 900000) {
-        reject(new Error('This image could not be compressed enough. Choose another image.'));
-        return;
+      try {
+        resolve(toUploadablePhoto(canvas));
+      } catch (error) {
+        reject(error);
       }
-      resolve(photo);
     };
     image.src = reader.result;
   };
