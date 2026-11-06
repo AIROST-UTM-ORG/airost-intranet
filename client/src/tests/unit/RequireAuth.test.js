@@ -40,19 +40,19 @@ const renderWithAuth = (authValue, initialPath = '/dashboard') => {
 
 describe('RequireAuth', () => {
   test('renders protected content when user has an allowed position (string)', () => {
-    const authValue = { user: { position: 'member' }, loading: false };
+    const authValue = { user: { positions: ['member'] }, loading: false };
     renderWithAuth(authValue);
     expect(screen.getByTestId('protected-content')).toBeInTheDocument();
   });
 
   test('renders protected content when user has an allowed position (array)', () => {
-    const authValue = { user: { position: ['member', 'admin'] }, loading: false };
+    const authValue = { user: { positions: ['member', 'admin'] }, loading: false };
     renderWithAuth(authValue);
     expect(screen.getByTestId('protected-content')).toBeInTheDocument();
   });
 
   test('renders protected content when user is admin', () => {
-    const authValue = { user: { position: ['admin'] }, loading: false };
+    const authValue = { user: { positions: ['admin'] }, loading: false };
     render(
       <AuthContext.Provider value={authValue}>
         <MemoryRouter initialEntries={['/admin']}>
@@ -69,7 +69,7 @@ describe('RequireAuth', () => {
   });
 
   test('redirects to /unauthorized when user does not have the required position', () => {
-    const authValue = { user: { position: ['member'] }, loading: false };
+    const authValue = { user: { positions: ['member'] }, loading: false };
     render(
       <AuthContext.Provider value={authValue}>
         <MemoryRouter initialEntries={['/admin']}>

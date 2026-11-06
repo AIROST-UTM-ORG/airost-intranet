@@ -1,7 +1,8 @@
 import React from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import * as aiicon from "react-icons/ai";
 import { IconContext } from "react-icons";
+import { FiUser } from "react-icons/fi";
 import "./Sidepanel.css";
 import { Sidebar } from "./Sidebar";
 import useAuth from "../../hooks/useAuth";
@@ -17,15 +18,15 @@ function Sidepanel() {
   };
 
   const isAdmin =
-    user?.position &&
-    (Array.isArray(user.position) ? user.position.includes("admin") : user.position === "admin");
+    user?.positions &&
+    (Array.isArray(user.positions) ? user.positions.includes("admin") : user.positions === "admin");
 
   return (
     <>
       <IconContext.Provider value={{ color: "#fff" }}>
-        <sidebar className="side-menu active">
+        <aside className="side-menu active">
           <ul className="side-menu-items">
-            <img src="/airost-icon.jpg" alt="Airost logo" />
+            <li className="side-logo"><img src="/airost-icon.jpg" alt="Airost logo" /></li>
             {Sidebar.map((item, index) => {
               const isActive =
                 item.path === "/"
@@ -77,8 +78,21 @@ function Sidepanel() {
                 <span>Log Out</span>
               </Link>
             </li>
+            <li className="side-profile">
+              <NavLink to="/profile" className={({ isActive }) => (isActive ? "active" : "")}>
+                {user?.photoUrl ? (
+                  <img src={user.photoUrl} alt="" referrerPolicy="no-referrer" />
+                ) : (
+                  <span className="side-profile-placeholder"><FiUser aria-hidden="true" /></span>
+                )}
+                <span className="side-profile-copy">
+                  <strong>{user?.name || "Airost member"}</strong>
+                  <small>{user?.email || ""}</small>
+                </span>
+              </NavLink>
+            </li>
           </ul>
-        </sidebar>
+        </aside>
       </IconContext.Provider>
     </>
   );

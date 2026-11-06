@@ -1,8 +1,12 @@
 const express = require('express');
-const { updateUser } = require('../controller/userController');
+const { getUsers, updateUser } = require('../controller/userController');
+const { requireAuth } = require('../middleware/auth');
 const router = express.Router();
 
-//UPDATE a User
-router.patch('/:id', updateUser);
+// Get users with optional search, filtering, and pagination.
+router.get('/users', requireAuth, getUsers);
+
+// UPDATE a User
+router.patch('/:id', requireAuth, updateUser);
 
 module.exports = router;

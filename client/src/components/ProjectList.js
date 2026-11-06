@@ -5,8 +5,8 @@ const ProjectList = ({ projects, onDeleteProject }) => {
   const { user } = useAuth();
   const isAdmin =
     user &&
-    user.position &&
-    (Array.isArray(user.position) ? user.position.includes("admin") : user.position === "admin");
+    user.positions &&
+    (Array.isArray(user.positions) ? user.positions.includes("admin") : user.positions === "admin");
 
   const handleDelete = (e, projectId) => {
     e.preventDefault();
@@ -23,7 +23,7 @@ const ProjectList = ({ projects, onDeleteProject }) => {
   return (
     <div className="project-list w-10/12">
       {projects.map((project) => (
-        <div className="project-preview" key={project.id}>
+        <div className="project-preview" key={project.id ?? project.projectId}>
           <Link style={{ textDecoration: "none" }} to={``}>
             <h2>{project.title}</h2>
             {!!project.advisor ? (

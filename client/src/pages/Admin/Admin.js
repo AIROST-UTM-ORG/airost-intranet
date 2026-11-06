@@ -28,7 +28,7 @@ const Admin = () => {
     }, []);
 
     const getUsers = async () => {
-        axios.get(`${API_URL}/api/admin/users`)
+        axios.get(`${API_URL}/api/user/users`)
         .then(users => setUsers(users.data))
         .catch(err => console.log(err));
     };
@@ -150,10 +150,10 @@ const Admin = () => {
                                 users.map(
                                     (user,index) => {
                                         return <tr key={index}>
-                                            <td><img src={user.photo} alt="Profile"/></td>
+                                            <td><img src={user.photoUrl} alt="Profile"/></td>
                                             <td>{user.name}</td>
                                             <td>{user.email}</td>
-                                            <td>{user.position}</td>
+                                            <td>{user.positions?.join(', ')}</td>
                                             <td className="text-center">
                                                 <div className="flex items-center justify-center h-full w-full">
                                                     {user.verified 
