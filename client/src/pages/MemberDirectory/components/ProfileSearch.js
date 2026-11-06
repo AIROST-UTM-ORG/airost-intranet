@@ -63,6 +63,7 @@ const ProfileSearch = ({
         <span className="profile-sr-only">{label}</span>
         <input
           type="search"
+          role="combobox"
           placeholder={placeholder}
           value={query}
           onChange={(event) => updateQuery(event.target.value)}
