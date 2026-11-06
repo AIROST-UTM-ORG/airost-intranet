@@ -11,10 +11,10 @@ const Admin = () => {
     const [activeTab, setActiveTab] = useState("users");
     const isAdmin = Boolean(
         currentUser &&
-        currentUser.position &&
-        (Array.isArray(currentUser.position)
-            ? currentUser.position.some((p) => typeof p === "string" && p.toLowerCase().includes("admin"))
-            : typeof currentUser.position === "string" && currentUser.position.toLowerCase().includes("admin"))
+        currentUser.positions &&
+        (Array.isArray(currentUser.positions)
+            ? currentUser.positions.some((p) => typeof p === "string" && p.toLowerCase().includes("admin"))
+            : typeof currentUser.positions === "string" && currentUser.positions.toLowerCase().includes("admin"))
     );
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
@@ -28,7 +28,7 @@ const Admin = () => {
     }, []);
 
     const getUsers = async () => {
-        axios.get(`${API_URL}/api/user/users`)
+        axios.get(`${API_URL}/api/user/users`,{ withCredentials: true })
         .then(users => setUsers(users.data))
         .catch(err => console.log(err));
     };
