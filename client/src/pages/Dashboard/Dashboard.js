@@ -2,7 +2,6 @@ import "./Dashboard.css";
 import useAuth from "../../hooks/useAuth";
 import axios from "axios";
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { API_URL } from "../../config/api";
 
 function Dashboard() {
@@ -108,8 +107,6 @@ function Dashboard() {
       setIsUpdating(false);
     }
   };
-  const navigate = useNavigate();
-
   return (
     <div className="dashboard">
       <div className="header-container">
