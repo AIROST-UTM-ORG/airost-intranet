@@ -1,46 +1,5 @@
 const User = require('../models/User');
 
-const getUsers = async (req, res) => {
-    var verifiedUsers = await VerifiedUser.find();
-
-    var loggedInUsers = await User.find();
-
-    let allUsers = [];
-
-    for (let loggedInUser of loggedInUsers){
-        let verified = false;
-
-        if (verifiedUsers.find(verUser => verUser.email == loggedInUser.email)){
-            verified = true;
-        }
-        allUsers.push({
-            _id: loggedInUser._id,
-            email: loggedInUser.email,
-            name: loggedInUser.name,
-            photo: loggedInUser.photo,
-            position: loggedInUser.position,
-            loggedIn: true,
-            verified: verified
-        })
-    }
-
-    for (let verUser of verifiedUsers){
-        if (allUsers.find(user => user.email == verUser.email)) continue;
-        allUsers.push(
-            {
-                _id: verUser._id,
-                email: verUser.email,
-                name: verUser.name,
-                photo: '',
-                position: verUser.position,
-                loggedIn: false,
-                verified: true,
-            }
-        )
-    }
-    res.json(allUsers)
-}
-
 const createVerifiedUser = async (req, res) => {
     if (!req.isAuthenticated || !req.isAuthenticated()) {
         return res.status(401).json({ error: 'Authentication required' });
@@ -77,5 +36,4 @@ const createVerifiedUser = async (req, res) => {
 
 module.exports = {
     createVerifiedUser,
-    getUsers
 }
