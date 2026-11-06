@@ -22,7 +22,7 @@ describe('ProfileSearch', () => {
       />,
     );
 
-    const searchInput = screen.getByRole('searchbox', { name: 'Search other club members' });
+    const searchInput = screen.getByRole('combobox', { name: 'Search other club members' });
     await userEvent.type(searchInput, 'alex');
 
     expect(screen.getByRole('option', { name: /Alex Lee/ })).toBeInTheDocument();
@@ -40,7 +40,7 @@ describe('ProfileSearch', () => {
         onSelectMember={jest.fn()}
       />,
     );
-    const searchInput = screen.getByRole('searchbox', { name: 'Search other club members' });
+    const searchInput = screen.getByRole('combobox', { name: 'Search other club members' });
 
     await userEvent.type(searchInput, 'alex');
     expect(screen.getByRole('option', { name: /Alex Lee/ })).toBeInTheDocument();

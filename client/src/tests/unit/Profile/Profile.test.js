@@ -74,7 +74,7 @@ describe('Member profile', () => {
 
     expect(screen.getByRole('button', { name: 'Back to members' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Back to members' }).parentElement)
-      .toContainElement(screen.getByRole('searchbox', { name: 'Search other club members' }));
+      .toContainElement(screen.getByRole('combobox', { name: 'Search other club members' }));
     expect(screen.getByRole('heading', { name: 'Alice Tan' })).toBeInTheDocument();
     expect(screen.getByText('Building helpful technology.')).toBeInTheDocument();
     expect(screen.getAllByText('Selangor, Malaysia')).toHaveLength(2);
@@ -156,7 +156,7 @@ describe('Member profile', () => {
     const otherMember = { name: 'Alex Lee', email: 'alex@example.com' };
     useFetchUsers.mockReturnValue({ data: [member, otherMember] });
     renderProfileRoutes('/members/alice%40example.com');
-    const search = screen.getByRole('searchbox', { name: 'Search other club members' });
+    const search = screen.getByRole('combobox', { name: 'Search other club members' });
 
     await userEvent.type(search, 'alex');
     expect(screen.getByRole('heading', { name: 'Alice Tan' })).toBeInTheDocument();

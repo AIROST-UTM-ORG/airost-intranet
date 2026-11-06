@@ -86,7 +86,7 @@ describe('MemberDirectory', () => {
 
   test('searches member names, email, course, year, and role and can clear the search', async () => {
     renderDirectory();
-    const search = screen.getByRole('searchbox', { name: /Search members/ });
+    const search = screen.getByRole('combobox', { name: /Search members/ });
 
     await userEvent.type(search, 'TREASURER');
     expect(getCardNames()).toEqual(['Cara Ng']);
@@ -109,7 +109,7 @@ describe('MemberDirectory', () => {
 
   test('navigates to a member profile from the shared search suggestions', async () => {
     renderDirectory();
-    const search = screen.getByRole('searchbox', { name: /Search members/ });
+    const search = screen.getByRole('combobox', { name: /Search members/ });
 
     await userEvent.type(search, 'Alice');
     await userEvent.click(screen.getByRole('option', { name: /Alice Tan/ }));
@@ -121,7 +121,7 @@ describe('MemberDirectory', () => {
 
   test('search suggestions include the signed-in member and match directory fields beyond name', async () => {
     renderDirectory();
-    const search = screen.getByRole('searchbox', { name: /Search members/ });
+    const search = screen.getByRole('combobox', { name: /Search members/ });
 
     await userEvent.type(search, 'Computer Science');
 
