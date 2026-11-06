@@ -125,6 +125,27 @@ describe('GET /api/user/users', () => {
 // ── POST /admin/users/verified ─────────────────────────────────────────────
 
 describe('POST /admin/users/verified', () => {
+  test('returns 401 when the requester is not authenticated', async () => {
+    const res = await request(app)
+      .post('/admin/users/verified')
+      .send({ name: 'Dave', email: 'dave@airost.com', position: 'member' });
+
+    expect(res.status).toBe(401);
+    expect(await User.findOne({ email: 'dave@airost.com' })).toBeNull();
+  });
+
+  test('returns 403 when an authenticated member tries to create a verified user', async () => {
+    const member = await seedUser();
+    const cookie = await authenticatedCookie(member._id);
+    const res = await request(app)
+      .post('/admin/users/verified')
+      .set('Cookie', cookie)
+      .send({ name: 'Dave', email: 'dave@airost.com', position: 'admin' });
+
+    expect(res.status).toBe(403);
+    expect(await User.findOne({ email: 'dave@airost.com' })).toBeNull();
+  });
+
   test('creates a placeholder User for a verified member', async () => {
     const cookie = await authenticatedAdminCookie();
     const payload = { name: 'Dave', email: 'dave@airost.com', position: 'member' };
