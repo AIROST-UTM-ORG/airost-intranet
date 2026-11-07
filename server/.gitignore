@@ -7,6 +7,6 @@ env.yaml
 
 Dockerfile
 
-package-lock.json
-
 /coverage
+
+/.tsupgrader/runtime-validation/

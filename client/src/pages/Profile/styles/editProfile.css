@@ -1,0 +1,65 @@
+.profile-edit-page {
+    @apply h-screen min-h-0 w-full min-w-0 overflow-x-hidden overflow-y-auto bg-[#f7f9fc] px-4 pb-8 pt-[26px] text-[#17233b] sm:px-[2.4vw];
+    overscroll-behavior-y: contain;
+    scrollbar-gutter: stable;
+  }
+
+  .profile-edit-page .profile-back {
+    @apply mb-[14px];
+  }
+
+  .profile-edit-layout {
+    @apply grid w-full min-w-0 items-start gap-4;
+    grid-template-columns: minmax(0, 1.7fr) minmax(230px, 0.9fr);
+  }
+
+  .profile-edit-fields {
+    @apply grid grid-cols-2 gap-[10px];
+  }
+
+  .profile-edit-field-wide {
+    @apply col-span-full;
+  }
+
+  .profile-edit-field > .profile-edit-field-error {
+    @apply mt-1 text-xs text-red-700;
+  }
+
+  .profile-edit-actions {
+    @apply mt-4 flex gap-[10px];
+  }
+
+  .profile-save-button,
+  .profile-cancel-button,
+  .profile-upload-button {
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .profile-edit-aside {
+    @apply flex flex-col gap-4;
+  }
+
+  .profile-edit-project-preview .profile-panel {
+    @apply border-0 p-0 shadow-none;
+  }
+@media (max-width: 850px) {
+  .profile-edit-layout {
+    @apply grid-cols-1;
+  }
+
+  .profile-edit-aside {
+    @apply grid grid-cols-2 items-start;
+  }
+}
+
+@media (max-width: 540px) {
+  .profile-edit-page {
+    @apply px-[14px] pb-[22px] pt-4;
+  }
+
+  .profile-edit-fields,
+  .profile-edit-aside {
+    @apply grid-cols-1;
+  }
+}

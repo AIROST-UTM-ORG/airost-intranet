@@ -86,19 +86,19 @@ describe('Documentation Performance & Query Count Sanity (N+1 Verification)', ()
 
     // Create users
     adminUser = await User.create({
-      googleID: 'perf-admin-google',
+      googleId: 'perf-admin-google',
       name: 'Perf Admin',
       email: 'perf.admin@airost.com',
-      photo: 'https://example.com/admin.jpg',
-      position: ['admin'],
+      photoUrl: 'https://example.com/admin.jpg',
+      positions: ['admin'],
     });
 
     memberUser = await User.create({
-      googleID: 'perf-member-google',
+      googleId: 'perf-member-google',
       name: 'Perf Member',
       email: 'perf.member@airost.com',
-      photo: 'https://example.com/member.jpg',
-      position: ['member'],
+      photoUrl: 'https://example.com/member.jpg',
+      positions: ['member'],
     });
 
     testProject = await Project.create({

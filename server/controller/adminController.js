@@ -1,5 +1,5 @@
-const VerifiedUser = require('../models/VerifiedUser');
 const User = require('../models/User');
+const VerifiedUser = require('../models/VerifiedUser');
 
 const getUsers = async (req, res) => {
     var verifiedUsers = await VerifiedUser.find();
@@ -42,35 +42,42 @@ const getUsers = async (req, res) => {
     res.json(allUsers)
 }
 
-const createVerifiedUser = async (req, res) => {
-    const newVerifiedUser = new VerifiedUser({
-        name : req.body.name,
-        email : req.body.email,
-        position : [req.body.position],
-    })
-    try {
-        const existingUser = await VerifiedUser.findOne({email : newVerifiedUser.email});
 
-        if (existingUser){
-            res.json({createStatus : "exist"})
-        }
-        else {
-            await newVerifiedUser.save();
-            res.status(201).json({createStatus : "success"});
-            await User.updateOne({email: req.body.email},{
-                $set:{
-                    position: [req.body.position]
-                }
-            })
-        }
-    } 
-    catch(err){
-        console.log(err)
+const createVerifiedUser = async (req, res) => {
+    if (!req.isAuthenticated || !req.isAuthenticated()) {
+        return res.status(401).json({ error: 'Authentication required' });
     }
-}
+    const positions = Array.isArray(req.user?.positions) ? req.user.positions : [];
+    const isAdmin = positions.some((p) => typeof p === 'string' && p.toLowerCase() === 'admin');
+    if (!isAdmin) {
+        return res.status(403).json({ error: 'Forbidden: Admin access required' });
+    }
+    
+    const name = typeof req.body.name === 'string' ? req.body.name.trim() : '';
+    const email = typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+    const position = typeof req.body.position === 'string' ? req.body.position.trim() : '';
+
+    if (!name || !email || !position) {
+        return res.status(400).json({ error: 'Name, email, and position are required.' });
+    }
+
+    try {
+        const existingUser = await User.findOne({ email });
+
+        if (existingUser) {
+            await User.updateOne({ _id: existingUser._id }, { $addToSet: { positions: position } });
+            return res.status(200).json({ createStatus: 'success' });
+        }
+
+        await User.create({ name, email, positions: [position] });
+        return res.status(201).json({ createStatus: 'success' });
+    } catch (error) {
+        console.error('Unable to create verified user:', error);
+        return res.status(500).json({ error: 'Unable to create verified user.' });
+    }
+};
 
 module.exports = {
     createVerifiedUser,
     getUsers
 }
-

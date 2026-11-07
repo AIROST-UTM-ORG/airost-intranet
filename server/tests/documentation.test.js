@@ -58,51 +58,51 @@ beforeAll(async () => {
 
   // Seed test users
   adminUser = await User.create({
-    googleID: 'google-admin',
+    googleId: 'google-admin',
     name: 'Admin User',
     email: 'admin@airost.com',
-    photo: 'https://example.com/admin.jpg',
-    position: ['admin', 'executive'],
+    photoUrl: 'https://example.com/admin.jpg',
+    positions: ['admin', 'executive'],
   });
 
   creatorUser = await User.create({
-    googleID: 'google-creator',
+    googleId: 'google-creator',
     name: 'Creator User',
     email: 'creator@airost.com',
-    photo: 'https://example.com/creator.jpg',
-    position: ['member'],
+    photoUrl: 'https://example.com/creator.jpg',
+    positions: ['member'],
   });
 
   leadUser = await User.create({
-    googleID: 'google-lead',
+    googleId: 'google-lead',
     name: 'Project Lead',
     email: 'lead@airost.com',
-    photo: 'https://example.com/lead.jpg',
-    position: ['member'],
+    photoUrl: 'https://example.com/lead.jpg',
+    positions: ['member'],
   });
 
   memberUser = await User.create({
-    googleID: 'google-member',
+    googleId: 'google-member',
     name: 'Project Member',
     email: 'member@airost.com',
-    photo: 'https://example.com/member.jpg',
-    position: ['member'],
+    photoUrl: 'https://example.com/member.jpg',
+    positions: ['member'],
   });
 
   selectedUser = await User.create({
-    googleID: 'google-selected',
+    googleId: 'google-selected',
     name: 'Selected Member',
     email: 'selected@airost.com',
-    photo: 'https://example.com/selected.jpg',
-    position: ['member'],
+    photoUrl: 'https://example.com/selected.jpg',
+    positions: ['member'],
   });
 
   outsiderUser = await User.create({
-    googleID: 'google-outsider',
+    googleId: 'google-outsider',
     name: 'Outsider User',
     email: 'outsider@airost.com',
-    photo: 'https://example.com/outsider.jpg',
-    position: ['member'],
+    photoUrl: 'https://example.com/outsider.jpg',
+    positions: ['member'],
   });
 
   // Seed test project
@@ -670,11 +670,11 @@ describe('Documentation Backend API Tests', () => {
 
     it('allows ObjectId match as the strongest unique identifier', async () => {
       const objectIdUser = await User.create({
-        googleID: 'google-id-lead',
+        googleId: 'google-id-lead',
         name: 'ObjectId Leader',
         email: 'idlead@airost.com',
-        photo: 'https://example.com/idlead.jpg',
-        position: ['member'],
+        photoUrl: 'https://example.com/idlead.jpg',
+        positions: ['member'],
       });
 
       const objectIdProject = await Project.create({
@@ -702,11 +702,11 @@ describe('Documentation Backend API Tests', () => {
 
     it('allows email match as second strongest unique identifier (case-insensitive exact match)', async () => {
       const emailUser = await User.create({
-        googleID: 'google-email-lead',
+        googleId: 'google-email-lead',
         name: 'Email Leader',
         email: 'Lead.Email@Airost.org',
-        photo: 'https://example.com/emaillead.jpg',
-        position: ['member'],
+        photoUrl: 'https://example.com/emaillead.jpg',
+        positions: ['member'],
       });
 
       const emailProject = await Project.create({
@@ -734,11 +734,11 @@ describe('Documentation Backend API Tests', () => {
 
     it('allows unique display name match when exactly ONE active user has that name', async () => {
       const uniqueNameUser = await User.create({
-        googleID: 'google-unique-lead',
+        googleId: 'google-unique-lead',
         name: 'Zara UniqueLeader',
         email: 'zara@airost.com',
-        photo: 'https://example.com/zara.jpg',
-        position: ['member'],
+        photoUrl: 'https://example.com/zara.jpg',
+        positions: ['member'],
       });
 
       const uniqueProject = await Project.create({
@@ -766,19 +766,19 @@ describe('Documentation Backend API Tests', () => {
 
     it('denies DUPLICATE names for both users and logs server-side warning without user details', async () => {
       const dupUser1 = await User.create({
-        googleID: 'google-dup-1',
+        googleId: 'google-dup-1',
         name: 'Jordan Duplicate',
         email: 'jordan1@airost.com',
-        photo: 'https://example.com/j1.jpg',
-        position: ['member'],
+        photoUrl: 'https://example.com/j1.jpg',
+        positions: ['member'],
       });
 
       const dupUser2 = await User.create({
-        googleID: 'google-dup-2',
+        googleId: 'google-dup-2',
         name: 'Jordan Duplicate',
         email: 'jordan2@airost.com',
-        photo: 'https://example.com/j2.jpg',
-        position: ['member'],
+        photoUrl: 'https://example.com/j2.jpg',
+        positions: ['member'],
       });
 
       const dupProject = await Project.create({
@@ -835,11 +835,11 @@ describe('Documentation Backend API Tests', () => {
 
     it('handles name with different case/whitespace consistently and rejects partial matching', async () => {
       const caseUser = await User.create({
-        googleID: 'google-case-lead',
+        googleId: 'google-case-lead',
         name: 'Morgan CaseLead',
         email: 'morgan@airost.com',
-        photo: 'https://example.com/morgan.jpg',
-        position: ['member'],
+        photoUrl: 'https://example.com/morgan.jpg',
+        positions: ['member'],
       });
 
       const whitespaceProject = await Project.create({
@@ -866,11 +866,11 @@ describe('Documentation Backend API Tests', () => {
 
     it('denies user when project has no lead (null, empty, or whitespace)', async () => {
       const normalUser = await User.create({
-        googleID: 'google-normal-user',
+        googleId: 'google-normal-user',
         name: 'Normal User',
         email: 'normal@airost.com',
-        photo: 'https://example.com/normal.jpg',
-        position: ['member'],
+        photoUrl: 'https://example.com/normal.jpg',
+        positions: ['member'],
       });
 
       const noLeadProject = await Project.create({
@@ -912,18 +912,18 @@ describe('Documentation Backend API Tests', () => {
     it('enforces permission matrix effects: canCreateSpace, project_members view/update access, and linkable projects', async () => {
       // 1. Create duplicate user setup
       const dupMember = await User.create({
-        googleID: 'google-dup-matrix',
+        googleId: 'google-dup-matrix',
         name: 'Taylor Ambiguous',
         email: 'taylor.dup1@airost.com',
-        photo: 'https://example.com/t1.jpg',
-        position: ['member'],
+        photoUrl: 'https://example.com/t1.jpg',
+        positions: ['member'],
       });
       await User.create({
-        googleID: 'google-dup-matrix-2',
+        googleId: 'google-dup-matrix-2',
         name: 'Taylor Ambiguous',
         email: 'taylor.dup2@airost.com',
-        photo: 'https://example.com/t2.jpg',
-        position: ['member'],
+        photoUrl: 'https://example.com/t2.jpg',
+        positions: ['member'],
       });
 
       const dupProj = await Project.create({
@@ -1406,19 +1406,19 @@ describe('Documentation Backend API Tests', () => {
       });
 
       const userA = await User.create({
-        googleID: 'google-admin-list-a',
+        googleId: 'google-admin-list-a',
         name: 'User Alpha Oversight',
         email: 'alpha.oversight@airost.com',
-        photo: 'https://example.com/a.jpg',
-        position: ['member'],
+        photoUrl: 'https://example.com/a.jpg',
+        positions: ['member'],
       });
 
       const userB = await User.create({
-        googleID: 'google-admin-list-b',
+        googleId: 'google-admin-list-b',
         name: 'User Beta Oversight',
         email: 'beta.oversight@airost.com',
-        photo: 'https://example.com/b.jpg',
-        position: ['member'],
+        photoUrl: 'https://example.com/b.jpg',
+        positions: ['member'],
       });
 
       const space1 = await DocumentationSpace.create({
@@ -1535,11 +1535,11 @@ describe('Documentation Backend API Tests', () => {
       });
 
       const qUser = await User.create({
-        googleID: 'google-q-user',
+        googleId: 'google-q-user',
         name: 'Xavier Zephyr',
         email: 'xavier.zephyr@airost.com',
-        photo: 'https://example.com/xz.jpg',
-        position: ['member'],
+        photoUrl: 'https://example.com/xz.jpg',
+        positions: ['member'],
       });
 
       const spaceByTitle = await DocumentationSpace.create({
@@ -1691,11 +1691,11 @@ describe('Documentation Backend API Tests', () => {
 
       // Inactive user
       const inactiveUser = await User.create({
-        googleID: 'google-inactive-user',
+        googleId: 'google-inactive-user',
         name: 'Inactive Former Member',
         email: 'inactive@airost.com',
-        photo: 'https://example.com/inactive.jpg',
-        position: ['member'],
+        photoUrl: 'https://example.com/inactive.jpg',
+        positions: ['member'],
         isActive: false,
       });
 
@@ -1708,19 +1708,19 @@ describe('Documentation Backend API Tests', () => {
 
     it('PATCH /doc/admin/spaces/:spaceId/owner: reassigns owner, old owner loses creator rights, new owner gains them', async () => {
       const initialOwner = await User.create({
-        googleID: 'google-initial-owner',
+        googleId: 'google-initial-owner',
         name: 'Initial Space Creator',
         email: 'initial.creator@airost.com',
-        photo: 'https://example.com/init.jpg',
-        position: ['member'],
+        photoUrl: 'https://example.com/init.jpg',
+        positions: ['member'],
       });
 
       const targetOwner = await User.create({
-        googleID: 'google-target-owner',
+        googleId: 'google-target-owner',
         name: 'Target New Owner',
         email: 'target.owner@airost.com',
-        photo: 'https://example.com/target.jpg',
-        position: ['member'],
+        photoUrl: 'https://example.com/target.jpg',
+        positions: ['member'],
       });
 
       const transferSpace = await DocumentationSpace.create({

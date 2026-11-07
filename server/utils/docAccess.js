@@ -9,11 +9,11 @@ const registerProjectRoleResolver = (resolver) => {
 
 /**
  * Checks whether the given user has platform admin privileges.
- * Matches existing codebase patterns in User, VerifiedUser, passport, and Sidepanel.
+ * User roles are stored in the canonical User.positions field.
  */
 const isAdmin = (user) => {
-  if (!user || !user.position) return false;
-  const positions = Array.isArray(user.position) ? user.position : [user.position];
+  if (!user || !user.positions) return false;
+  const positions = Array.isArray(user.positions) ? user.positions : [user.positions];
   return positions.some(
     (pos) => typeof pos === 'string' && pos.toLowerCase().includes('admin')
   );

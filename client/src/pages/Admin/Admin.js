@@ -11,10 +11,10 @@ const Admin = () => {
     const [activeTab, setActiveTab] = useState("users");
     const isAdmin = Boolean(
         currentUser &&
-        currentUser.position &&
-        (Array.isArray(currentUser.position)
-            ? currentUser.position.some((p) => typeof p === "string" && p.toLowerCase().includes("admin"))
-            : typeof currentUser.position === "string" && currentUser.position.toLowerCase().includes("admin"))
+        currentUser.positions &&
+        (Array.isArray(currentUser.positions)
+            ? currentUser.positions.some((p) => typeof p === "string" && p.toLowerCase().includes("admin"))
+            : typeof currentUser.positions === "string" && currentUser.positions.toLowerCase().includes("admin"))
     );
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
@@ -28,7 +28,7 @@ const Admin = () => {
     }, []);
 
     const getUsers = async () => {
-        axios.get(`${API_URL}/api/admin/users`)
+        axios.get(`${API_URL}/api/user/users`,{ withCredentials: true })
         .then(users => setUsers(users.data))
         .catch(err => console.log(err));
     };
@@ -150,10 +150,10 @@ const Admin = () => {
                                 users.map(
                                     (user,index) => {
                                         return <tr key={index}>
-                                            <td><img src={user.photo} alt="Profile"/></td>
+                                            <td><img src={user.photoUrl} alt="Profile"/></td>
                                             <td>{user.name}</td>
                                             <td>{user.email}</td>
-                                            <td>{user.position}</td>
+                                            <td>{user.positions?.join(', ')}</td>
                                             <td className="text-center">
                                                 <div className="flex items-center justify-center h-full w-full">
                                                     {user.verified 

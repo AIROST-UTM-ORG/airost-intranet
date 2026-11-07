@@ -17,10 +17,10 @@ const RequireAuth = ({ allowedPosition }) => {
     );
   }
 
-  const hasPosition = user?.position && (
-    Array.isArray(user.position)
-      ? user.position.some((p) => allowedPosition.includes(p))
-      : allowedPosition.includes(user.position)
+  const hasPosition = user?.positions && (
+    Array.isArray(user.positions)
+      ? user.positions.some((p) => allowedPosition.includes(p))
+      : allowedPosition.includes(user.positions)
   );
 
   return hasPosition ? (
