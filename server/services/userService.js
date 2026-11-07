@@ -46,6 +46,14 @@ const userDirectoryQuery = (filter) => User.find(filter)
   .lean();
 
 /**
+ * Fetch all users using the directory-safe projection.
+ */
+const getAllUsers = async () => {
+  const users = await userDirectoryQuery({});
+  return formatUsers(users);
+};
+
+/**
  * Fetch active users matching search, role, and year criteria with pagination.
  */
 const getFilteredUsers = async ({ search, role, year, page, limit }) => {
@@ -70,6 +78,13 @@ const getFilteredUsers = async ({ search, role, year, page, limit }) => {
   }
 
   return formatUsers(await query);
+};
+
+/**
+ * Find a user document by ID.
+ */
+const findUserById = async (id) => {
+  return User.findById(id);
 };
 
 /**
@@ -155,7 +170,9 @@ const normalizeSocialUrl = (value, network) => {
 };
 
 module.exports = {
+  getAllUsers,
   getFilteredUsers,
+  findUserById,
   updateUser,
   formatUsers,
   isValidPhotoUrl,

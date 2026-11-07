@@ -107,7 +107,7 @@ const createApp = ({ sessionStore } = {}) => {
   app.use('/airost/doc', DocRoutes);
   app.use('/doc', DocRoutes);
   app.use('/admin', adminRoutes);
-  app.use('/user', userRoutes);
+  app.use('/api/user', userRoutes);
   app.use('/projects', projectRoutes);
   app.use('/calendar', eventRoutes);
 
