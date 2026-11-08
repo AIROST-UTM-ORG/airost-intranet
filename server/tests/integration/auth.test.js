@@ -109,6 +109,28 @@ describe('/auth/logout', () => {
       expect.arrayContaining([expect.stringMatching(/^connect\.sid=;/)])
     );
   });
+
+  test('destroys the active session and returns JSON on POST', async () => {
+    const user = await User.create({
+      googleId: 'test-google-user-post-logout',
+      name: 'POST Logout User',
+      email: 'post-logout@example.com',
+      positions: ['member'],
+    });
+    const agent = request.agent(app);
+    await agent.get(`/test/login-as/${user._id}`).expect(200);
+
+    const res = await agent
+      .post('/auth/logout')
+      .set('Accept', 'application/json');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ success: true, message: 'Successfully logged out' });
+    expect(res.headers['set-cookie']).toEqual(
+      expect.arrayContaining([expect.stringMatching(/^connect\.sid=;/)])
+    );
+    await agent.get('/auth/login/success').expect(401);
+  });
 });
 
 // ── Security: Unauthorized access to protected-like routes ───────────────────
