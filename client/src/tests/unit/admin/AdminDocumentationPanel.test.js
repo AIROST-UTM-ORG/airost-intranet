@@ -68,13 +68,13 @@ describe("Admin Console - Documentation Oversight Panel", () => {
   const adminUser = {
     _id: "admin-1",
     name: "Admin Alice",
-    position: ["admin"],
+    positions: ["admin"],
   };
 
   const memberUser = {
     _id: "member-1",
     name: "Member Bob",
-    position: ["member"],
+    positions: ["member"],
   };
 
   beforeEach(() => {

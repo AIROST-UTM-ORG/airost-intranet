@@ -9,13 +9,13 @@ import {
 } from "../../Documentation/documentationApi";
 
 export const isUserAdmin = (user) => {
-  if (!user || !user.position) return false;
-  if (Array.isArray(user.position)) {
-    return user.position.some(
+  if (!user || !user.positions) return false;
+  if (Array.isArray(user.positions)) {
+    return user.positions.some(
       (p) => typeof p === "string" && p.toLowerCase().includes("admin")
     );
   }
-  return typeof user.position === "string" && user.position.toLowerCase().includes("admin");
+  return typeof user.positions === "string" && user.positions.toLowerCase().includes("admin");
 };
 
 export const useAdminSpaces = () => {

@@ -159,7 +159,7 @@ describe("ProjectDocumentationLink Component States", () => {
     const adminUser = {
       _id: "u-admin",
       name: "Admin User",
-      position: ["admin"],
+      positions: ["admin"],
     };
 
     renderWithAuth(
@@ -182,7 +182,7 @@ describe("ProjectDocumentationLink Component States", () => {
     const leadUser = {
       _id: "u-lead",
       name: "Jess",
-      position: ["member"],
+      positions: ["member"],
     };
 
     renderWithAuth(
@@ -204,7 +204,7 @@ describe("ProjectDocumentationLink Component States", () => {
     const platformAdminUser = {
       _id: "u-admin-2",
       name: "Platform Admin User",
-      position: ["Platform Admin"],
+      positions: ["Platform Admin"],
     };
 
     renderWithAuth(
@@ -223,7 +223,7 @@ describe("ProjectDocumentationLink Component States", () => {
     const memberUser = {
       _id: "u-member",
       name: "Normal Member",
-      position: ["member"],
+      positions: ["member"],
     };
 
     renderWithAuth(
@@ -338,7 +338,7 @@ describe("ProjectDetails Integration", () => {
     const adminUser = {
       _id: "u-admin",
       name: "Admin User",
-      position: ["admin"],
+      positions: ["admin"],
     };
 
     renderWithAuth(

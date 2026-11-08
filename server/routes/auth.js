@@ -28,13 +28,17 @@ const getClientUrl = (path = '') => {
   return cleanPath ? `${baseUrl}${cleanPath}` : baseUrl;
 };
 
-router.get('/login/success', (req, res) => {
+router.get('/login/success', async (req, res) => {
   try {
     if (req.user) {
+      await req.user.populate({ path: 'featuredProjectIds', select: '_id projectId title description lead' });
+      const user = req.user.toObject();
+      delete user.googleId;
+      delete user.__v;
       res.status(200).json({
         success: true,
         message: "Successfully authenticated",
-        user: req.user,
+        user,
       });
     } else {
       res.status(401).json({

@@ -77,10 +77,10 @@ const ProjectDocumentationLink = ({
   let userCanCreate = canCreate;
   if (userCanCreate === undefined) {
     const isAdmin = Boolean(
-      user?.position &&
-        (Array.isArray(user.position)
-          ? user.position.some((p) => typeof p === "string" && p.toLowerCase().includes("admin"))
-          : typeof user.position === "string" && user.position.toLowerCase().includes("admin"))
+      user?.positions &&
+        (Array.isArray(user.positions)
+          ? user.positions.some((p) => typeof p === "string" && p.toLowerCase().includes("admin"))
+          : typeof user.positions === "string" && user.positions.toLowerCase().includes("admin"))
     );
 
     const effectiveLead = projectLead || project?.lead;
