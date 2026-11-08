@@ -309,6 +309,7 @@ describe("Documentation Feature - All 14 Screens", () => {
     });
   });
 
+
   // -------------------------------------------------------------------------
   // Screen 10: Space Detail — Empty Deployment area
   // -------------------------------------------------------------------------
@@ -568,7 +569,7 @@ describe("Documentation Feature - All 14 Screens", () => {
         if (url === "/projects") {
           return Promise.reject(new Error("Network Error: Failed to fetch projects"));
         }
-        if (url === "/admin/users") {
+        if (url === "/api/user/users") {
           return Promise.resolve({ data: [] });
         }
         return Promise.resolve({ data: [] });
@@ -604,7 +605,7 @@ describe("Documentation Feature - All 14 Screens", () => {
         if (url === "/projects") {
           return Promise.resolve({ data: [] });
         }
-        if (url === "/admin/users") {
+        if (url === "/api/user/users") {
           return Promise.reject(new Error("Server Error: Failed to fetch members"));
         }
         return Promise.resolve({ data: [] });
@@ -658,7 +659,7 @@ describe("Documentation Feature - All 14 Screens", () => {
             data: [{ _id: "65f29d20c571c48201a99999", title: "Real Project Beta" }],
           });
         }
-        if (url === "/admin/users") {
+        if (url === "/api/user/users") {
           return Promise.resolve({
             data: [{ _id: "65f29d20c571c48201a88888", name: "Real User", email: "user@airost.com" }],
           });
@@ -729,7 +730,7 @@ describe("Documentation Feature - All 14 Screens", () => {
         if (url === "/projects") {
           return Promise.resolve({ data: [] });
         }
-        if (url === "/admin/users") {
+        if (url === "/api/user/users") {
           return Promise.resolve({ data: [] });
         }
         if (url === "/doc/spaces/space-target-1") {
@@ -789,4 +790,3 @@ describe("Documentation Feature - All 14 Screens", () => {
     });
   });
 });
-

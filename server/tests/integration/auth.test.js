@@ -146,15 +146,6 @@ describe.skip('Security: unauthenticated requests', () => {
     const res = await request(app).get('/api/user/users');
     expect(res.status).toBe(401);
   });
-    const res = await request(app).get('/api/user/users');
-    // If auth middleware is added later, this will break and force a test update.
-    expect(res.status).toBe(200);
-    expect(res.body.success).toBe(true);
-    expect(res.body.message).toMatch(/successfully logged out/i);
-    expect(res.headers['set-cookie']).toEqual(
-      expect.arrayContaining([expect.stringMatching(/^connect\.sid=;/)])
-    );
-  });
 
   test('terminates active session on backend and rejects subsequent requests with 401', async () => {
     const user = await User.create({
