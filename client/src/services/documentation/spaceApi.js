@@ -370,7 +370,7 @@ export const listMembers = async () => {
   }
 
   try {
-    const res = await realApiClient.get("/admin/users");
+    const res = await realApiClient.get("/api/user/users");
     if (!Array.isArray(res.data)) {
       throw createError(500, "INTERNAL_ERROR", "Failed to fetch members: invalid response format");
     }
