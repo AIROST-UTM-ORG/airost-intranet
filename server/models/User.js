@@ -6,11 +6,11 @@ const originSchema = new mongoose.Schema({
 }, { _id: false });
 
 const userSchema = new mongoose.Schema({
-  googleId: { type: String, unique: true, sparse: true, trim: true },
+  googleId: { type: String, unique: true, sparse: true, trim: true, alias: 'googleID' },
   email: { type: String, unique: true, sparse: true, trim: true, lowercase: true },
   name: { type: String, required: true, trim: true },
   photoUrl: { type: String, default: '' },
-  positions: { type: [String], default: [] },
+  positions: { type: [String], default: [], alias: 'position' },
   year: { type: String, default: '' },
   course: { type: String, default: '' },
   origin: { type: originSchema, default: () => ({}) },
