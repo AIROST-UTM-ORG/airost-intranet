@@ -3,12 +3,12 @@
  */
 const express = require('express');
 
-const authRoutes = require('./auth');
-const docRoutes = require('./docRoutes');
-const adminRoutes = require('./adminRoutes');
-const userRoutes = require('./userRoutes');
-const eventRoutes = require('./eventRoutes');
-const projectRoutes = require('./projectsRoutes');
+const authRoutes = require('../../routes/auth');
+const docRoutes = require('../../routes/docRoutes');
+const adminRoutes = require('../../routes/adminRoutes');
+const userRoutes = require('../../routes/userRoutes');
+const eventRoutes = require('../../routes/eventRoutes');
+const projectRoutes = require('../../routes/projectsRoutes');
 
 const router = express.Router();
 
@@ -33,7 +33,7 @@ router.use('/calendar', eventRoutes);
 if (process.env.NODE_ENV === 'test') {
   router.post('/test/auth/login', async (req, res) => {
     try {
-      const User = require('../models/User');
+      const User = require('../../models/User');
       const user = await User.findById(req.body.userId);
       if (!user) return res.status(404).json({ error: 'User not found' });
       req.login(user, (error) => {
