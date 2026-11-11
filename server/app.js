@@ -3,13 +3,13 @@ const passport = require('passport');
 const cors = require('cors');
 const session = require('express-session');
 
-require('./config/env');
+require('./src/config/env');
 require('./passport');
 
-const { corsOptions } = require('./config/cors');
-const routes = require('./routes');
-const { globalErrorHandler } = require('./middleware/errorHandler');
-const { notFoundHandler } = require('./middleware/notFound');
+const { corsOptions } = require('./src/config/cors');
+const routes = require('./src/routes');
+const { globalErrorHandler } = require('./src/middleware/errorHandler');
+const { notFoundHandler } = require('./src/middleware/notFound');
 
 const createApp = ({ sessionStore } = {}) => {
   const app = express();
