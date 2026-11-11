@@ -21,12 +21,6 @@ let app;
 beforeAll(async () => {
   await connect();
   app = createApp();
-
-  // Test-only endpoint to simulate passport session serialization in tests
-  app.get('/test/login-as/:id', (req, res) => {
-    req.session.passport = { user: req.params.id };
-    res.json({ success: true });
-  });
 });
 
 afterEach(async () => {
@@ -67,7 +61,10 @@ describe('GET /auth/login/success', () => {
     });
 
     const agent = request.agent(app);
-    await agent.get(`/test/login-as/${user._id}`).expect(200);
+    await agent
+      .post('/test/auth/login')
+      .send({ userId: user._id })
+      .expect(200);
 
     const res = await agent.get('/auth/login/success');
     expect(res.status).toBe(200);
@@ -118,7 +115,10 @@ describe('/auth/logout', () => {
       positions: ['member'],
     });
     const agent = request.agent(app);
-    await agent.get(`/test/login-as/${user._id}`).expect(200);
+    await agent
+      .post('/test/auth/login')
+      .send({ userId: user._id })
+      .expect(200);
 
     const res = await agent
       .post('/auth/logout')
@@ -158,7 +158,11 @@ describe.skip('Security: unauthenticated requests', () => {
 
     const agent = request.agent(app);
     // Establish active session
-    await agent.get(`/test/login-as/${user._id}`).expect(200);
+    // await agent.get(`/test/login-as/${user._id}`).expect(200);
+    await agent
+      .post('/test/auth/login')
+      .send({ userId: user._id })
+      .expect(200);
 
     // Verify session is active
     const activeRes = await agent.get('/auth/login/success');
