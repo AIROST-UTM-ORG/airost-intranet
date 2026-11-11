@@ -2,6 +2,9 @@
  * Express middleware to ensure a request is authenticated.
  * Rejects unauthenticated, expired, or invalid sessions with 401 Unauthorized.
  */
+/*
+ * Legacy files, to be removed at the end of phase 3
+ */
 const requireAuth = (req, res, next) => {
   if (req.isAuthenticated && req.isAuthenticated()) {
     return next();
