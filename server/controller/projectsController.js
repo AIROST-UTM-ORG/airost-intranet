@@ -12,36 +12,34 @@ const getProjects = async (req, res) => {
 }
 
 const createProject = async (req, res) => {
-    try{
-        const projectId = await Project.countDocuments();
-        const lastProject = await Project.findOne({}, {}, { sort: { 'createdAt' : -1 } })
-        console.log(lastProject.projectId)
+    try {
+        const lastProject = await Project.findOne({}, {}, { sort: { 'createdAt' : -1 } });
+        const nextProjectId = (lastProject?.projectId ?? 0) + 1;
         const newProject = {
-            projectId: lastProject.projectId + 1,
             ...req.body,
+            projectId: nextProjectId,
         };
-        const savedNewProject = await Project.create(newProject)
-        res.status(200).json(savedNewProject)
-        const newProjectBoard = await ProjectBoard.create(newProject)
-    } catch(error){
-        console.log(error.message)
+        const savedNewProject = await Project.create(newProject);
+        await ProjectBoard.create({ ...newProject, projectId: nextProjectId });
+        res.status(201).json(savedNewProject);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
 }
 
 const getProjectBoard = async (req, res) => {
     const projectId = req.params.uid;
-    if (!isNaN(projectId)){
-        try{
-            let projectBoard = await ProjectBoard.findOne({"projectId": projectId})
-            const tasks=projectBoard
-            
-            res.status(200).json(projectBoard)
-        } catch(error){
-            console.log(error.message)
-        }
+    if (isNaN(projectId)) {
+        return res.status(400).json({ message: 'projectId is not a number' });
     }
-    else{
-        console.log(`projectId: ${projectId} is not a number`)
+    try {
+        let projectBoard = await ProjectBoard.findOne({ "projectId": projectId });
+        if (!projectBoard) {
+            return res.status(404).json({ message: 'Project board not found' });
+        }
+        res.status(200).json(projectBoard);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
 }
 
@@ -86,12 +84,20 @@ const createProjectBoard = async (req, res) => {
     }
 }
 
-const refreshProjectBoard = async (req, res) => {//from client
-
-    try{
-        const updatedProjectBoard = await ProjectBoard.findOneAndUpdate({projectId: req.body.projectId},{$set:{tasks: req.body.tasks}})
-        res.status(200).json(updatedProjectBoard)
-    }catch{error => console.log(error.message)}
+const refreshProjectBoard = async (req, res) => {
+    try {
+        const updatedProjectBoard = await ProjectBoard.findOneAndUpdate(
+            { projectId: req.body.projectId },
+            { $set: { tasks: req.body.tasks } },
+            { new: true }
+        );
+        if (!updatedProjectBoard) {
+            return res.status(404).json({ message: 'Project board not found' });
+        }
+        res.status(200).json(updatedProjectBoard);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 }
 
 const updateProjectBoard = async (req, res) => {
