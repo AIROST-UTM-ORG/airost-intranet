@@ -2097,10 +2097,10 @@ describe('Documentation Backend API Tests', () => {
       });
     });
 
-    describe('Authenticated platform admin access (write allowed: 200)', () => {
+    describe('Authenticated platform admin access (write allowed)', () => {
       let createdDocId;
 
-      it('allows platform admin to POST /doc (200)', async () => {
+      it('allows platform admin to POST /doc (201)', async () => {
         const res = await adminAgent.post('/doc').send({
           image: 'https://example.com/test.jpg',
           title: 'Admin Created Doc',
@@ -2111,7 +2111,7 @@ describe('Documentation Backend API Tests', () => {
           description: 'Created by admin',
           content: 'Admin content',
         });
-        expect(res.status).toBe(200);
+        expect(res.status).toBe(201);
         expect(res.body.title).toBe('Admin Created Doc');
         createdDocId = res.body._id;
       });
