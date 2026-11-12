@@ -1,17 +1,22 @@
+import { useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import Google from "../../assets/google-icon.png";
 import "./Login.css";
-import { useLocation } from "react-router-dom";
-import { API_URL } from "../../config/api";
 
 const Login = ({ getPath }) => {
   const google = () => {
-    window.open(`${API_URL}/auth/google`, "_self");
+    window.open("/auth/google", "_self");
   };
 
   const location = useLocation();
   const from = location.state?.from?.pathname || "/";
 
-  getPath(from);
+  useEffect(() => {
+    if (typeof getPath === "function") {
+      getPath(from);
+    }
+  }, [from, getPath]);
+
   return (
     <div className="loginPage">
       <div className="loginBtn google" onClick={google}>
