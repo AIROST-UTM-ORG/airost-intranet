@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
 import './Admin.css';
-import { FaCheck, FaXmark } from "react-icons/fa6";
-import { API_URL } from '../../config/api';
+import { FaCheck } from "react-icons/fa6";
+import apiClient from '../../shared/api/client';
 import useAuth from "../../hooks/useAuth";
 import AdminDocumentationPanel from "./AdminDocumentationPanel";
 
@@ -19,23 +18,21 @@ const Admin = () => {
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [position, setPosition] = useState("");
-    const [showModal, setShowModal] = useState(false);
     const [users, setUsers]  = useState([]);
-    const [createSuccess, setCreateSuccess] = useState(false);
 
     useEffect(() => {
         getUsers();
     }, []);
 
     const getUsers = async () => {
-        axios.get(`${API_URL}/api/user/users`,{ withCredentials: true })
+        apiClient.get('/user/users')
         .then(users => setUsers(users.data))
         .catch(err => console.log(err));
     };
 
     const approveUser = async (user) => {
         try {
-            const response = await axios.post(`${API_URL}/api/admin/users/verified`, {
+            const response = await apiClient.post('/admin/users/verified', {
                 name: user.name,
                 email: user.email,
                 position: "member"
@@ -53,22 +50,18 @@ const Admin = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
   
-        const response = await axios.post(`${API_URL}/api/admin/users/verified`, {
+        const response = await apiClient.post('/admin/users/verified', {
             name : name,
             email : email,
             position : position,
         });
         
         if (response.data.createStatus === "success"){
-            setCreateSuccess(true);
             setName("");
             setEmail("");
             setPosition("");
         }
     };
-    
-    const handleCloseModal = () => setShowModal(false);
-    const handleShowModal = () => setShowModal(true);
 
     return (
     <div className='admin-page container'>

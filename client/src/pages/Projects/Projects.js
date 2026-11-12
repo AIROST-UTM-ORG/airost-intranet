@@ -5,8 +5,7 @@ import { useForm } from "react-hook-form";
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import useFetchUsers from "../../hooks/useFetchUsers";
 import useGetProjects from './hooks/useGetProjects';
-import axios from 'axios';
-import { API_URL } from '../../config/api';
+import apiClient from '../../shared/api/client';
 
 function Projects() {
   const projects = useGetProjects();
@@ -20,7 +19,7 @@ function Projects() {
   const users = useFetchUsers();
 
   const createProject = async (project) => {
-      return axios.post(`${API_URL}/api/projects`,{
+      return apiClient.post('/projects', {
           title: project.title,
           description: project.description ? project.description : "",
           lead: project.lead,
@@ -28,7 +27,7 @@ function Projects() {
   };
 
   const deleteProject = async (projectId) => {
-      return axios.delete(`${API_URL}/api/projects/${projectId}`);
+      return apiClient.delete(`/projects/${projectId}`);
   };
 
   const createProjectMutation = useMutation({
