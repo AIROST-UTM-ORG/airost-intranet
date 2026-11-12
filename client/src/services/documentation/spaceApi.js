@@ -61,7 +61,7 @@ export const listSpaces = async (filter = {}) => {
     params.projectId =
       typeof filter.projectId === "object" ? filter.projectId._id : filter.projectId;
   }
-  const response = await realApiClient.get("/doc/spaces", {
+  const response = await realApiClient.get("/airost/doc/spaces", {
     params: Object.keys(params).length > 0 ? params : undefined,
   });
   return (response.data || []).map((space) => ({
@@ -117,7 +117,7 @@ export const getSpace = async (spaceId) => {
     };
   }
 
-  const response = await realApiClient.get(`/doc/spaces/${spaceId}`);
+  const response = await realApiClient.get(`/airost/doc/spaces/${spaceId}`);
   const data = response.data;
   return {
     ...data,
@@ -211,7 +211,7 @@ export const createSpace = async (payload) => {
       : {}),
   };
 
-  const response = await realApiClient.post("/doc/spaces", sanitizedPayload);
+  const response = await realApiClient.post("/airost/doc/spaces", sanitizedPayload);
   const data = response.data;
   return {
     ...data,
@@ -291,7 +291,7 @@ export const updateSpace = async (spaceId, payload) => {
       : {}),
   };
 
-  const response = await realApiClient.patch(`/doc/spaces/${spaceId}`, sanitizedPayload);
+  const response = await realApiClient.patch(`/airost/doc/spaces/${spaceId}`, sanitizedPayload);
   const data = response.data;
   return {
     ...data,
@@ -332,7 +332,7 @@ export const deleteSpace = async (spaceId) => {
     };
   }
 
-  const response = await realApiClient.delete(`/doc/spaces/${spaceId}`);
+  const response = await realApiClient.delete(`/airost/doc/spaces/${spaceId}`);
   return response.data;
 };
 
@@ -370,7 +370,7 @@ export const listMembers = async () => {
   }
 
   try {
-    const res = await realApiClient.get("/api/user/users");
+    const res = await realApiClient.get("/user/users");
     if (!Array.isArray(res.data)) {
       throw createError(500, "INTERNAL_ERROR", "Failed to fetch members: invalid response format");
     }
