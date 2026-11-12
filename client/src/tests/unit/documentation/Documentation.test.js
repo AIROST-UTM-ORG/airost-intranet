@@ -301,9 +301,11 @@ describe("Documentation Feature - All 14 Screens", () => {
     await waitFor(() => {
       expect(screen.getByTestId("current-area-count")).toHaveTextContent("1 document");
     });
-    expect(screen.getByTestId("archived-documents-link")).toHaveTextContent(
-      "Archived Documents (3)"
-    );
+    await waitFor(() => {
+      expect(screen.getByTestId("archived-documents-link")).toHaveTextContent(
+        "Archived Documents (3)"
+      );
+    });
   });
 
 
