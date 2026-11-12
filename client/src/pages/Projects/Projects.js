@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import './Projects.css';
 import ProjectList from '../../components/ProjectList';
 import { useForm } from "react-hook-form";
@@ -7,8 +7,10 @@ import useFetchUsers from "../../hooks/useFetchUsers";
 import useGetProjects from './hooks/useGetProjects';
 import axios from 'axios';
 import { API_URL } from '../../config/api';
+import Modal from '../../shared/components/Dialog/Modal';
 
 function Projects() {
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const projects = useGetProjects();
   const queryClient = useQueryClient();
   const {
@@ -49,9 +51,18 @@ function Projects() {
         }
     });
 
+  const handleOpenModal = () => {
+    setIsCreateModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsCreateModalOpen(false);
+    reset();
+  };
+
   const onSubmit = (data) => {
     createProjectMutation.mutate(data);
-    reset();
+    handleCloseModal();
   };
 
   const handleDeleteProject = (projectId) => {
@@ -62,7 +73,7 @@ function Projects() {
     <div className='Projects p-5'>
       <div className='flex flex-row justify-between items-center w-10/12'>
         <h1 className='project-title'>Projects</h1>
-        <button className="btn btn-primary" onClick={()=>document.getElementById('my_modal_2').showModal()}>Add New Project</button>
+        <button className="btn btn-primary" onClick={handleOpenModal}>Add New Project</button>
       </div>      {projects.isLoading 
         ? <div className="flex flex-col gap-2">
             <div className="skeleton h-20"></div>
@@ -72,35 +83,33 @@ function Projects() {
         : <ProjectList projects={ projects.data } onDeleteProject={handleDeleteProject}></ProjectList>
       }
 
-        <dialog id="my_modal_2" className="modal">
-          <div className="modal-box">
-            <h3 className="font-bold text-lg mb-5">Add New Project</h3>
-            <form action="POST" onSubmit={handleSubmit(onSubmit)}>
-              <div className='flex flex-col gap-3'>
-                <label className="input input-bordered flex items-center gap-2">
-                  Project Title
-                  <input {...register("title",{required: true})} type="text" className="grow" placeholder="Airost Intranet" required/>
-                </label>
-                <label className="input input-bordered flex items-center gap-2">
-                  Description
-                  <input {...register("description")} type="text" className="grow" placeholder="This project is about....." />
-                </label>
-                {!users.isLoading && <select
-                      {...register("lead")}
-                      className="select select-bordered w-full">
-                          <option value="no_assignee">Project Lead</option>
-                          {users.data.map(user => {
-                              return (<option key={user.email} value={user.email}>{user.name}</option>);
-                          })}
-                  </select>}
-                <button className='btn btn-neutral' type='submit'>Submit</button>
-              </div>
-            </form>
+      <Modal
+        isOpen={isCreateModalOpen}
+        onClose={handleCloseModal}
+        title="Add New Project"
+      >
+        <form action="POST" onSubmit={handleSubmit(onSubmit)} className="mt-5">
+          <div className='flex flex-col gap-3'>
+            <label className="input input-bordered flex items-center gap-2">
+              Project Title
+              <input {...register("title",{required: true})} type="text" className="grow" placeholder="Airost Intranet" required/>
+            </label>
+            <label className="input input-bordered flex items-center gap-2">
+              Description
+              <input {...register("description")} type="text" className="grow" placeholder="This project is about....." />
+            </label>
+            {!users.isLoading && <select
+                  {...register("lead")}
+                  className="select select-bordered w-full">
+                      <option value="no_assignee">Project Lead</option>
+                      {users.data.map(user => {
+                          return (<option key={user.email} value={user.email}>{user.name}</option>);
+                      })}
+              </select>}
+            <button className='btn btn-neutral' type='submit'>Submit</button>
           </div>
-          <form method="dialog" className="modal-backdrop">
-            <button>close</button>
-          </form>
-      </dialog>
+        </form>
+      </Modal>
 
     </div>
   );
