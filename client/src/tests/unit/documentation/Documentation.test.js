@@ -2,8 +2,7 @@ import React from "react";
 import "@testing-library/jest-dom";
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import axios from "axios";
-import { realApiClient } from "../../../services/documentation/client";
+import apiClient from "../../../shared/api/client";
 import Documentation from "../../../pages/Documentation/Documentation";
 import {
   resetMockData,
@@ -14,22 +13,20 @@ import {
   listMembers,
 } from "../../../pages/Documentation/documentationApi";
 
-jest.mock("axios", () => {
-  const mockAxiosInstance = {
+jest.mock("../../../shared/api/client", () => {
+  const mockClient = {
     get: jest.fn(),
     post: jest.fn(),
     patch: jest.fn(),
+    put: jest.fn(),
     delete: jest.fn(),
-    interceptors: {
-      response: { use: jest.fn() },
-    },
+    request: jest.fn(),
   };
   return {
     __esModule: true,
-    default: {
-      create: jest.fn(() => mockAxiosInstance),
-      ...mockAxiosInstance,
-    },
+    default: mockClient,
+    apiClient: mockClient,
+    resetAuthUnauthorizedLock: jest.fn(),
   };
 });
 
@@ -303,10 +300,10 @@ describe("Documentation Feature - All 14 Screens", () => {
     // After archiving, active count is 1, and archived count becomes 3
     await waitFor(() => {
       expect(screen.getByTestId("current-area-count")).toHaveTextContent("1 document");
-      expect(screen.getByTestId("archived-documents-link")).toHaveTextContent(
-        "Archived Documents (3)"
-      );
     });
+    expect(screen.getByTestId("archived-documents-link")).toHaveTextContent(
+      "Archived Documents (3)"
+    );
   });
 
 
@@ -549,7 +546,7 @@ describe("Documentation Feature - All 14 Screens", () => {
 
     test("listProjects rethrows error instead of returning SEED_PROJECTS when real API fails", async () => {
       setUseMock(false);
-      realApiClient.get.mockImplementationOnce(() =>
+      apiClient.get.mockImplementationOnce(() =>
         Promise.reject(new Error("Network Error"))
       );
       await expect(listProjects()).rejects.toThrow("Network Error");
@@ -557,7 +554,7 @@ describe("Documentation Feature - All 14 Screens", () => {
 
     test("listMembers rethrows error instead of returning SEED_USERS when real API fails", async () => {
       setUseMock(false);
-      realApiClient.get.mockImplementationOnce(() =>
+      apiClient.get.mockImplementationOnce(() =>
         Promise.reject(new Error("Unauthorized"))
       );
       await expect(listMembers()).rejects.toThrow("Unauthorized");
@@ -565,11 +562,11 @@ describe("Documentation Feature - All 14 Screens", () => {
 
     test("projects fetch failure: error is surfaced, no seed data shown, and form submit stays blocked", async () => {
       setUseMock(false);
-      realApiClient.get.mockImplementation((url) => {
+      apiClient.get.mockImplementation((url) => {
         if (url === "/projects") {
           return Promise.reject(new Error("Network Error: Failed to fetch projects"));
         }
-        if (url === "/api/user/users") {
+        if (url === "/user/users") {
           return Promise.resolve({ data: [] });
         }
         return Promise.resolve({ data: [] });
@@ -601,11 +598,11 @@ describe("Documentation Feature - All 14 Screens", () => {
 
     test("users fetch failure: error is surfaced, no seed data shown, and form submit stays blocked", async () => {
       setUseMock(false);
-      realApiClient.get.mockImplementation((url) => {
+      apiClient.get.mockImplementation((url) => {
         if (url === "/projects") {
           return Promise.resolve({ data: [] });
         }
-        if (url === "/api/user/users") {
+        if (url === "/user/users") {
           return Promise.reject(new Error("Server Error: Failed to fetch members"));
         }
         return Promise.resolve({ data: [] });
@@ -628,7 +625,7 @@ describe("Documentation Feature - All 14 Screens", () => {
 
     test("spaces list initial load project failure surfaces error with retry option and renders no seed data", async () => {
       setUseMock(false);
-      realApiClient.get.mockImplementation((url) => {
+      apiClient.get.mockImplementation((url) => {
         if (url === "/projects") {
           return Promise.reject(new Error("Failed to load projects"));
         }
@@ -653,13 +650,13 @@ describe("Documentation Feature - All 14 Screens", () => {
 
     test("success path: real projects and users load successfully and allow form submit", async () => {
       setUseMock(false);
-      realApiClient.get.mockImplementation((url) => {
+      apiClient.get.mockImplementation((url) => {
         if (url === "/projects") {
           return Promise.resolve({
             data: [{ _id: "65f29d20c571c48201a99999", title: "Real Project Beta" }],
           });
         }
-        if (url === "/api/user/users") {
+        if (url === "/user/users") {
           return Promise.resolve({
             data: [{ _id: "65f29d20c571c48201a88888", name: "Real User", email: "user@airost.com" }],
           });
@@ -693,7 +690,7 @@ describe("Documentation Feature - All 14 Screens", () => {
 
     test("listMembers rejects with a normalized error when real API returns a non-array response", async () => {
       setUseMock(false);
-      realApiClient.get.mockImplementationOnce(() =>
+      apiClient.get.mockImplementationOnce(() =>
         Promise.resolve({ data: { message: "Invalid payload format" } })
       );
       await expect(listMembers()).rejects.toThrow("Failed to fetch members: invalid response format");
@@ -701,7 +698,7 @@ describe("Documentation Feature - All 14 Screens", () => {
 
     test("listMembers returns an empty array when real API returns an empty array (does not return seed data)", async () => {
       setUseMock(false);
-      realApiClient.get.mockImplementationOnce(() =>
+      apiClient.get.mockImplementationOnce(() =>
         Promise.resolve({ data: [] })
       );
       const members = await listMembers();
@@ -713,8 +710,8 @@ describe("Documentation Feature - All 14 Screens", () => {
 
     test("handleStartEditSpace: getSpace failure shows error alert with retry and does not open edit form", async () => {
       setUseMock(false);
-      realApiClient.get.mockImplementation((url) => {
-        if (url === "/doc/spaces") {
+      apiClient.get.mockImplementation((url) => {
+        if (url === "/airost/doc/spaces") {
           return Promise.resolve({
             data: [
               {
@@ -730,10 +727,10 @@ describe("Documentation Feature - All 14 Screens", () => {
         if (url === "/projects") {
           return Promise.resolve({ data: [] });
         }
-        if (url === "/api/user/users") {
+        if (url === "/user/users") {
           return Promise.resolve({ data: [] });
         }
-        if (url === "/doc/spaces/space-target-1") {
+        if (url === "/airost/doc/spaces/space-target-1") {
           return Promise.reject(new Error("Network Error: Failed to fetch full space details"));
         }
         return Promise.resolve({ data: [] });
@@ -766,8 +763,8 @@ describe("Documentation Feature - All 14 Screens", () => {
       expect(screen.getByTestId("spaces-list-screen")).toBeInTheDocument();
 
       // Click retry when next attempt succeeds
-      realApiClient.get.mockImplementation((url) => {
-        if (url === "/doc/spaces/space-target-1") {
+      apiClient.get.mockImplementation((url) => {
+        if (url === "/airost/doc/spaces/space-target-1") {
           return Promise.resolve({
             data: {
               _id: "space-target-1",
