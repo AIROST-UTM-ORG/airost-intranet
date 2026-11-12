@@ -1,19 +1,14 @@
-import axios from 'axios';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
-import { API_URL } from '../../../config/api';
+import apiClient from '../../../shared/api/client';
 
 const usePBMRefresh = ({projectId, cards}) => {
     const queryClient = useQueryClient();
     const updateProjectBoard = async () => {
     try{
         console.log("Sending pending update data to backend");
-        const response=await axios.put(`${API_URL}/api/projects/tracking`,{
+        const response=await apiClient.put('/projects/tracking',{
             projectId:projectId,
             tasks: cards, //should be only a single task (not a whole array)
-        },{
-            headers:{
-                'Content-Type': 'application/json',
-            }
         });
         return response;
     }catch(err){

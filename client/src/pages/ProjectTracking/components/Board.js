@@ -1,43 +1,37 @@
-import React, { useEffect, useState } from "react";
-import axios from 'axios'
+import React, { useState } from "react";
 import Column from "./Column";
 import BurnBarrel from "./BurnBarrel";
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query';
 import useFetchUsers from "../../../hooks/useFetchUsers";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import useAuth from "../../../hooks/useAuth";
 import useGetProjects from "../../Projects/hooks/useGetProjects";
-import { delay } from "framer-motion";
-import { isEqual } from "lodash";
-import { API_URL } from "../../../config/api";
+import apiClient from "../../../shared/api/client";
 
 const Board = () => {
     const [cards, setCards] = useState([]);
     const {projectId} = useParams();
     const { user } = useAuth();
 
-    //console.log(projectId)
     const projectTitle = useGetProjects()?.data
-        ?.find(project => project.projectId == projectId)?.title;
-    //console.log(projectTitle)
-    const getProjectBoard = async () => {
-        return axios.get(`${API_URL}/api/projects/tracking/${projectId}`) 
+        ?.find(project => String(project.projectId) === String(projectId))?.title;
 
+    const getProjectBoard = async () => {
+        return apiClient.get(`/projects/tracking/${projectId}`)
         .then(res => {
-            
-            setCards(res.data.tasks)
-            
-            return res.data
+            setCards(res.data.tasks);
+            return res.data;
         })
-        .catch(err => console.log(err))
-    }
-    const projectBoard = useQuery({
+        .catch(err => console.log(err));
+    };
+
+    useQuery({
         queryKey:["projectBoard"],
         queryFn: getProjectBoard,
         enabled: !isNaN(projectId)
-    })
+    });
 
-    const users = useFetchUsers();
+    useFetchUsers();
 
     return (
         <div className="h-screen w-full flex flex-col items-center justify-center">
@@ -92,6 +86,6 @@ const Board = () => {
             </div>
     </div>
     );
-    };
+};
 
 export default Board;
