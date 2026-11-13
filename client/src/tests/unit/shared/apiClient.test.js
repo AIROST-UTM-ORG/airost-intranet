@@ -38,6 +38,26 @@ describe('shared/api/client (apiClient)', () => {
     expect(apiClient.defaults.headers.common['Content-Type']).toBeUndefined();
   });
 
+  test('uses REACT_APP_API_URL in development when configured', () => {
+    const prevEnv = process.env.NODE_ENV;
+    const prevUrl = process.env.REACT_APP_API_URL;
+    try {
+      process.env.NODE_ENV = 'development';
+      process.env.REACT_APP_API_URL = 'http://localhost:4000/api';
+      jest.isolateModules(() => {
+        const devClient = require('../../../shared/api/client').default;
+        expect(devClient.defaults.baseURL).toBe('http://localhost:4000/api');
+      });
+    } finally {
+      process.env.NODE_ENV = prevEnv;
+      if (prevUrl !== undefined) {
+        process.env.REACT_APP_API_URL = prevUrl;
+      } else {
+        delete process.env.REACT_APP_API_URL;
+      }
+    }
+  });
+
   test('preserves proper Content-Type headers for JSON vs FormData without hardcoded overrides', async () => {
     const capturedHeaders = [];
     apiClient.defaults.adapter = jest.fn(async (config) => {

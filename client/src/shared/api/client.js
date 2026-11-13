@@ -3,8 +3,8 @@ import axios from 'axios';
 // Production must always use relative '/api' routing so requests stay same-origin
 // behind reverse proxies (e.g., Cloudflare) and retain session cookies (connect.sid).
 const baseURL =
-  process.env.NODE_ENV === 'development' && process.env.REACT_APP_API_BASE_URL
-    ? process.env.REACT_APP_API_BASE_URL
+  process.env.NODE_ENV === 'development' && process.env.REACT_APP_API_URL
+    ? process.env.REACT_APP_API_URL
     : '/api';
 
 const AUTH_EXEMPT_ENDPOINTS = new Set([
