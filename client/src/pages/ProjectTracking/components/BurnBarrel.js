@@ -26,8 +26,12 @@ const BurnBarrel = ({ setCards, cards, projectId, user }) => {
         const selectedCard = cards.find((c) => c._id == cardId);
         console.log("selectedCard: ",selectedCard)
         console.log("user: ",user)
-        const userIsCreator = selectedCard?.createdBy !== user?.email; 
-        if(userIsCreator && !user.positions?.includes("admin")){
+        const isCreator = Boolean(selectedCard?.createdBy && user?.email && selectedCard.createdBy === user.email);
+        const isAdmin = Boolean(
+            user?.positions?.includes("admin") ||
+            (typeof user?.position === "string" && user.position.includes("admin"))
+        );
+        if (!isCreator && !isAdmin) {
             errorDeleteNotification();
             setActive(false);
             return;
@@ -41,8 +45,9 @@ const BurnBarrel = ({ setCards, cards, projectId, user }) => {
 
     const confirmDelete = () => {
         if (cardToDelete) {
-            setCards((pv) => pv.filter((c) => c._id !== cardToDelete._id)); //Keep all cards except the one that match the condition (delete card)
-            projectBoardMutation.mutate();
+            const updatedCards = cards.filter((c) => c._id !== cardToDelete._id);
+            setCards(updatedCards);
+            projectBoardMutation.mutate(updatedCards);
             successDeleteNotification();
             setConfirmDeleteModalOpen(false);
             setCardToDelete(null);
