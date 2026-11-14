@@ -29,7 +29,8 @@ const MODULE_OPTION_MAP = {
   'module:projects': { id: 'b9380959', name: 'Projects' },
   'module:docs': { id: 'a7b03313', name: 'Docs' },
   'module:mobile': { id: 'c546be8d', name: 'Mobile' },
-  'module:infra': { id: '107ed7a6', name: 'Infra' }
+  'module:infra': { id: '107ed7a6', name: 'Infra' },
+  'module:refactor': { id: 'b3d5c92c', name: 'Refactor' }
 };
 
 const owner = process.env.REPO_OWNER || process.env.GITHUB_REPOSITORY_OWNER;
@@ -89,6 +90,11 @@ async function graphql(query, variables = {}, authToken = githubToken) {
 }
 
 function getModuleFromScope(title) {
+  if (!title || typeof title !== 'string') return null;
+  if (/^refactor(?:\([^)]+\))?:/i.test(title)) {
+    return 'module:refactor';
+  }
+
   const scopeMatch = title.match(/^(?:feat|fix|refactor|docs|test|chore)\(([^)]+)\):/i);
   const scope = (scopeMatch ? scopeMatch[1] : '').toLowerCase();
 
@@ -121,20 +127,28 @@ function getModuleForPath(filePath) {
   return null;
 }
 
-function inferLabelsFromMetadata(title, files = []) {
+function inferLabelsFromMetadata(title, files = [], existingLabels = []) {
   const inferred = new Set();
+
+  const isRefactor = /^refactor(?:\([^)]+\))?:/i.test(title) ||
+    (Array.isArray(existingLabels) && existingLabels.includes('module:refactor')) ||
+    getModuleFromScope(title) === 'module:refactor';
 
   // 1. Module inference from title conventional scope: feat(scope): ...
   const scopeModule = getModuleFromScope(title);
   if (scopeModule) {
     inferred.add(scopeModule);
+  } else if (isRefactor) {
+    inferred.add('module:refactor');
   }
 
   // 2. Module inference from changed file paths across all diffed files
-  for (const f of files) {
-    const fileModule = getModuleForPath(f);
-    if (fileModule) {
-      inferred.add(fileModule);
+  if (!isRefactor) {
+    for (const f of files) {
+      const fileModule = getModuleForPath(f);
+      if (fileModule) {
+        inferred.add(fileModule);
+      }
     }
   }
 
@@ -316,7 +330,7 @@ async function run() {
       const hasPhase = labels.some(l => l.startsWith('phase:'));
       const hasType = labels.some(l => ['bug', 'enhancement', 'documentation'].includes(l));
 
-      const inferred = inferLabelsFromMetadata(title, files);
+      const inferred = inferLabelsFromMetadata(title, files, labels);
       const toAdd = inferred.filter(candidate => {
         if (candidate.startsWith('phase:') && hasPhase) return false;
         if (['bug', 'enhancement', 'documentation'].includes(candidate) && hasType) return false;
