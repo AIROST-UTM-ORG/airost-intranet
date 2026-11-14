@@ -2,6 +2,7 @@
  * Provides reusable date validation and day-boundary helpers.
  */
 const isValidDate = (value) => {
+  if (value === null || value === undefined || value === '') return false;
   const date = value instanceof Date ? value : new Date(value);
   return !Number.isNaN(date.getTime());
 };
