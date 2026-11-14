@@ -37,6 +37,7 @@ const response = () => {
     res.body = body;
     return res;
   });
+  res.end = jest.fn(() => res);
   return res;
 };
 
@@ -67,9 +68,12 @@ describe('AppError and API response helpers', () => {
     expect(res.statusCode).toBe(201);
     expect(res.body).toEqual({ success: true, data: [], meta: { count: 0 } });
 
-    sendSuccess(res, null, HTTP_STATUS.NO_CONTENT, null);
-    expect(res.statusCode).toBe(HTTP_STATUS.NO_CONTENT);
-    expect(res.body).toEqual({ success: true, data: null, meta: null });
+    const noContentRes = response();
+    expect(sendSuccess(noContentRes, null, HTTP_STATUS.NO_CONTENT, null)).toBe(noContentRes);
+    expect(noContentRes.statusCode).toBe(HTTP_STATUS.NO_CONTENT);
+    expect(noContentRes.end).toHaveBeenCalledTimes(1);
+    expect(noContentRes.json).not.toHaveBeenCalled();
+    expect(noContentRes.body).toBeNull();
   });
 
   test('sendError includes useful details but omits null and undefined details', () => {
