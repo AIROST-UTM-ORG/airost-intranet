@@ -22,20 +22,22 @@ const Board = () => {
     //console.log(projectTitle)
     const getProjectBoard = async () => {
         return axios.get(`${API_URL}/api/projects/tracking/${projectId}`) 
-
         .then(res => {
-            
-            setCards(res.data.tasks)
-            
-            return res.data
-        })
-        .catch(err => console.log(err))
-    }
+            return res.data;
+        });
+    };
+
     const projectBoard = useQuery({
-        queryKey:["projectBoard"],
+        queryKey: ["projectBoard", projectId],
         queryFn: getProjectBoard,
         enabled: !isNaN(projectId)
-    })
+    });
+
+    useEffect(() => {
+        if (projectBoard.data?.tasks) {
+            setCards(projectBoard.data.tasks);
+        }
+    }, [projectBoard.data?.tasks]);
 
     const users = useFetchUsers();
 
