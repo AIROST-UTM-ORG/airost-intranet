@@ -10,9 +10,18 @@
 
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom';
 import RequireAuth from '../../components/RequireAuth';
 import { AuthContext } from '../../context/authContext';
+
+const LoginLocationSpy = () => {
+  const location = useLocation();
+  return (
+    <div data-testid="login-page" data-from={location.state?.from?.pathname || ''}>
+      Login
+    </div>
+  );
+};
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -28,7 +37,7 @@ const renderWithAuth = (authValue, initialPath = '/dashboard') => {
           <Route element={<RequireAuth allowedPosition={['member', 'admin']} />}>
             <Route path="/dashboard" element={<div data-testid="protected-content">Dashboard</div>} />
           </Route>
-          <Route path="/login" element={<div data-testid="login-page">Login</div>} />
+          <Route path="/login" element={<LoginLocationSpy />} />
           <Route path="/unauthorized" element={<div data-testid="unauthorized-page">Unauthorized</div>} />
         </Routes>
       </MemoryRouter>
@@ -86,10 +95,12 @@ describe('RequireAuth', () => {
     expect(screen.queryByTestId('admin-content')).not.toBeInTheDocument();
   });
 
-  test('redirects to /login when user is null (unauthenticated)', () => {
+  test('redirects to /login when user is null (unauthenticated) and preserves from location state', () => {
     const authValue = { user: null, loading: false };
-    renderWithAuth(authValue);
-    expect(screen.getByTestId('login-page')).toBeInTheDocument();
+    renderWithAuth(authValue, '/dashboard');
+    const loginPage = screen.getByTestId('login-page');
+    expect(loginPage).toBeInTheDocument();
+    expect(loginPage).toHaveAttribute('data-from', '/dashboard');
     expect(screen.queryByTestId('protected-content')).not.toBeInTheDocument();
   });
 

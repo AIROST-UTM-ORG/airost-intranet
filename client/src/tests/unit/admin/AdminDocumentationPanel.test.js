@@ -2,59 +2,26 @@ import React from "react";
 import "@testing-library/jest-dom";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
+import apiClient from "../../../shared/api/client";
+import Admin from "../../../pages/Admin/Admin";
+import AdminDocumentationPanel from "../../../pages/Admin/AdminDocumentationPanel";
+import { AuthContext } from "../../../context/authContext";
+import * as docApi from "../../../pages/Documentation/documentationApi";
 
-jest.mock("axios", () => {
-  let successInterceptor = null;
-  let errorInterceptor = null;
-
-  const runWithInterceptors = async (fn, ...args) => {
-    try {
-      const res = await fn(...args);
-      return successInterceptor ? successInterceptor(res) : res;
-    } catch (err) {
-      if (errorInterceptor) {
-        return await errorInterceptor(err);
-      }
-      throw err;
-    }
-  };
-
-  const rawMock = {
+jest.mock("../../../shared/api/client", () => {
+  const mockClient = {
     get: jest.fn(),
     post: jest.fn(),
     patch: jest.fn(),
     delete: jest.fn(),
   };
-
-  const mockAxiosInstance = {
-    rawMock,
-    get: (...args) => runWithInterceptors(rawMock.get, ...args),
-    post: (...args) => runWithInterceptors(rawMock.post, ...args),
-    patch: (...args) => runWithInterceptors(rawMock.patch, ...args),
-    delete: (...args) => runWithInterceptors(rawMock.delete, ...args),
-    interceptors: {
-      response: {
-        use: (success, error) => {
-          successInterceptor = success;
-          errorInterceptor = error;
-        },
-      },
-    },
-  };
   return {
     __esModule: true,
-    default: {
-      create: jest.fn(() => mockAxiosInstance),
-      ...mockAxiosInstance,
-    },
-    ...mockAxiosInstance,
+    default: mockClient,
+    apiClient: mockClient,
+    resetAuthUnauthorizedLock: jest.fn(),
   };
 });
-
-import Admin from "../../../pages/Admin/Admin";
-import AdminDocumentationPanel from "../../../pages/Admin/AdminDocumentationPanel";
-import { AuthContext } from "../../../context/authContext";
-import * as docApi from "../../../pages/Documentation/documentationApi";
 
 const renderWithAuth = (ui, user = null) => {
   return render(
@@ -80,6 +47,7 @@ describe("Admin Console - Documentation Oversight Panel", () => {
   beforeEach(() => {
     docApi.resetMockData();
     jest.restoreAllMocks();
+    apiClient.get.mockResolvedValue({ data: [] });
   });
 
   // ---------------------------------------------------------------------------
@@ -227,7 +195,7 @@ describe("Admin Console - Documentation Oversight Panel", () => {
     const reassignSpy = jest.spyOn(docApi, "reassignSpaceOwner").mockResolvedValue({
       space: { _id: "65f29d20c571c48201a00001", createdBy: "65f29d20c571c48201a33331" },
     });
-    const listSpy = jest.spyOn(docApi, "getAdminSpaces");
+    jest.spyOn(docApi, "getAdminSpaces");
 
     renderWithAuth(<AdminDocumentationPanel />, adminUser);
     expect(await screen.findByTestId("admin-space-row-65f29d20c571c48201a00001")).toBeInTheDocument();

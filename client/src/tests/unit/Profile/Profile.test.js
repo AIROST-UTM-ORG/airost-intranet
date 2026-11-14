@@ -1,17 +1,19 @@
 import React from 'react';
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import axios from 'axios';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import Profile from '../../../pages/Profile/Profile';
 import EditProfile from '../../../pages/Profile/EditProfile';
-import { API_URL } from '../../../config/api';
+import apiClient from '../../../shared/api/client';
 import useAuth from '../../../hooks/useAuth';
 import useFetchUsers from '../../../hooks/useFetchUsers';
 import { makeSquarePhoto } from '../../../pages/Profile/utils/photo';
 
-jest.mock('axios', () => ({ get: jest.fn(), patch: jest.fn() }));
+jest.mock('../../../shared/api/client', () => ({
+  __esModule: true,
+  default: { get: jest.fn(), patch: jest.fn() },
+}));
 jest.mock('@tanstack/react-query', () => ({
   ...jest.requireActual('@tanstack/react-query'),
   useQueryClient: jest.fn(),
@@ -59,9 +61,9 @@ describe('Member profile', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    axios.patch.mockReset();
-    axios.get.mockReset();
-    axios.get.mockReturnValue(new Promise(() => {}));
+    apiClient.patch.mockReset();
+    apiClient.get.mockReset();
+    apiClient.get.mockReturnValue(new Promise(() => {}));
     useAuth.mockReturnValue({ user: member, setUser });
     useFetchUsers.mockReturnValue({ data: [member] });
     invalidateQueries.mockResolvedValue(undefined);
@@ -73,6 +75,7 @@ describe('Member profile', () => {
     renderProfileRoutes('/members/alice%40example.com');
 
     expect(screen.getByRole('button', { name: 'Back to members' })).toBeInTheDocument();
+    // eslint-disable-next-line testing-library/no-node-access
     expect(screen.getByRole('button', { name: 'Back to members' }).parentElement)
       .toContainElement(screen.getByRole('combobox', { name: 'Search other club members' }));
     expect(screen.getByRole('heading', { name: 'Alice Tan' })).toBeInTheDocument();
@@ -126,9 +129,9 @@ describe('Member profile', () => {
 
     useAuth.mockReturnValue({ user: member, setUser });
     useFetchUsers.mockReturnValue({ data: [] });
-    const missingProfile = renderProfileRoutes('/members/missing%40example.com');
+    const view = renderProfileRoutes('/members/missing%40example.com');
     expect(screen.getByRole('status')).toHaveTextContent('This member profile was not found.');
-    missingProfile.unmount();
+    view.unmount();
 
     useFetchUsers.mockReturnValue({ data: [], isError: true });
     renderProfileRoutes('/members/missing%40example.com');
@@ -172,13 +175,11 @@ describe('Member profile', () => {
       user: { ...member, featuredProjectIds: [featuredProjects[0]] },
       setUser,
     });
-    axios.get.mockResolvedValueOnce({ data: featuredProjects });
-    axios.patch.mockResolvedValue({ data: { ...member, name: 'Alice Tan Updated' } });
+    apiClient.get.mockResolvedValueOnce({ data: featuredProjects });
+    apiClient.patch.mockResolvedValue({ data: { ...member, name: 'Alice Tan Updated' } });
     renderProfileRoutes('/profile');
 
-    await act(async () => {
-      await userEvent.click(screen.getByRole('button', { name: 'Edit profile' }));
-    });
+    await userEvent.click(screen.getByRole('button', { name: 'Edit profile' }));
     expect(screen.getByRole('heading', { name: 'Edit profile' })).toBeInTheDocument();
 
     await userEvent.clear(screen.getByLabelText('Name'));
@@ -187,19 +188,18 @@ describe('Member profile', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Save changes' }));
 
     await waitFor(() => {
-      expect(axios.patch).toHaveBeenCalledWith(
-        `${API_URL}/api/user/member-1`,
+      expect(apiClient.patch).toHaveBeenCalledWith(
+        '/user/member-1',
         expect.objectContaining({
           name: 'Alice Tan Updated',
           featuredProjectIds: ['project-1', 'project-2'],
           origin: { state: 'Selangor', country: 'Malaysia' },
           instagramUrl: 'https://instagram.com/alice',
         }),
-        { withCredentials: true },
       );
-      expect(setUser).toHaveBeenCalledWith(expect.any(Function));
-      expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ['users'] });
     });
+    expect(setUser).toHaveBeenCalledWith(expect.any(Function));
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ['users'] });
     expect(setUser.mock.calls[0][0](member)).toEqual({
       ...member,
       name: 'Alice Tan Updated',
@@ -208,7 +208,7 @@ describe('Member profile', () => {
   });
 
   test('displays the API error when saving fails', async () => {
-    axios.patch.mockRejectedValue({
+    apiClient.patch.mockRejectedValue({
       response: { data: { message: 'Profile update rejected.' } },
     });
     const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
@@ -238,8 +238,9 @@ describe('Member profile', () => {
     const saveButton = screen.getByRole('button', { name: 'Save changes' });
     expect(saveButton).toBeDisabled();
 
+    // eslint-disable-next-line testing-library/no-node-access
     fireEvent.submit(saveButton.closest('form'));
-    expect(axios.patch).not.toHaveBeenCalled();
+    expect(apiClient.patch).not.toHaveBeenCalled();
     expect(screen.getByText('Correct the highlighted social links before saving.')).toBeInTheDocument();
   });
 
@@ -260,7 +261,7 @@ describe('Member profile', () => {
       'Your profile could not be saved.',
     ],
   ])('%s', async (_description, error, expectedMessage) => {
-    axios.patch.mockRejectedValueOnce(error);
+    apiClient.patch.mockRejectedValueOnce(error);
     const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
     renderProfileRoutes('/profile/edit');
 
@@ -280,7 +281,7 @@ describe('Member profile', () => {
   test('does not upload when no file is selected', () => {
     renderProfileRoutes('/profile/edit');
 
-    fireEvent.change(document.getElementById('profile-image-file'), { target: { files: [] } });
+    fireEvent.change(screen.getByLabelText(/Upload image/i), { target: { files: [] } });
 
     expect(makeSquarePhoto).not.toHaveBeenCalled();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
@@ -288,13 +289,13 @@ describe('Member profile', () => {
 
   test('rejects unsupported profile image files', () => {
     renderProfileRoutes('/profile/edit');
-    const fileInput = document.getElementById('profile-image-file');
+    const fileInput = screen.getByLabelText(/Upload image/i);
     const invalidFile = new File(['text'], 'notes.txt', { type: 'text/plain' });
 
     fireEvent.change(fileInput, { target: { files: [invalidFile] } });
 
     expect(screen.getByRole('alert')).toHaveTextContent('Choose an image file to upload.');
-    expect(axios.patch).not.toHaveBeenCalled();
+    expect(apiClient.patch).not.toHaveBeenCalled();
   });
 
   test('rejects profile image files larger than 10 MB', () => {
@@ -302,7 +303,7 @@ describe('Member profile', () => {
     const oversizedFile = new File(['image'], 'large.png', { type: 'image/png' });
     Object.defineProperty(oversizedFile, 'size', { value: 10 * 1024 * 1024 + 1 });
 
-    fireEvent.change(document.getElementById('profile-image-file'), {
+    fireEvent.change(screen.getByLabelText(/Upload image/i), {
       target: { files: [oversizedFile] },
     });
 
@@ -315,7 +316,7 @@ describe('Member profile', () => {
     renderProfileRoutes('/profile/edit');
     const imageFile = new File(['image'], 'avatar.png', { type: 'image/png' });
 
-    fireEvent.change(document.getElementById('profile-image-file'), {
+    fireEvent.change(screen.getByLabelText(/Upload image/i), {
       target: { files: [imageFile] },
     });
 
@@ -331,7 +332,7 @@ describe('Member profile', () => {
     renderProfileRoutes('/profile/edit');
     const imageFile = new File(['image'], 'avatar.png', { type: 'image/png' });
 
-    fireEvent.change(document.getElementById('profile-image-file'), {
+    fireEvent.change(screen.getByLabelText(/Upload image/i), {
       target: { files: [imageFile] },
     });
 
@@ -344,7 +345,7 @@ describe('Member profile', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Save changes' }));
     expect(screen.getByRole('alert')).toHaveTextContent('Your account could not be identified.');
-    expect(axios.patch).not.toHaveBeenCalled();
+    expect(apiClient.patch).not.toHaveBeenCalled();
     unmount();
 
     useAuth.mockReturnValue({ user: { ...member, name: '   ' }, setUser });
@@ -352,7 +353,7 @@ describe('Member profile', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Save changes' }));
 
     expect(screen.getByRole('alert')).toHaveTextContent('Enter your name before saving.');
-    expect(axios.patch).not.toHaveBeenCalled();
+    expect(apiClient.patch).not.toHaveBeenCalled();
   });
 
   test('clears all featured projects when saving an empty selection', async () => {
@@ -360,16 +361,15 @@ describe('Member profile', () => {
       user: { ...member, featuredProjectIds: [] },
       setUser,
     });
-    axios.patch.mockResolvedValue({ data: member });
+    apiClient.patch.mockResolvedValue({ data: member });
     renderProfileRoutes('/profile/edit');
 
     await userEvent.click(screen.getByRole('button', { name: 'Save changes' }));
 
     await waitFor(() => {
-      expect(axios.patch).toHaveBeenCalledWith(
-        `${API_URL}/api/user/member-1`,
+      expect(apiClient.patch).toHaveBeenCalledWith(
+        '/user/member-1',
         expect.objectContaining({ featuredProjectIds: [] }),
-        { withCredentials: true },
       );
     });
   });
@@ -379,16 +379,15 @@ describe('Member profile', () => {
       user: { ...member, _id: undefined, id: 'fallback-id' },
       setUser,
     });
-    axios.patch.mockResolvedValue({ data: member });
+    apiClient.patch.mockResolvedValue({ data: member });
     renderProfileRoutes('/profile/edit');
 
     await userEvent.click(screen.getByRole('button', { name: 'Save changes' }));
 
     await waitFor(() => {
-      expect(axios.patch).toHaveBeenCalledWith(
-        `${API_URL}/api/user/fallback-id`,
+      expect(apiClient.patch).toHaveBeenCalledWith(
+        '/user/fallback-id',
         expect.any(Object),
-        { withCredentials: true },
       );
     });
   });

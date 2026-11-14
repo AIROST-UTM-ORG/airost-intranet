@@ -1,32 +1,28 @@
 import '../style/Doc-blog.css';
-import React from 'react';
-import { Link } from "react-router-dom";
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { useState, useEffect } from 'react';
-import { API_URL } from '../../../config/api';
+import apiClient from '../../../shared/api/client';
 
 const DocBlog = () => {
-  const [docs, setDocs] = useState(null)
+  const [docs, setDocs] = useState(null);
 
   useEffect(() => {
     const fetchDocs = async () => {
-      const response = await fetch(`${API_URL}/api/airost/doc`)
-      const json = await response.json()
-
-      if (response.ok) {
-        setDocs(json)
+      try {
+        const response = await apiClient.get('/airost/doc');
+        setDocs(response.data);
+      } catch (err) {
+        console.error('Failed to fetch docs:', err);
       }
-    }
+    };
 
-    fetchDocs()
-  }, [])
+    fetchDocs();
+  }, []);
 
   const { id } = useParams();
-  const docBlog = docs?.filter((doc)=>doc._id===id);
-  const getFontSize = (textLength) => {
-    var textLength =  (textLength > 50) ? textLength*0.8 :
-                      textLength=65;
-    return textLength;
+  const docBlog = docs?.filter((doc) => doc._id === id);
+  const getFontSize = (length) => {
+    return length > 50 ? length * 0.8 : 65;
   };
   
   return(
