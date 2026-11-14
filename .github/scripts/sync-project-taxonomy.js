@@ -8,7 +8,7 @@
  * 2. Synchronizes repository labels with GitHub Project #6 (AIROST Intranet)
  *    single-select custom fields:
  *      - "Target Phase" (Phase 2 / Phase 3)
- *      - "Module" (Auth, Members, Projects, Docs, Mobile, Infra)
+ *      - "Module" (Auth, Members, Projects, Docs, Mobile, Infra, Refactor)
  */
 
 const githubToken = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
@@ -127,11 +127,22 @@ function getModuleForPath(filePath) {
   return null;
 }
 
-function inferLabelsFromMetadata(title, files = [], existingLabels = []) {
+function inferLabelsFromMetadata(title, files = [], closingIssues = [], existingLabels = []) {
+  // Support backward compatibility when callers pass existingLabels as 3rd param
+  if (Array.isArray(closingIssues) && closingIssues.length > 0 && typeof closingIssues[0] === 'string' && (!existingLabels || existingLabels.length === 0)) {
+    existingLabels = closingIssues;
+    closingIssues = [];
+  }
+
   const inferred = new Set();
 
+  const hasRefactorLabel = Array.isArray(existingLabels) && existingLabels.some(l => {
+    const name = (typeof l === 'string' ? l : l?.name || '').toLowerCase();
+    return name === 'module:refactor';
+  });
+
   const isRefactor = /^refactor(?:\([^)]+\))?:/i.test(title) ||
-    (Array.isArray(existingLabels) && existingLabels.includes('module:refactor')) ||
+    hasRefactorLabel ||
     getModuleFromScope(title) === 'module:refactor';
 
   // 1. Module inference from title conventional scope: feat(scope): ...
@@ -142,7 +153,7 @@ function inferLabelsFromMetadata(title, files = [], existingLabels = []) {
     inferred.add('module:refactor');
   }
 
-  // 2. Module inference from changed file paths across all diffed files
+  // 2. Module inference from changed file paths across all diffed files (suppressed for refactors)
   if (!isRefactor) {
     for (const f of files) {
       const fileModule = getModuleForPath(f);
@@ -152,11 +163,28 @@ function inferLabelsFromMetadata(title, files = [], existingLabels = []) {
     }
   }
 
-  // 3. Phase inference: default to phase:2-delivery unless explicit phase 3 keywords
-  if (/phase[- ]?3|architecture/i.test(title)) {
-    inferred.add('phase:3-architecture');
-  } else {
-    inferred.add('phase:2-delivery');
+  // 3. Phase label inference from title or closing issues
+  let phaseFound = false;
+  const phaseMatch = title.match(/(?:\[phase:|\bphase:|\bphase[- ](?=[0-9]))([a-z0-9._-]+)/i);
+  if (phaseMatch) {
+    let name = phaseMatch[1].toLowerCase();
+    if (name === '2') name = '2-delivery';
+    else if (name === '3') name = '3-architecture';
+    inferred.add(`phase:${name}`);
+    phaseFound = true;
+  } else if (Array.isArray(closingIssues)) {
+    for (const issue of closingIssues) {
+      const issueLabels = issue?.labels?.nodes || issue?.labels || [];
+      for (const lbl of issueLabels) {
+        const name = (typeof lbl === 'string' ? lbl : lbl?.name || '').toLowerCase();
+        if (name.startsWith('phase:')) {
+          inferred.add(name);
+          phaseFound = true;
+          break;
+        }
+      }
+      if (phaseFound) break;
+    }
   }
 
   // 4. Type label inference from prefix
@@ -169,6 +197,31 @@ function inferLabelsFromMetadata(title, files = [], existingLabels = []) {
   }
 
   return Array.from(inferred);
+}
+
+function determineLabelsToAdd(existingLabels = [], inferredLabels = []) {
+  const existing = new Set((existingLabels || []).map(l => (typeof l === 'string' ? l.toLowerCase() : '')).filter(Boolean));
+  let hasPhase = Array.from(existing).some(l => l.startsWith('phase:'));
+  let hasType = Array.from(existing).some(l => ['bug', 'enhancement', 'documentation'].includes(l));
+
+  const toAdd = [];
+  for (const candidate of (inferredLabels || [])) {
+    if (!candidate || typeof candidate !== 'string') continue;
+    const candLower = candidate.toLowerCase();
+    const isPhase = candLower.startsWith('phase:');
+    const isType = ['bug', 'enhancement', 'documentation'].includes(candLower);
+
+    if (existing.has(candLower) || (isPhase && hasPhase) || (isType && hasType)) {
+      continue;
+    }
+
+    if (isPhase) hasPhase = true;
+    if (isType) hasType = true;
+    existing.add(candLower);
+    toAdd.push(candidate);
+  }
+
+  return toAdd;
 }
 
 function selectProjectModule(labels, title, files = []) {
@@ -249,6 +302,15 @@ async function run() {
               files(first: 100) {
                 nodes { path }
               }
+              closingIssuesReferences(first: 10) {
+                nodes {
+                  number
+                  title
+                  labels(first: 20) {
+                    nodes { name }
+                  }
+                }
+              }
             }
           }
         }
@@ -266,6 +328,15 @@ async function run() {
               }
               files(first: 100) {
                 nodes { path }
+              }
+              closingIssuesReferences(first: 10) {
+                nodes {
+                  number
+                  title
+                  labels(first: 20) {
+                    nodes { name }
+                  }
+                }
               }
               projectItems(first: 10) {
                 nodes {
@@ -301,6 +372,15 @@ async function run() {
                   files(first: 100) {
                     nodes { path }
                   }
+                  closingIssuesReferences(first: 10) {
+                    nodes {
+                      number
+                      title
+                      labels(first: 20) {
+                        nodes { name }
+                      }
+                    }
+                  }
                 }
               }
             }
@@ -327,15 +407,9 @@ async function run() {
 
     // Auto-infer missing labels for PRs on open, edit, or sync
     if (['opened', 'synchronize', 'reopened', 'edited', ''].includes(eventAction)) {
-      const hasPhase = labels.some(l => l.startsWith('phase:'));
-      const hasType = labels.some(l => ['bug', 'enhancement', 'documentation'].includes(l));
-
-      const inferred = inferLabelsFromMetadata(title, files, labels);
-      const toAdd = inferred.filter(candidate => {
-        if (candidate.startsWith('phase:') && hasPhase) return false;
-        if (['bug', 'enhancement', 'documentation'].includes(candidate) && hasType) return false;
-        return !labels.includes(candidate);
-      });
+      const closingIssues = pr.closingIssuesReferences?.nodes || [];
+      const inferred = inferLabelsFromMetadata(title, files, closingIssues, labels);
+      const toAdd = determineLabelsToAdd(labels, inferred);
 
       if (toAdd.length > 0) {
         try {
@@ -500,7 +574,9 @@ async function run() {
     }
   }
 
+  const remainingPhaseLabels = labels.filter(l => (typeof l === 'string' ? l : l?.name || '').toLowerCase().startsWith('phase:'));
   const isPhaseUnlabeled = eventAction === 'unlabeled' &&
+    remainingPhaseLabels.length === 0 &&
     (!eventLabelName || eventLabelName.startsWith('phase:') || !!PHASE_OPTION_MAP[eventLabelName]);
 
   if (targetPhaseOption) {
@@ -537,6 +613,8 @@ async function run() {
         console.warn(`::warning::Failed to update Target Phase on Project #6: ${err.message}`);
       }
     }
+  } else if (remainingPhaseLabels.length > 0) {
+    console.warn(`::warning::PR #${itemNumber} has unmapped phase label(s): ${remainingPhaseLabels.join(', ')}. Retaining current Target Phase in Project #6.`);
   } else if (isPhaseUnlabeled) {
     console.log(`Clearing Target Phase on Project #6 (no phase labels remaining)...`);
     try {
@@ -569,7 +647,9 @@ async function run() {
   // 2. Sync Module using single-select priority rule
   const targetModuleOption = selectProjectModule(labels, title, files);
 
+  const remainingModuleLabels = labels.filter(l => (typeof l === 'string' ? l : l?.name || '').toLowerCase().startsWith('module:'));
   const isModuleUnlabeled = eventAction === 'unlabeled' &&
+    remainingModuleLabels.length === 0 &&
     (!eventLabelName || eventLabelName.startsWith('module:') || !!MODULE_OPTION_MAP[eventLabelName]);
 
   if (targetModuleOption) {
@@ -667,6 +747,7 @@ module.exports = {
   getModuleFromScope,
   getModuleForPath,
   inferLabelsFromMetadata,
+  determineLabelsToAdd,
   selectProjectModule,
   PHASE_OPTION_MAP,
   MODULE_OPTION_MAP
