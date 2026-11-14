@@ -43,6 +43,10 @@ jobs:
             exit 1
           fi
 
+      - name: Run taxonomy sync unit tests
+        working-directory: .
+        run: node --test .github/scripts/sync-project-taxonomy.test.js
+
   client-tests:
     name: Client Tests & Build
     runs-on: ubuntu-latest

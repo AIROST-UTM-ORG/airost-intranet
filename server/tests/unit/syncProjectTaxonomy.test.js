@@ -83,7 +83,7 @@ describe('sync-project-taxonomy', () => {
     test('refactor commit with scope does not smear domain module labels across touched files', () => {
       const labels = inferLabelsFromMetadata('refactor(ui): consolidate modal primitives', crossCuttingFiles);
       expect(labels).toContain('module:refactor');
-      expect(labels).toContain('phase:2-delivery');
+      expect(labels).not.toContain('phase:2-delivery');
       expect(labels).not.toContain('module:projects');
       expect(labels).not.toContain('module:auth');
       expect(labels).not.toContain('module:members');
@@ -120,7 +120,7 @@ describe('sync-project-taxonomy', () => {
       expect(labels).toContain('module:projects');
       expect(labels).toContain('module:auth');
       expect(labels).toContain('enhancement');
-      expect(labels).toContain('phase:2-delivery');
+      expect(labels).not.toContain('phase:2-delivery');
       expect(labels).not.toContain('module:refactor');
     });
 

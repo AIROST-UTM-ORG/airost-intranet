@@ -159,6 +159,13 @@ describe('sync-project-taxonomy', () => {
       const labelsPhase3 = inferLabelsFromMetadata('feat: phase:3 future design');
       assert.ok(labelsPhase3.includes('phase:3-architecture'));
     });
+
+    it('does not match English phrases like phase-out as phase labels', () => {
+      const labels = inferLabelsFromMetadata('chore: phase-out legacy endpoints', [], []);
+      const phaseLabels = labels.filter(l => l.startsWith('phase:'));
+      assert.strictEqual(phaseLabels.length, 0, 'phase-out must not be extracted as a phase label');
+      assert.ok(!labels.includes('phase:out'));
+    });
   });
 
   describe('inferLabelsFromMetadata - Unassigned phase label when neither issue nor title specifies one (No fallback)', () => {
@@ -307,6 +314,75 @@ describe('sync-project-taxonomy', () => {
       assert.ok(labels.includes('module:projects'));
       assert.ok(labels.includes('enhancement'));
       assert.ok(labels.includes('phase:2-delivery'));
+    });
+  });
+
+  describe('inferLabelsFromMetadata - Refactor module isolation and closing issues coordination', () => {
+    it('supports 4-argument signature accepting both closingIssues and existingLabels', () => {
+      const closingIssues = [
+        {
+          number: 110,
+          title: 'Architecture cleanup',
+          labels: { nodes: [{ name: 'phase:3-architecture' }] }
+        }
+      ];
+      const existingLabels = ['module:refactor'];
+      const crossCuttingFiles = [
+        'client/src/pages/Projects.jsx',
+        'server/routes/auth.js'
+      ];
+
+      const labels = inferLabelsFromMetadata(
+        'chore: modularize auth and project stores',
+        crossCuttingFiles,
+        closingIssues,
+        existingLabels
+      );
+
+      assert.ok(labels.includes('phase:3-architecture'), 'inherits phase:3-architecture from closingIssues');
+      assert.ok(labels.includes('module:refactor'), 'maintains module:refactor');
+      assert.ok(!labels.includes('module:projects'), 'suppresses module:projects smearing');
+      assert.ok(!labels.includes('module:auth'), 'suppresses module:auth smearing');
+    });
+
+    it('suppresses domain module smearing on refactor title while inheriting phase from closing issues', () => {
+      const closingIssues = [
+        {
+          number: 111,
+          title: 'Phase 2 delivery issue',
+          labels: { nodes: [{ name: 'phase:2-delivery' }] }
+        }
+      ];
+      const crossCuttingFiles = [
+        'client/src/pages/Projects.jsx',
+        'server/routes/user.js',
+        'server/models/Doc.js'
+      ];
+
+      const labels = inferLabelsFromMetadata(
+        'refactor(core): decouple data access layers',
+        crossCuttingFiles,
+        closingIssues
+      );
+
+      assert.ok(labels.includes('module:refactor'), 'infers module:refactor');
+      assert.ok(labels.includes('phase:2-delivery'), 'inherits phase:2-delivery from closing issue');
+      assert.ok(!labels.includes('module:projects'), 'suppresses module:projects');
+      assert.ok(!labels.includes('module:members'), 'suppresses module:members');
+      assert.ok(!labels.includes('module:docs'), 'suppresses module:docs');
+    });
+
+    it('maintains backward compatibility when existingLabels is passed as 3rd parameter', () => {
+      const crossCuttingFiles = ['client/src/pages/Projects.jsx', 'server/routes/auth.js'];
+      const labels = inferLabelsFromMetadata(
+        'chore: reorganize component tree',
+        crossCuttingFiles,
+        ['module:refactor']
+      );
+
+      assert.ok(labels.includes('module:refactor'), 'infers module:refactor');
+      assert.ok(!labels.includes('module:projects'), 'suppresses module:projects');
+      assert.ok(!labels.includes('module:auth'), 'suppresses module:auth');
     });
   });
 
