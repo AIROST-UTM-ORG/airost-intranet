@@ -5,7 +5,7 @@
  * Routes tested:
  *   GET  /auth/login/success  — unauthenticated / invalid credentials → 401
  *   GET  /auth/login/failed   → 401
- *   GET  /auth/logout         — destroys session, clears cookie, redirects to /login
+ *   POST /auth/logout         — destroys session, clears cookie, redirects to /login
  *   POST /auth/logout         — destroys session, clears cookie, returns 200 JSON
  *   GET  /auth/google         — initiates OAuth redirect
  */
@@ -94,11 +94,11 @@ describe('GET /auth/google', () => {
   });
 });
 
-// ── /auth/logout (GET and POST) ───────────────────────────────────────────────
+// ── POST /auth/logout ─────────────────────────────────────────────────────────
 
 describe('/auth/logout', () => {
-  test('clears the session cookie and redirects to the login page on GET', async () => {
-    const res = await request(app).get('/auth/logout');
+  test('clears the session cookie and redirects to the login page on POST', async () => {
+    const res = await request(app).post('/auth/logout');
 
     expect(res.status).toBe(302);
     expect(res.headers.location).toMatch(/\/login$/);
@@ -169,7 +169,7 @@ describe.skip('Security: unauthenticated requests', () => {
     expect(activeRes.body.success).toBe(true);
 
     // Perform logout
-    const logoutRes = await agent.get('/auth/logout');
+    const logoutRes = await agent.post('/auth/logout');
     expect(logoutRes.status).toBe(302);
 
     // Verify subsequent request with agent or expired session is rejected with 401
