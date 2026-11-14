@@ -8,10 +8,9 @@ const { PLATFORM_ROLES } = require('../shared/constants/roles');
 
 const getUserRoles = (user) => {
   if (!user) return [];
-  const positions = Array.isArray(user.positions)
-    ? user.positions
-    : [user.positions || user.position].filter(Boolean);
-  return [user.role, user.platformRole, ...positions]
+  const positions = user.positions ?? user.position;
+  const roles = Array.isArray(positions) ? positions : [positions];
+  return roles
     .filter((role) => typeof role === 'string')
     .map((role) => role.trim().toLowerCase());
 };
@@ -23,9 +22,7 @@ const requireRole = (...roles) => {
       return next(new AppError(UNAUTHORIZED, 'UNAUTHENTICATED', 'Authentication is required'));
     }
     const userRoles = getUserRoles(req.user);
-    const hasRole = targetRoles.some((role) =>
-      userRoles.some((userRole) => userRole === role || userRole.includes(role))
-    );
+    const hasRole = targetRoles.some((role) => userRoles.includes(role));
     if (hasRole) return next();
     return next(new AppError(FORBIDDEN, 'FORBIDDEN', 'You do not have permission to perform this action'));
   };
