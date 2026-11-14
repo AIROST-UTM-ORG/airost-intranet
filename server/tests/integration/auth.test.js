@@ -5,7 +5,7 @@
  * Routes tested:
  *   GET  /auth/login/success  — unauthenticated / invalid credentials → 401
  *   GET  /auth/login/failed   → 401
- *   GET  /auth/logout         — destroys session, clears cookie, redirects to /login
+ *   POST /auth/logout         — destroys session, clears cookie, redirects to /login
  *   POST /auth/logout         — destroys session, clears cookie, returns 200 JSON
  *   GET  /auth/google         — initiates OAuth redirect
  */
@@ -21,12 +21,6 @@ let app;
 beforeAll(async () => {
   await connect();
   app = createApp();
-
-  // Test-only endpoint to simulate passport session serialization in tests
-  app.get('/test/login-as/:id', (req, res) => {
-    req.session.passport = { user: req.params.id };
-    res.json({ success: true });
-  });
 });
 
 afterEach(async () => {
@@ -67,7 +61,10 @@ describe('GET /auth/login/success', () => {
     });
 
     const agent = request.agent(app);
-    await agent.get(`/test/login-as/${user._id}`).expect(200);
+    await agent
+      .post('/test/auth/login')
+      .send({ userId: user._id })
+      .expect(200);
 
     const res = await agent.get('/auth/login/success');
     expect(res.status).toBe(200);
@@ -97,11 +94,11 @@ describe('GET /auth/google', () => {
   });
 });
 
-// ── /auth/logout (GET and POST) ───────────────────────────────────────────────
+// ── POST /auth/logout ─────────────────────────────────────────────────────────
 
 describe('/auth/logout', () => {
-  test('clears the session cookie and redirects to the login page on GET', async () => {
-    const res = await request(app).get('/auth/logout');
+  test('clears the session cookie and redirects to the login page on POST', async () => {
+    const res = await request(app).post('/auth/logout');
 
     expect(res.status).toBe(302);
     expect(res.headers.location).toMatch(/\/login$/);
@@ -118,7 +115,10 @@ describe('/auth/logout', () => {
       positions: ['member'],
     });
     const agent = request.agent(app);
-    await agent.get(`/test/login-as/${user._id}`).expect(200);
+    await agent
+      .post('/test/auth/login')
+      .send({ userId: user._id })
+      .expect(200);
 
     const res = await agent
       .post('/auth/logout')
@@ -158,7 +158,10 @@ describe.skip('Security: unauthenticated requests', () => {
 
     const agent = request.agent(app);
     // Establish active session
-    await agent.get(`/test/login-as/${user._id}`).expect(200);
+    await agent
+      .post('/test/auth/login')
+      .send({ userId: user._id })
+      .expect(200);
 
     // Verify session is active
     const activeRes = await agent.get('/auth/login/success');
@@ -166,7 +169,7 @@ describe.skip('Security: unauthenticated requests', () => {
     expect(activeRes.body.success).toBe(true);
 
     // Perform logout
-    const logoutRes = await agent.get('/auth/logout');
+    const logoutRes = await agent.post('/auth/logout');
     expect(logoutRes.status).toBe(302);
 
     // Verify subsequent request with agent or expired session is rejected with 401

@@ -1,11 +1,10 @@
 require("dotenv").config();
 
-const mongoose = require("mongoose");
 const { createApp } = require("./app");
+const { connectDatabase } = require("./src/config/database");
 const dns = require("dns");
 
 const PORT = process.env.PORT || 4000;
-const MONGODB_URI = process.env.MONGODB_URI || process.env.MONGO_URI;
 const app = createApp();
 
 // MongoDB connection
@@ -20,11 +19,7 @@ if (process.env.USE_CUSTOM_DNS === 'true') {
 
 const startServer = async () => {
   try {
-    if (!MONGODB_URI) {
-      throw new Error("MONGODB_URI is not configured");
-    }
-
-    await mongoose.connect(MONGODB_URI);
+    await connectDatabase();
     console.log("connected to database");
 
     app.listen(PORT, "0.0.0.0", () => {
