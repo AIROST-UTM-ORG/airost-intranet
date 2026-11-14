@@ -6,10 +6,10 @@
   "scripts": {
     "start": "node server.js",
     "dev": "cross-env NODE_ENV=development nodemon server.js",
-    "test": "cross-env NODE_ENV=test jest --runInBand",
-    "test:unit": "cross-env NODE_ENV=test jest tests/unit --runInBand",
-    "test:integration": "cross-env NODE_ENV=test jest tests/integration --runInBand",
-    "test:coverage": "cross-env NODE_ENV=test jest --coverage --runInBand"
+    "test": "cross-env NODE_ENV=test MONGOMS_VERSION=7.0.14 jest --runInBand",
+    "test:unit": "cross-env NODE_ENV=test MONGOMS_VERSION=7.0.14 jest tests/unit --runInBand",
+    "test:integration": "cross-env NODE_ENV=test MONGOMS_VERSION=7.0.14 jest tests/integration --runInBand",
+    "test:coverage": "cross-env NODE_ENV=test MONGOMS_VERSION=7.0.14 jest --coverage --runInBand"
   },
   "keywords": [],
   "author": "",

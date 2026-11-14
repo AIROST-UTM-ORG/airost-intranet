@@ -36,7 +36,7 @@ const sampleTask = {
 
 // ── trackTaskCreation ─────────────────────────────────────────────────────────
 
-describe.skip('trackTaskCreation', () => {
+describe('trackTaskCreation', () => {
   test('creates a TaskHistory record with changeType=created', async () => {
     await trackTaskCreation(sampleTask, 1, 'alice');
 
@@ -50,7 +50,7 @@ describe.skip('trackTaskCreation', () => {
 
 // ── trackTaskChanges ──────────────────────────────────────────────────────────
 
-describe.skip('trackTaskChanges', () => {
+describe('trackTaskChanges', () => {
   test('creates no history entries when tasks are identical', async () => {
     await trackTaskChanges(sampleTask, sampleTask, 1, 'alice');
     const records = await TaskHistory.find({});
@@ -102,7 +102,7 @@ describe.skip('trackTaskChanges', () => {
 
 // ── getTaskHistory ────────────────────────────────────────────────────────────
 
-describe.skip('getTaskHistory', () => {
+describe('getTaskHistory', () => {
   test('returns history entries sorted by timestamp descending', async () => {
     await trackTaskCreation(sampleTask, 1, 'alice');
     const updatedTask = { ...sampleTask, title: 'New Title' };
@@ -122,7 +122,7 @@ describe.skip('getTaskHistory', () => {
 
 // ── getProjectHistory ─────────────────────────────────────────────────────────
 
-describe.skip('getProjectHistory', () => {
+describe('getProjectHistory', () => {
   test('returns all history records for a given projectId', async () => {
     await trackTaskCreation(sampleTask, 42, 'alice');
     await trackTaskCreation({ ...sampleTask, task_id: 'task-002' }, 42, 'bob');
