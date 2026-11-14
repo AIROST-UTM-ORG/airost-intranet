@@ -156,6 +156,10 @@ describe('POST /airost/doc', () => {
       .send(validDocPayload());
     expect(res.status).toBe(403);
     expect(res.body.error.code).toBe('FORBIDDEN');
+
+    const listRes = await memberAgent.get('/airost/doc');
+    expect(listRes.status).toBe(200);
+    expect(listRes.body).toHaveLength(0);
   });
 });
 
@@ -197,6 +201,10 @@ describe('PATCH /airost/doc/:id', () => {
       .send({ title: 'Unauthorized Member Update' });
     expect(res.status).toBe(403);
     expect(res.body.error.code).toBe('FORBIDDEN');
+
+    const getRes = await memberAgent.get(`/airost/doc/${id}`);
+    expect(getRes.status).toBe(200);
+    expect(getRes.body.title).toBe(validDocPayload().title);
   });
 });
 
@@ -234,5 +242,9 @@ describe('DELETE /airost/doc/:id', () => {
     const res = await memberAgent.delete(`/airost/doc/${id}`);
     expect(res.status).toBe(403);
     expect(res.body.error.code).toBe('FORBIDDEN');
+
+    const getRes = await memberAgent.get(`/airost/doc/${id}`);
+    expect(getRes.status).toBe(200);
+    expect(getRes.body._id).toBe(id);
   });
 });
