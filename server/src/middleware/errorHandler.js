@@ -13,7 +13,6 @@ const globalErrorHandler = (error, req, res, next) => {
     : Number.isInteger(error.statusCode) ? error.statusCode : INTERNAL_SERVER_ERROR;
   let code = typeof error.code === 'string' ? error.code : undefined;
   let message = error.message;
-  const details = error.details;
 
   if (error.name === 'ValidationError') {
     status = BAD_REQUEST;
@@ -34,6 +33,9 @@ const globalErrorHandler = (error, req, res, next) => {
   }
 
   if (status >= INTERNAL_SERVER_ERROR) console.error(error);
+  const details = status === INTERNAL_SERVER_ERROR && !(error instanceof AppError)
+    ? undefined
+    : error.details;
   return sendError(res, status, code, message, details);
 };
 
