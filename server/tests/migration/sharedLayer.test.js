@@ -179,14 +179,29 @@ describe('error middleware contracts', () => {
 });
 
 describe('authentication and authorization middleware', () => {
-  test('authenticate accepts Passport authentication and the user fallback', () => {
+  test('authenticate accepts Passport authentication with a user and the user fallback', () => {
     const next = jest.fn();
-    authenticate({ isAuthenticated: () => true }, {}, next);
+    const isAuthenticated = jest.fn(() => true);
+    authenticate({ isAuthenticated, user: { id: 'passport-member' } }, {}, next);
+    expect(isAuthenticated).toHaveBeenCalledTimes(1);
     expect(next).toHaveBeenCalledWith();
 
     const fallbackNext = jest.fn();
     authenticate({ user: { id: 'member' } }, {}, fallbackNext);
     expect(fallbackNext).toHaveBeenCalledWith();
+  });
+
+  test('authenticate rejects a Passport-authenticated request without req.user', () => {
+    const next = jest.fn();
+    const isAuthenticated = jest.fn(() => true);
+    authenticate({ isAuthenticated }, {}, next);
+
+    expect(isAuthenticated).toHaveBeenCalledTimes(1);
+    expect(next.mock.calls[0][0]).toMatchObject({
+      status: 401,
+      code: 'UNAUTHENTICATED',
+      message: 'Authentication is required',
+    });
   });
 
   test('authenticate rejects unauthenticated requests with 401', () => {
