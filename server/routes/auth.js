@@ -124,7 +124,6 @@ const handleLogout = (req, res) => {
   }
 };
 
-router.get('/logout', handleLogout);
 router.post('/logout', handleLogout);
 
 router.get('/google', (req, res, next) => {
