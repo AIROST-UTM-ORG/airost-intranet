@@ -35,6 +35,9 @@ describe('BurnBarrel', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     setCards = jest.fn();
+    mockMutate.mockImplementation((updatedCards, callbacks) => {
+      callbacks?.onSuccess?.();
+    });
     usePBMRefresh.mockReturnValue({
       mutate: mockMutate,
     });
@@ -108,7 +111,7 @@ describe('BurnBarrel', () => {
     expect(setCards).toHaveBeenCalledWith(expectedFiltered);
 
     expect(mockMutate).toHaveBeenCalledTimes(1);
-    expect(mockMutate).toHaveBeenCalledWith(expectedFiltered);
+    expect(mockMutate).toHaveBeenCalledWith(expectedFiltered, expect.any(Object));
 
     expect(
       await screen.findByText('Task deleted successfully')
@@ -139,7 +142,7 @@ describe('BurnBarrel', () => {
 
     const expectedFiltered = [{ _id: 'card-1', title: 'Task 1', createdBy: 'creator@example.com' }];
     expect(setCards).toHaveBeenCalledWith(expectedFiltered);
-    expect(mockMutate).toHaveBeenCalledWith(expectedFiltered);
+    expect(mockMutate).toHaveBeenCalledWith(expectedFiltered, expect.any(Object));
   });
 
   test('allows admin with legacy string position to delete tasks created by others', async () => {
@@ -166,7 +169,7 @@ describe('BurnBarrel', () => {
 
     const expectedFiltered = [{ _id: 'card-1', title: 'Task 1', createdBy: 'creator@example.com' }];
     expect(setCards).toHaveBeenCalledWith(expectedFiltered);
-    expect(mockMutate).toHaveBeenCalledWith(expectedFiltered);
+    expect(mockMutate).toHaveBeenCalledWith(expectedFiltered, expect.any(Object));
   });
 
   test('cancelling delete in modal closes dialog without calling mutation or setCards', async () => {
@@ -197,5 +200,40 @@ describe('BurnBarrel', () => {
 
     expect(setCards).not.toHaveBeenCalled();
     expect(mockMutate).not.toHaveBeenCalled();
+  });
+
+  test('does not update local cards or show success toast if mutation fails', async () => {
+    mockMutate.mockImplementation((updatedCards, callbacks) => {
+      callbacks?.onError?.(new Error('Network error'));
+    });
+
+    const creatorUser = {
+      email: 'creator@example.com',
+      positions: ['member'],
+    };
+
+    const { container } = render(
+      <BurnBarrel
+        setCards={setCards}
+        cards={cards}
+        projectId="42"
+        user={creatorUser}
+      />
+    );
+
+    triggerDrop(container, 'card-1');
+
+    expect(await screen.findByText('Confirm Delete')).toBeInTheDocument();
+
+    const deleteButton = screen.getByRole('button', { name: 'Delete' });
+    fireEvent.click(deleteButton);
+
+    const expectedFiltered = [{ _id: 'card-2', title: 'Task 2', createdBy: 'other@example.com' }];
+    expect(mockMutate).toHaveBeenCalledWith(expectedFiltered, expect.any(Object));
+    expect(setCards).not.toHaveBeenCalled();
+    expect(
+      await screen.findByText('Failed to delete task. Please try again.')
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Task deleted successfully')).not.toBeInTheDocument();
   });
 });

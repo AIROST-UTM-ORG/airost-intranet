@@ -46,11 +46,18 @@ const BurnBarrel = ({ setCards, cards, projectId, user }) => {
     const confirmDelete = () => {
         if (cardToDelete) {
             const updatedCards = cards.filter((c) => c._id !== cardToDelete._id);
-            setCards(updatedCards);
-            projectBoardMutation.mutate(updatedCards);
-            successDeleteNotification();
             setConfirmDeleteModalOpen(false);
-            setCardToDelete(null);
+            projectBoardMutation.mutate(updatedCards, {
+                onSuccess: () => {
+                    setCards(updatedCards);
+                    successDeleteNotification();
+                    setCardToDelete(null);
+                },
+                onError: () => {
+                    failDeleteNotification();
+                    setCardToDelete(null);
+                },
+            });
         }
     };
 
@@ -63,6 +70,13 @@ const BurnBarrel = ({ setCards, cards, projectId, user }) => {
         messageApi.open({
           type: 'error',
           content: 'Only creator or admin can delete this',
+        });
+    };
+
+    const failDeleteNotification = () => {
+        messageApi.open({
+          type: 'error',
+          content: 'Failed to delete task. Please try again.',
         });
     };
 
