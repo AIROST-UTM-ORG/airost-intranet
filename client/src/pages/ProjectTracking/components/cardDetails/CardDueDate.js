@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import {setDate } from "../store/ReduxStore";
+import {setDate } from "app/store";
 import Datepicker from "react-tailwindcss-datepicker";
 import moment from "moment";
 

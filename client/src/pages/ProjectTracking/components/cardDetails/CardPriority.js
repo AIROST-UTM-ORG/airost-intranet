@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { setValue,setPriority } from "../store/ReduxStore";
+import { setValue,setPriority } from "app/store";
 import consts from "../../../../consts/consts";
 
 export default function CardPriority({value,id}){
