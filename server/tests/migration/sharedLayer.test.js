@@ -54,6 +54,7 @@ describe('AppError and API response helpers', () => {
     const detailed = new AppError(409, 'CONFLICT', 'Already exists', { field: 'email' }, false);
     expect(detailed.details).toEqual({ field: 'email' });
     expect(detailed.isOperational).toBe(false);
+    expect(detailed.stack).toContain('AppError: Already exists');
   });
 
   test('sendSuccess includes metadata only when provided and returns the response', () => {
@@ -65,6 +66,10 @@ describe('AppError and API response helpers', () => {
     sendSuccess(res, [], HTTP_STATUS.CREATED, { count: 0 });
     expect(res.statusCode).toBe(201);
     expect(res.body).toEqual({ success: true, data: [], meta: { count: 0 } });
+
+    sendSuccess(res, null, HTTP_STATUS.NO_CONTENT, null);
+    expect(res.statusCode).toBe(HTTP_STATUS.NO_CONTENT);
+    expect(res.body).toEqual({ success: true, data: null, meta: null });
   });
 
   test('sendError includes useful details but omits null and undefined details', () => {
@@ -92,6 +97,13 @@ describe('error middleware contracts', () => {
     });
   });
 
+  test('globalErrorHandler preserves explicit status and string code on non-500 errors', () => {
+    const res = response();
+    globalErrorHandler({ status: 422, statusCode: 400, code: 'UNPROCESSABLE', message: 'Invalid data' }, {}, res, jest.fn());
+    expect(res.statusCode).toBe(422);
+    expect(res.body.error).toEqual({ code: 'UNPROCESSABLE', message: 'Invalid data' });
+  });
+
   test('globalErrorHandler masks unknown errors and does not expose internal details', () => {
     const res = response();
     const next = jest.fn();
@@ -109,17 +121,39 @@ describe('error middleware contracts', () => {
     }
   });
 
+  test('defaults invalid status values to a masked 500 response', () => {
+    const res = response();
+    const log = jest.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      globalErrorHandler({ status: '400', statusCode: NaN, code: 9, message: 'private message' }, {}, res, jest.fn());
+      expect(res.statusCode).toBe(500);
+      expect(res.body).toEqual({
+        success: false,
+        error: { code: 'INTERNAL_SERVER_ERROR', message: 'An unexpected error occurred' },
+      });
+      expect(log).toHaveBeenCalledTimes(1);
+    } finally {
+      log.mockRestore();
+    }
+  });
+
   test.each([
-    [{ name: 'ValidationError', message: 'Invalid field' }, 400, 'VALIDATION_ERROR'],
-    [{ name: 'CastError', path: '_id', value: 'bad-id', message: 'Cast failed' }, 400, 'INVALID_ID'],
-    [{ code: 11000, message: 'E11000 duplicate key' }, 409, 'DUPLICATE_KEY'],
-  ])('maps database error %# to an expected client response', (error, status, code) => {
+    [{ name: 'ValidationError', message: 'Invalid field', errors: { name: {} } }, 400, 'VALIDATION_ERROR', 'Invalid field'],
+    [{ name: 'CastError', path: '_id', value: 'bad-id', message: 'Cast failed' }, 400, 'INVALID_ID', 'Invalid _id: bad-id'],
+    [{ code: 11000, message: 'E11000 duplicate key' }, 409, 'DUPLICATE_KEY', 'Resource already exists'],
+  ])('maps database error %# to an expected client response', (error, status, code, message) => {
     const res = response();
     globalErrorHandler(error, {}, res, jest.fn());
     expect(res.statusCode).toBe(status);
-    expect(res.body.success).toBe(false);
-    expect(res.body.error.code).toBe(code);
+    expect(res.body).toEqual({ success: false, error: { code, message } });
     expect(typeof res.body.error.code).toBe('string');
+  });
+
+  test('uses statusCode when status is absent and fallback codes for non-string codes', () => {
+    const res = response();
+    globalErrorHandler({ statusCode: 418, code: 17, message: 'Teapot' }, {}, res, jest.fn());
+    expect(res.statusCode).toBe(418);
+    expect(res.body.error).toEqual({ code: 'REQUEST_ERROR', message: 'Teapot' });
   });
 
   test('passes errors onward after headers have been sent', () => {
@@ -157,6 +191,14 @@ describe('authentication and authorization middleware', () => {
     expect(next.mock.calls[0][0]).toMatchObject({
       status: 401, code: 'UNAUTHENTICATED', message: 'Authentication is required',
     });
+
+    const noPassportNext = jest.fn();
+    authenticate({}, {}, noPassportNext);
+    expect(noPassportNext.mock.calls[0][0]).toMatchObject({ status: 401, code: 'UNAUTHENTICATED' });
+
+    const falsePassportNext = jest.fn();
+    authenticate({ isAuthenticated: () => false, user: { id: 'ignored' } }, {}, falsePassportNext);
+    expect(falsePassportNext.mock.calls[0][0].status).toBe(401);
   });
 
   test('requireAdmin accepts the canonical User positions shape and case variants', () => {
@@ -169,6 +211,10 @@ describe('authentication and authorization middleware', () => {
     const aliasedAdmin = new User({ name: 'Aliased Admin', position: ['ADMIN'] });
     requireAdmin({ user: aliasedAdmin }, {}, singularNext);
     expect(singularNext).toHaveBeenCalledWith();
+
+    const legacyAliasNext = jest.fn();
+    requireAdmin({ user: { position: 'ADMIN' } }, {}, legacyAliasNext);
+    expect(legacyAliasNext).toHaveBeenCalledWith();
   });
 
   test('requireRole distinguishes missing identity from insufficient role', () => {
@@ -193,6 +239,12 @@ describe('authentication and authorization middleware', () => {
     const next = jest.fn();
     const user = new User({ name: 'Super Admin User', positions: ['superadmin'] });
     requireAdmin({ user }, {}, next);
+    expect(next.mock.calls[0][0].status).toBe(403);
+  });
+
+  test('requireRole rejects empty role lists and ignores non-string positions', () => {
+    const next = jest.fn();
+    requireRole()({ user: new User({ name: 'No Roles', positions: [null, 42] }) }, {}, next);
     expect(next.mock.calls[0][0].status).toBe(403);
   });
 });
@@ -224,6 +276,21 @@ describe('request validation middleware', () => {
     expect(next.mock.calls[0][0]).toMatchObject({ status: 400, code: 'VALIDATION_ERROR', message: 'bad input' });
   });
 
+  test('handles synchronous validator throws and promise rejections', async () => {
+    for (const validator of [
+      () => { throw new Error('sync invalid'); },
+      () => Promise.reject(new Error('async invalid')),
+      () => { throw new Error(); },
+    ]) {
+      const next = jest.fn();
+      await validate(validator)({}, {}, next);
+      expect(next.mock.calls[0][0]).toMatchObject({ status: 400, code: 'VALIDATION_ERROR' });
+    }
+    const fallbackNext = jest.fn();
+    await validate(() => { throw new Error(); })({}, {}, fallbackNext);
+    expect(fallbackNext.mock.calls[0][0].message).toBe('Request validation failed');
+  });
+
   test('preserves AppErrors and supports validators that return data directly', async () => {
     const expected = new AppError(422, 'CUSTOM', 'Custom validation');
     const appErrorNext = jest.fn();
@@ -235,17 +302,24 @@ describe('request validation middleware', () => {
     await validate(() => ({ field: 'value' }))(req, {}, next);
     expect(req.sanitizedData).toEqual({ field: 'value' });
     expect(next).toHaveBeenCalledWith();
+
+    const noResultReq = {};
+    const noResultNext = jest.fn();
+    await validate(() => undefined)(noResultReq, {}, noResultNext);
+    expect(noResultReq).not.toHaveProperty('sanitizedData');
+    expect(noResultNext).toHaveBeenCalledWith();
   });
 });
 
 describe('shared utility and constants behavior', () => {
   test('date helpers reject optional empty values and invalid dates', () => {
-    for (const value of [null, undefined, '', 'not-a-date']) {
+    for (const value of [null, undefined, '', 'not-a-date', new Date(Number.NaN)]) {
       expect(isValidDate(value)).toBe(false);
       expect(toISOString(value)).toBeNull();
     }
     expect(isValidDate('2024-01-02')).toBe(true);
     expect(toISOString(new Date('2024-01-02T00:00:00.000Z'))).toBe('2024-01-02T00:00:00.000Z');
+    expect(toISOString(0)).toBe('1970-01-01T00:00:00.000Z');
   });
 
   test('date boundary helpers preserve the day while setting local boundaries', () => {
@@ -254,18 +328,33 @@ describe('shared utility and constants behavior', () => {
     expect(endOfDay(date).getTime()).toBe(new Date(2024, 3, 5, 23, 59, 59, 999).getTime());
   });
 
+  test('date boundary helpers default to the current day', () => {
+    jest.useFakeTimers().setSystemTime(new Date(2024, 3, 5, 12, 34, 56, 789));
+    try {
+      expect(startOfDay().getTime()).toBe(new Date(2024, 3, 5, 0, 0, 0, 0).getTime());
+      expect(endOfDay().getTime()).toBe(new Date(2024, 3, 5, 23, 59, 59, 999).getTime());
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   test('object ID validation accepts canonical IDs and rejects malformed values', () => {
     expect(isValidObjectId('507f1f77bcf86cd799439011')).toBe(true);
     expect(isValidObjectId('507F1F77BCF86CD799439011')).toBe(true);
     expect(isValidObjectId('not-an-id')).toBe(false);
     expect(isValidObjectId(507)).toBe(false);
+    expect(isValidObjectId(null)).toBe(false);
+    expect(isValidObjectId('507f1f77bcf86cd79943901Z')).toBe(false);
   });
 
   test('string normalizers escape regex syntax and reject non-string inputs safely', () => {
-    expect(escapeRegex('a.b[c]')).toBe('a\\.b\\[c\\]');
+    const regexCharacters = '.*+?^${}()|[]\\';
+    expect(new RegExp(escapeRegex(regexCharacters)).test(regexCharacters)).toBe(true);
+    expect(escapeRegex()).toBe('');
     expect(escapeRegex(null)).toBe('');
     expect(normalizeWhitespace('  one\n  two  ')).toBe('one two');
     expect(normalizeWhitespace({ value: 1 })).toBe('');
+    expect(normalizeWhitespace()).toBe('');
   });
 
   test('role and status constants are stable and immutable', () => {
@@ -280,6 +369,13 @@ describe('shared utility and constants behavior', () => {
 });
 
 describe('asyncHandler', () => {
+  test('returns the successful handler result without calling next', async () => {
+    const next = jest.fn();
+    const result = await asyncHandler(async () => 'handled')({}, {}, next);
+    expect(result).toBe('handled');
+    expect(next).not.toHaveBeenCalled();
+  });
+
   test('forwards asynchronous failures to Express error middleware', async () => {
     const error = new Error('async failure');
     const next = jest.fn();
