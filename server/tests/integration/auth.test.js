@@ -158,7 +158,6 @@ describe.skip('Security: unauthenticated requests', () => {
 
     const agent = request.agent(app);
     // Establish active session
-    // await agent.get(`/test/login-as/${user._id}`).expect(200);
     await agent
       .post('/test/auth/login')
       .send({ userId: user._id })
