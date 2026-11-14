@@ -9,7 +9,7 @@ const { UNAUTHORIZED } = require('../shared/constants/httpStatus');
 
 const authenticate = (req, res, next) => {
   const authenticated = typeof req.isAuthenticated === 'function'
-    ? req.isAuthenticated()
+    ? req.isAuthenticated() && Boolean(req.user)
     : Boolean(req.user);
 
   if (authenticated) return next();
