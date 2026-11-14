@@ -7,8 +7,10 @@ const isValidObjectId = (value) =>
   typeof value === 'string' && mongoose.Types.ObjectId.isValid(value) &&
   String(new mongoose.Types.ObjectId(value)) === value.toLowerCase();
 
-const escapeRegex = (value = '') => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const escapeRegex = (value = '') =>
+  (typeof value === 'string' ? value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') : '');
 
-const normalizeWhitespace = (value = '') => String(value).trim().replace(/\s+/g, ' ');
+const normalizeWhitespace = (value = '') =>
+  (typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : '');
 
 module.exports = { isValidObjectId, escapeRegex, normalizeWhitespace };
