@@ -43,10 +43,14 @@ beforeEach(async () => {
   });
 
   adminAgent = request.agent(app);
-  await adminAgent.post('/test/auth/login').send({ userId: adminUser._id });
+  const adminLogin = await adminAgent.post('/test/auth/login').send({ userId: adminUser._id });
+  expect(adminLogin.status).toBe(200);
+  expect(adminLogin.body.success).toBe(true);
 
   memberAgent = request.agent(app);
-  await memberAgent.post('/test/auth/login').send({ userId: memberUser._id });
+  const memberLogin = await memberAgent.post('/test/auth/login').send({ userId: memberUser._id });
+  expect(memberLogin.status).toBe(200);
+  expect(memberLogin.body.success).toBe(true);
 });
 
 afterEach(async () => {
