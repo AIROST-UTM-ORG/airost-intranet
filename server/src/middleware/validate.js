@@ -4,9 +4,9 @@
 const AppError = require('../shared/errors/AppError');
 const { BAD_REQUEST } = require('../shared/constants/httpStatus');
 
-const validate = (validator) => (req, res, next) => {
+const validate = (validator) => async (req, res, next) => {
   try {
-    const result = validator(req);
+    const result = await validator(req);
     if (result === false || result?.valid === false) {
       const message = result?.message || 'Request validation failed';
       return next(new AppError(BAD_REQUEST, 'VALIDATION_ERROR', message, result?.details));
