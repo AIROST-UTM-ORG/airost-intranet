@@ -5,6 +5,7 @@
  */
 
 const AppError = require('../../src/shared/errors/AppError');
+const User = require('../../models/User');
 const { sendSuccess, sendError } = require('../../src/shared/utils/apiResponse');
 const { globalErrorHandler } = require('../../src/middleware/errorHandler');
 const { notFoundHandler } = require('../../src/middleware/notFound');
@@ -160,11 +161,13 @@ describe('authentication and authorization middleware', () => {
 
   test('requireAdmin accepts the canonical User positions shape and case variants', () => {
     const next = jest.fn();
-    requireAdmin({ user: { positions: ['Admin'] } }, {}, next);
+    const admin = new User({ name: 'Admin User', positions: ['Admin'] });
+    requireAdmin({ user: admin }, {}, next);
     expect(next).toHaveBeenCalledWith();
 
     const singularNext = jest.fn();
-    requireAdmin({ user: { position: 'ADMIN' } }, {}, singularNext);
+    const aliasedAdmin = new User({ name: 'Aliased Admin', position: ['ADMIN'] });
+    requireAdmin({ user: aliasedAdmin }, {}, singularNext);
     expect(singularNext).toHaveBeenCalledWith();
   });
 
@@ -174,14 +177,23 @@ describe('authentication and authorization middleware', () => {
     expect(unauthenticatedNext.mock.calls[0][0].status).toBe(401);
 
     const forbiddenNext = jest.fn();
-    requireAdmin({ user: { positions: ['member'] } }, {}, forbiddenNext);
+    const member = new User({ name: 'Member User', positions: ['member'] });
+    requireAdmin({ user: member }, {}, forbiddenNext);
     expect(forbiddenNext.mock.calls[0][0].status).toBe(403);
   });
 
-  test('requireRole handles multiple requested roles and legacy role properties', () => {
+  test('requireRole handles multiple requested roles from canonical positions', () => {
     const next = jest.fn();
-    requireRole('advisor', 'member')({ user: { platformRole: 'MEMBER' } }, {}, next);
+    const member = new User({ name: 'Member User', positions: ['MEMBER'] });
+    requireRole('advisor', 'member')({ user: member }, {}, next);
     expect(next).toHaveBeenCalledWith();
+  });
+
+  test('requireAdmin does not treat a role containing admin as the admin role', () => {
+    const next = jest.fn();
+    const user = new User({ name: 'Super Admin User', positions: ['superadmin'] });
+    requireAdmin({ user }, {}, next);
+    expect(next.mock.calls[0][0].status).toBe(403);
   });
 });
 
