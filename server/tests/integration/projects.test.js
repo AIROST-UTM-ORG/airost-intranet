@@ -70,6 +70,16 @@ describe('GET /projects', () => {
     expect(res.status).toBe(200);
     expect(res.body.length).toBe(2);
   });
+
+  test('returns 500 when Project.find throws an error', async () => {
+    const findSpy = jest.spyOn(Project, 'find').mockRejectedValueOnce(new Error('Database query failed'));
+
+    const res = await request(app).get('/projects');
+    expect(res.status).toBe(500);
+    expect(res.body).toEqual({ error: 'Database query failed' });
+
+    findSpy.mockRestore();
+  });
 });
 
 // ── POST /projects ────────────────────────────────────────────────────────────
@@ -103,6 +113,26 @@ describe('POST /projects', () => {
     });
     expect(res.status).toBe(201);
     expect(res.body.projectId).toBe(6);
+  });
+
+  test('rolls back project creation and returns 500 when ProjectBoard.create throws an error', async () => {
+    const createBoardSpy = jest.spyOn(ProjectBoard, 'create').mockRejectedValueOnce(new Error('Board creation failed'));
+
+    const payload = {
+      title: 'Rollback Project',
+      description: 'Test rollback description',
+      lead: 'Lead Dev',
+    };
+
+    const res = await request(app).post('/projects').send(payload);
+    expect(res.status).toBe(500);
+    expect(res.body).toEqual({ error: 'Board creation failed' });
+
+    // Confirm project was rolled back and not found in database
+    const project = await Project.findOne({ title: 'Rollback Project' });
+    expect(project).toBeNull();
+
+    createBoardSpy.mockRestore();
   });
 });
 

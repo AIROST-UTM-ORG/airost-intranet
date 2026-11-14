@@ -7,7 +7,7 @@ const getProjects = async (req, res) => {
         let projects = await Project.find()
         res.status(200).json(projects)
     } catch(error){
-        console.log(error.message)
+        res.status(500).json({ error: error.message })
     }
 }
 
@@ -20,7 +20,12 @@ const createProject = async (req, res) => {
             projectId: nextProjectId,
         };
         const savedNewProject = await Project.create(newProject);
-        await ProjectBoard.create({ ...newProject, projectId: nextProjectId });
+        try {
+            await ProjectBoard.create({ ...newProject, projectId: nextProjectId });
+        } catch (error) {
+            await Project.findByIdAndDelete(savedNewProject._id);
+            return res.status(500).json({ error: error.message });
+        }
         res.status(201).json(savedNewProject);
     } catch (error) {
         res.status(500).json({ error: error.message });
