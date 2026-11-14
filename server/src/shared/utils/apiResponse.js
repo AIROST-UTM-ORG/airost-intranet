@@ -4,6 +4,7 @@
 const sendSuccess = (res, data, status = 200, meta) => {
   const payload = { success: true, data };
   if (meta !== undefined) payload.meta = meta;
+  if (status === 204) return res.status(204).end();
   return res.status(status).json(payload);
 };
 
