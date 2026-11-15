@@ -54,7 +54,7 @@ const seedBoard = (overrides = {}) =>
 
 // ── GET /projects ─────────────────────────────────────────────────────────────
 
-describe.skip('GET /projects', () => {
+describe('GET /projects', () => {
   test('returns 200 and an empty array when no projects exist', async () => {
     const res = await request(app).get('/projects');
     expect(res.status).toBe(200);
@@ -70,11 +70,21 @@ describe.skip('GET /projects', () => {
     expect(res.status).toBe(200);
     expect(res.body.length).toBe(2);
   });
+
+  test('returns 500 when Project.find throws an error', async () => {
+    const findSpy = jest.spyOn(Project, 'find').mockRejectedValueOnce(new Error('Database query failed'));
+
+    const res = await request(app).get('/projects');
+    expect(res.status).toBe(500);
+    expect(res.body).toEqual({ error: 'Database query failed' });
+
+    findSpy.mockRestore();
+  });
 });
 
 // ── POST /projects ────────────────────────────────────────────────────────────
 
-describe.skip('POST /projects', () => {
+describe('POST /projects', () => {
   test('creates the first project with projectId=1 and creates an empty board', async () => {
     const payload = {
       title: 'First Project',
@@ -104,11 +114,31 @@ describe.skip('POST /projects', () => {
     expect(res.status).toBe(201);
     expect(res.body.projectId).toBe(6);
   });
+
+  test('rolls back project creation and returns 500 when ProjectBoard.create throws an error', async () => {
+    const createBoardSpy = jest.spyOn(ProjectBoard, 'create').mockRejectedValueOnce(new Error('Board creation failed'));
+
+    const payload = {
+      title: 'Rollback Project',
+      description: 'Test rollback description',
+      lead: 'Lead Dev',
+    };
+
+    const res = await request(app).post('/projects').send(payload);
+    expect(res.status).toBe(500);
+    expect(res.body).toEqual({ error: 'Board creation failed' });
+
+    // Confirm project was rolled back and not found in database
+    const project = await Project.findOne({ title: 'Rollback Project' });
+    expect(project).toBeNull();
+
+    createBoardSpy.mockRestore();
+  });
 });
 
 // ── DELETE /projects/:id ──────────────────────────────────────────────────────
 
-describe.skip('DELETE /projects/:id', () => {
+describe('DELETE /projects/:id', () => {
   test('deletes a project and its board, returns 200', async () => {
     await seedProject({ projectId: 10 });
     await seedBoard({ projectId: 10 });
@@ -130,7 +160,7 @@ describe.skip('DELETE /projects/:id', () => {
 
 // ── GET /projects/tracking/:uid ───────────────────────────────────────────────
 
-describe.skip('GET /projects/tracking/:uid', () => {
+describe('GET /projects/tracking/:uid', () => {
   test('returns the project board for a valid numeric projectId', async () => {
     await seedBoard({ projectId: 5, tasks: [] });
 
@@ -154,7 +184,7 @@ describe.skip('GET /projects/tracking/:uid', () => {
 
 // ── POST /projects/tracking ───────────────────────────────────────────────────
 
-describe.skip('POST /projects/tracking', () => {
+describe('POST /projects/tracking', () => {
   test('creates a new project board when none exists', async () => {
     const res = await request(app)
       .post('/projects/tracking')
@@ -189,7 +219,7 @@ describe.skip('POST /projects/tracking', () => {
 
 // ── PUT /projects/tracking ───────────────────────────────────────────────────
 
-describe.skip('PUT /projects/tracking', () => {
+describe('PUT /projects/tracking', () => {
   test('refreshes the tasks of an existing project board and returns 200', async () => {
     await seedBoard({ projectId: 12, tasks: [] });
 
@@ -224,7 +254,7 @@ describe.skip('PUT /projects/tracking', () => {
 
 // ── PUT /projects/update ──────────────────────────────────────────────────────
 
-describe.skip('PUT /projects/update', () => {
+describe('PUT /projects/update', () => {
   test('updates a specific task within a project board', async () => {
     const task = {
       title: 'Original Title',
@@ -255,7 +285,7 @@ describe.skip('PUT /projects/update', () => {
 
 // ── GET /projects/tasks/:taskId/history ───────────────────────────────────────
 
-describe.skip('GET /projects/tasks/:taskId/history', () => {
+describe('GET /projects/tasks/:taskId/history', () => {
   test('returns 200 and an empty array when no history exists', async () => {
     const res = await request(app).get('/projects/tasks/nonexistent-task/history');
     expect(res.status).toBe(200);
@@ -290,7 +320,7 @@ describe.skip('GET /projects/tasks/:taskId/history', () => {
 
 // ── GET /projects/:projectId/history ──────────────────────────────────────────
 
-describe.skip('GET /projects/:projectId/history', () => {
+describe('GET /projects/:projectId/history', () => {
   test('returns 200 and an empty array when no history exists for project', async () => {
     const res = await request(app).get('/projects/999/history');
     expect(res.status).toBe(200);

@@ -49,9 +49,8 @@ GitHub does not automatically label issues or pull requests. When creating issue
 
 ### Label taxonomy
 
-1. **Phase labels (Required - exactly 1)**:
-   - `phase:2-delivery`: Active delivery items committed to Phase 2.
-   - `phase:3-architecture`: Future Phase 3 architecture restructuring and platform evolution.
+1. **Phase labels (Required, exactly 1)**:
+   - `phase:<phase-name>`: Milestone phase for the item, such as `phase:2-delivery` or `phase:3-architecture`. See Project #6 for current phases.
 
 2. **Module labels (Required - at least 1)**:
    - `module:auth`: Authentication, sessions, login/logout, tokens, and authorization.
@@ -124,7 +123,7 @@ Before submitting a pull request for final review, verify:
 
 - All acceptance criteria listed in the issue are met.
 - Automated tests pass locally.
-- Phase label (`phase:2-delivery`) and module label are applied.
+- Phase label (`phase:<phase-name>`) and module label are applied.
 - The item is linked to the `AIROST Intranet` project board.
 - No secrets or environment files are staged in Git.
 - The PR description follows the required format and references the target issue.

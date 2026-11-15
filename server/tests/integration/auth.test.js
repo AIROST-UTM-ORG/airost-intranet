@@ -135,7 +135,7 @@ describe('/auth/logout', () => {
 
 // ── Security: Unauthorized access to protected-like routes ───────────────────
 
-describe.skip('Security: unauthenticated requests', () => {
+describe('Security: unauthenticated requests', () => {
   // NOTE: The current routes (admin, doc, projects, user) do NOT have
   // server-side auth middleware guards — the application relies on the
   // client-side RequireAuth component + the /auth/login/success handshake.

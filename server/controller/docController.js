@@ -651,7 +651,7 @@ const createDoc = async (req, res) => {
 
   try {
     const DOC = await docService.createLegacyDoc({ image, title, profile, author, date, type, description, content });
-    res.status(200).json(DOC);
+    res.status(201).json(DOC);
   } catch (error) {
     res.status(400).json({ error: error.message });
   }

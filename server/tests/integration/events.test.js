@@ -27,7 +27,7 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
-describe.skip('GET /calendar/upcoming-events', () => {
+describe('GET /calendar/upcoming-events', () => {
   test('returns 200 and events list on success', async () => {
     const mockEvents = [
       { id: 'event-1', summary: 'Meeting 1' },
@@ -50,8 +50,8 @@ describe.skip('GET /calendar/upcoming-events', () => {
   });
 });
 
-describe.skip('POST /calendar/add', () => {
-  test('returns 200 and result when event is inserted successfully', async () => {
+describe('POST /calendar/add', () => {
+  test('returns 201 and result when event is inserted successfully', async () => {
     insertEvent.mockResolvedValueOnce(1);
 
     const eventPayload = {
@@ -61,7 +61,7 @@ describe.skip('POST /calendar/add', () => {
     };
 
     const res = await request(app).post('/calendar/add').send(eventPayload);
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(201);
     expect(res.body).toBe(1);
     expect(insertEvent).toHaveBeenCalledWith(eventPayload);
   });
@@ -75,7 +75,7 @@ describe.skip('POST /calendar/add', () => {
   });
 });
 
-describe.skip('DELETE /calendar/:id', () => {
+describe('DELETE /calendar/:id', () => {
   test('returns 200 and result when event is deleted', async () => {
     removeEvent.mockResolvedValueOnce(1);
 

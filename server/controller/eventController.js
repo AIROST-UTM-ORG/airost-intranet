@@ -14,7 +14,7 @@ const fetchEvents = async (req, res) => {
 const addEvent = async (req, res) => {
     try {
         const event = await insertEvent(req.body);
-        res.json(event);
+        res.status(201).json(event);
       } catch (error) {
         console.error('Error adding event:', error.message);
         res.status(500).json({ error: error.message });

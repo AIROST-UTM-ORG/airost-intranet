@@ -3,7 +3,7 @@ import apiClient from '../../../shared/api/client';
 
 const usePBMRefresh = ({projectId, cards}) => {
     const queryClient = useQueryClient();
-    const updateProjectBoard = async () => {
+    const updateProjectBoard = async (updatedCards) => {
     try{
         console.log("Sending pending update data to backend");
         const response=await apiClient.put('/projects/tracking',{
@@ -19,7 +19,7 @@ const usePBMRefresh = ({projectId, cards}) => {
     return useMutation({
         mutationFn: updateProjectBoard,
         onSuccess: (data) => {
-            queryClient.invalidateQueries();
+            queryClient.invalidateQueries({ queryKey: ["projectBoard", projectId] });
             console.log("Project board updated successfully", data);
           },
           onError:(err)=>{
