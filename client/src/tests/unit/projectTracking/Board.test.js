@@ -2,17 +2,15 @@ import React from 'react';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, Link } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import axios from 'axios';
+import apiClient from '../../../shared/api/client';
 import Board from '../../../pages/ProjectTracking/components/Board';
 import { AuthContext } from '../../../context/authContext';
-import { API_URL } from '../../../config/api';
 
-jest.mock('axios', () => ({
-  get: jest.fn(),
-  post: jest.fn(),
-  put: jest.fn(),
-  delete: jest.fn(),
-  patch: jest.fn(),
+jest.mock('../../../shared/api/client', () => ({
+  __esModule: true,
+  default: {
+    get: jest.fn(),
+  },
 }));
 jest.mock('../../../hooks/useFetchUsers', () => () => ({ data: [] }));
 jest.mock('../../../pages/Projects/hooks/useGetProjects', () => () => ({
@@ -84,7 +82,7 @@ describe('Board component', () => {
       { _id: 't-2', title: 'Write unit tests', column: 'todo' },
     ];
 
-    axios.get.mockResolvedValueOnce({
+    apiClient.get.mockResolvedValueOnce({
       data: {
         projectId: '42',
         tasks: mockTasks,
@@ -93,7 +91,7 @@ describe('Board component', () => {
 
     renderBoard('42');
 
-    expect(axios.get).toHaveBeenCalledWith(`${API_URL}/api/projects/tracking/42`);
+    expect(apiClient.get).toHaveBeenCalledWith('/projects/tracking/42');
 
     // Verify tasks are synced via useEffect into cards and passed to columns
     await waitFor(() => {
@@ -116,7 +114,7 @@ describe('Board component', () => {
 
   test('propagates query errors so TanStack Query enters error state instead of swallowing them', async () => {
     const networkError = new Error('Network failure loading board');
-    axios.get.mockRejectedValueOnce(networkError);
+    apiClient.get.mockRejectedValueOnce(networkError);
 
     renderBoard('42');
 
@@ -134,7 +132,7 @@ describe('Board component', () => {
 
   test('updates cards when switching between project boards or cache updates', async () => {
     const project42Tasks = [{ _id: 't-1', title: 'Task 42', column: 'backlog' }];
-    axios.get.mockResolvedValueOnce({
+    apiClient.get.mockResolvedValueOnce({
       data: { projectId: '42', tasks: project42Tasks },
     });
 
