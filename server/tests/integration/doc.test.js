@@ -149,6 +149,18 @@ describe('POST /airost/doc', () => {
     expect(res.status).toBe(400);
     expect(res.body.emptyFields.length).toBe(8);
   });
+
+  test('rejects non-admin member from creating a doc with 403', async () => {
+    const res = await memberAgent
+      .post('/airost/doc')
+      .send(validDocPayload());
+    expect(res.status).toBe(403);
+    expect(res.body.error.code).toBe('FORBIDDEN');
+
+    const listRes = await memberAgent.get('/airost/doc');
+    expect(listRes.status).toBe(200);
+    expect(listRes.body).toHaveLength(0);
+  });
 });
 
 // ── PATCH /airost/doc/:id ─────────────────────────────────────────────────────
@@ -179,6 +191,21 @@ describe('PATCH /airost/doc/:id', () => {
     expect(res.status).toBe(200);
     expect(res.body.title).toBe('Updated Title');
   });
+
+  test('rejects non-admin member from updating a doc with 403', async () => {
+    const createRes = await adminAgent.post('/airost/doc').send(validDocPayload());
+    const id = createRes.body._id;
+
+    const res = await memberAgent
+      .patch(`/airost/doc/${id}`)
+      .send({ title: 'Unauthorized Member Update' });
+    expect(res.status).toBe(403);
+    expect(res.body.error.code).toBe('FORBIDDEN');
+
+    const getRes = await memberAgent.get(`/airost/doc/${id}`);
+    expect(getRes.status).toBe(200);
+    expect(getRes.body.title).toBe(validDocPayload().title);
+  });
 });
 
 // ── DELETE /airost/doc/:id ────────────────────────────────────────────────────
@@ -206,5 +233,18 @@ describe('DELETE /airost/doc/:id', () => {
     // Confirm it no longer exists
     const getRes = await memberAgent.get(`/airost/doc/${id}`);
     expect(getRes.status).toBe(404);
+  });
+
+  test('rejects non-admin member from deleting a doc with 403', async () => {
+    const createRes = await adminAgent.post('/airost/doc').send(validDocPayload());
+    const id = createRes.body._id;
+
+    const res = await memberAgent.delete(`/airost/doc/${id}`);
+    expect(res.status).toBe(403);
+    expect(res.body.error.code).toBe('FORBIDDEN');
+
+    const getRes = await memberAgent.get(`/airost/doc/${id}`);
+    expect(getRes.status).toBe(200);
+    expect(getRes.body._id).toBe(id);
   });
 });
