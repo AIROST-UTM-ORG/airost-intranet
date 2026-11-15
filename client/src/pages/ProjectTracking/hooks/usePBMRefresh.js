@@ -4,12 +4,12 @@ import { API_URL } from '../../../config/api';
 
 const usePBMRefresh = ({projectId, cards}) => {
     const queryClient = useQueryClient();
-    const updateProjectBoard = async () => {
+    const updateProjectBoard = async (updatedCards) => {
     try{
         console.log("Sending pending update data to backend");
         const response=await axios.put(`${API_URL}/api/projects/tracking`,{
             projectId:projectId,
-            tasks: cards, //should be only a single task (not a whole array)
+            tasks: updatedCards !== undefined ? updatedCards : cards, //should be only a single task (not a whole array)
         },{
             headers:{
                 'Content-Type': 'application/json',
@@ -24,7 +24,7 @@ const usePBMRefresh = ({projectId, cards}) => {
     return useMutation({
         mutationFn: updateProjectBoard,
         onSuccess: (data) => {
-            queryClient.invalidateQueries();
+            queryClient.invalidateQueries({ queryKey: ["projectBoard", projectId] });
             console.log("Project board updated successfully", data);
           },
           onError:(err)=>{
