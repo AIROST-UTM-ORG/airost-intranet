@@ -1,5 +1,5 @@
 import { Outlet } from "react-router-dom";
-import Sidepanel from "../Sidepanel/Sidepanel.js";
+import Sidepanel from "./Sidepanel/Sidepanel";
 import "./Layout.css";
 import useAuth from "../../hooks/useAuth";
 

@@ -5,7 +5,7 @@ import { IconContext } from "react-icons";
 import { FiUser } from "react-icons/fi";
 import "./Sidepanel.css";
 import { Sidebar } from "./Sidebar";
-import useAuth from "../../hooks/useAuth";
+import useAuth from "../../../hooks/useAuth";
 
 function Sidepanel() {
   const { user, logout } = useAuth();
