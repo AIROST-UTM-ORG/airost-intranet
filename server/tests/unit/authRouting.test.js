@@ -54,7 +54,7 @@ describe('Auth Client URL Resolution (getClientUrl)', () => {
   });
 });
 
-describe('GET /logout redirection behavior', () => {
+describe('POST /logout redirection behavior', () => {
   const originalEnv = process.env.REACT_APP_URL;
   let testApp;
 
@@ -81,14 +81,14 @@ describe('GET /logout redirection behavior', () => {
 
   test('redirects to relative "/login" when REACT_APP_URL is empty', async () => {
     process.env.REACT_APP_URL = '';
-    const res = await request(testApp).get('/auth/logout');
+    const res = await request(testApp).post('/auth/logout');
     expect(res.status).toBe(302);
     expect(res.headers.location).toBe('/login');
   });
 
   test('redirects to absolute login URL when REACT_APP_URL is set', async () => {
     process.env.REACT_APP_URL = 'http://localhost:3000';
-    const res = await request(testApp).get('/auth/logout');
+    const res = await request(testApp).post('/auth/logout');
     expect(res.status).toBe(302);
     expect(res.headers.location).toBe('http://localhost:3000/login');
   });
