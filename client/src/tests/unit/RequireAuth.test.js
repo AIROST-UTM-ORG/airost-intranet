@@ -10,8 +10,8 @@
 
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { MemoryRouter, Routes, Route } from 'react-router-dom';
-import RequireAuth from '../../components/RequireAuth';
+import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom';
+import RequireAuth from '../../app/router/RequireAuth';
 import { AuthContext } from '../../context/authContext';
 
 const LoginLocationSpy = () => {
