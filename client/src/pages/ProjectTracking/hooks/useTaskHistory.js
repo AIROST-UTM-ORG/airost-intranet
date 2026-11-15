@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import axios from 'axios';
-import { API_URL } from '../../../config/api';
+import apiClient from '../../../shared/api/client';
 
 const useTaskHistory = (taskId) => {
     const fetchTaskHistory = async () => {
@@ -9,20 +8,15 @@ const useTaskHistory = (taskId) => {
         }
         
         try {
-            const response = await axios.get(
-                `${API_URL}/api/projects/tasks/${taskId}/history`,
-                {
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
-                }
-            );
+            const response = await apiClient.get(`/projects/tasks/${taskId}/history`);
             return response.data;
         } catch (error) {
             console.error('Error fetching task history:', error.response?.data || error.message);
             throw error;
         }
-    };    return useQuery({
+    };
+
+    return useQuery({
         queryKey: ['taskHistory', taskId],
         queryFn: fetchTaskHistory,
         enabled: !!taskId, // Only run query if taskId exists

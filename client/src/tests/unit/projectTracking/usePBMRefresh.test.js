@@ -1,16 +1,14 @@
 import React from 'react';
 import { renderHook, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import axios from 'axios';
+import apiClient from '../../../shared/api/client';
 import usePBMRefresh from '../../../pages/ProjectTracking/hooks/usePBMRefresh';
-import { API_URL } from '../../../config/api';
 
-jest.mock('axios', () => ({
-  get: jest.fn(),
-  post: jest.fn(),
-  put: jest.fn(),
-  delete: jest.fn(),
-  patch: jest.fn(),
+jest.mock('../../../shared/api/client', () => ({
+  __esModule: true,
+  default: {
+    put: jest.fn(),
+  },
 }));
 
 describe('usePBMRefresh', () => {
@@ -40,7 +38,7 @@ describe('usePBMRefresh', () => {
   };
 
   test('invalidates only ["projectBoard", projectId] on successful update', async () => {
-    axios.put.mockResolvedValueOnce({ data: { success: true } });
+    apiClient.put.mockResolvedValueOnce({ data: { success: true } });
 
     const initialCards = [{ _id: 'card-1', title: 'Task 1' }];
     const { result } = renderHook(
@@ -61,7 +59,7 @@ describe('usePBMRefresh', () => {
   });
 
   test('sends updatedCards when passed via mutate(updatedCards) to eliminate stale closure', async () => {
-    axios.put.mockResolvedValueOnce({ data: { success: true } });
+    apiClient.put.mockResolvedValueOnce({ data: { success: true } });
 
     const initialCards = [
       { _id: 'card-1', title: 'Task 1' },
@@ -78,23 +76,18 @@ describe('usePBMRefresh', () => {
       await result.current.mutateAsync(filteredCards);
     });
 
-    expect(axios.put).toHaveBeenCalledTimes(1);
-    expect(axios.put).toHaveBeenCalledWith(
-      `${API_URL}/api/projects/tracking`,
+    expect(apiClient.put).toHaveBeenCalledTimes(1);
+    expect(apiClient.put).toHaveBeenCalledWith(
+      '/projects/tracking',
       {
         projectId: '42',
         tasks: filteredCards,
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-        },
       }
     );
   });
 
   test('falls back to initial cards when mutate is called without arguments', async () => {
-    axios.put.mockResolvedValueOnce({ data: { success: true } });
+    apiClient.put.mockResolvedValueOnce({ data: { success: true } });
 
     const initialCards = [{ _id: 'card-1', title: 'Task 1' }];
 
@@ -107,13 +100,12 @@ describe('usePBMRefresh', () => {
       await result.current.mutateAsync();
     });
 
-    expect(axios.put).toHaveBeenCalledWith(
-      `${API_URL}/api/projects/tracking`,
+    expect(apiClient.put).toHaveBeenCalledWith(
+      '/projects/tracking',
       {
         projectId: '42',
         tasks: initialCards,
-      },
-      expect.any(Object)
+      }
     );
   });
 });

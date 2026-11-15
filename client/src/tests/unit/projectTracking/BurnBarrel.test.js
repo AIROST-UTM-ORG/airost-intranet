@@ -3,14 +3,10 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import BurnBarrel from '../../../pages/ProjectTracking/components/BurnBarrel';
 import usePBMRefresh from '../../../pages/ProjectTracking/hooks/usePBMRefresh';
 
-jest.mock('axios', () => ({
-  get: jest.fn(),
-  post: jest.fn(),
-  put: jest.fn(),
-  delete: jest.fn(),
-  patch: jest.fn(),
+jest.mock('../../../pages/ProjectTracking/hooks/usePBMRefresh', () => ({
+  __esModule: true,
+  default: jest.fn(),
 }));
-jest.mock('../../../pages/ProjectTracking/hooks/usePBMRefresh');
 
 describe('BurnBarrel', () => {
   const mockMutate = jest.fn();

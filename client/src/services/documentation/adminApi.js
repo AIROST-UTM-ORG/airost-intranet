@@ -96,7 +96,7 @@ export const getAdminSpaces = async ({ page = 1, limit = 25, q = "" } = {}) => {
     };
   }
 
-  const response = await realApiClient.get("/doc/admin/spaces", {
+  const response = await realApiClient.get("/airost/doc/admin/spaces", {
     params: { page, limit, q: q || undefined },
   });
   return response.data;
@@ -142,7 +142,7 @@ export const reassignSpaceOwner = async (spaceId, userId) => {
     };
   }
 
-  const response = await realApiClient.patch(`/doc/admin/spaces/${spaceId}/owner`, {
+  const response = await realApiClient.patch(`/airost/doc/admin/spaces/${spaceId}/owner`, {
     userId,
   });
   return response.data;

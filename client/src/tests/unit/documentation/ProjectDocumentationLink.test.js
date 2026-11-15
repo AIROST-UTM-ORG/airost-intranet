@@ -1,61 +1,27 @@
 import React from "react";
 import "@testing-library/jest-dom";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
-
-jest.mock("axios", () => {
-  let successInterceptor = null;
-  let errorInterceptor = null;
-
-  const runWithInterceptors = async (fn, ...args) => {
-    try {
-      const res = await fn(...args);
-      return successInterceptor ? successInterceptor(res) : res;
-    } catch (err) {
-      if (errorInterceptor) {
-        return await errorInterceptor(err);
-      }
-      throw err;
-    }
-  };
-
-  const rawMock = {
-    get: jest.fn(),
-    post: jest.fn(),
-    patch: jest.fn(),
-    delete: jest.fn(),
-  };
-
-  const mockAxiosInstance = {
-    rawMock,
-    get: (...args) => runWithInterceptors(rawMock.get, ...args),
-    post: (...args) => runWithInterceptors(rawMock.post, ...args),
-    patch: (...args) => runWithInterceptors(rawMock.patch, ...args),
-    delete: (...args) => runWithInterceptors(rawMock.delete, ...args),
-    interceptors: {
-      response: {
-        use: (success, error) => {
-          successInterceptor = success;
-          errorInterceptor = error;
-        },
-      },
-    },
-  };
-  return {
-    __esModule: true,
-    default: {
-      create: jest.fn(() => mockAxiosInstance),
-      ...mockAxiosInstance,
-    },
-    ...mockAxiosInstance,
-  };
-});
-
 import ProjectDocumentationLink from "../../../pages/Documentation/components/ProjectDocumentationLink";
 import ProjectDetails from "../../../pages/Projects/ProjectDetails";
 import Documentation from "../../../pages/Documentation/Documentation";
 import { AuthContext } from "../../../context/authContext";
 import * as docApi from "../../../pages/Documentation/documentationApi";
+
+jest.mock("../../../shared/api/client", () => {
+  const mockClient = {
+    get: jest.fn(),
+    post: jest.fn(),
+    patch: jest.fn(),
+    delete: jest.fn(),
+  };
+  return {
+    __esModule: true,
+    default: mockClient,
+    apiClient: mockClient,
+    resetAuthUnauthorizedLock: jest.fn(),
+  };
+});
 
 const renderWithAuth = (ui, user = null, initialEntries = ["/"]) => {
   return render(

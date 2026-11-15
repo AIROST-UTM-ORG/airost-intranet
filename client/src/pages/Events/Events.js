@@ -1,6 +1,6 @@
 import './Events.css'
 import { useState, useEffect } from 'react'
-import { API_URL } from '../../config/api';
+import apiClient from '../../shared/api/client';
 import Modal from '../../shared/components/Dialog/Modal';
 // import Spinner from 'react-bootstrap/Spinner';
 const { format, parseISO } = require('date-fns');
@@ -33,27 +33,19 @@ const dateTimeForCalander = (dateStr, timeStr) => {
 
 async function fetchEvents() {
     try {
-        const response = await fetch(`${API_URL}/api/calendar/upcoming-events`);
-        const data = await response.json();
-        return data;
+        const response = await apiClient.get('/calendar/upcoming-events');
+        return response.data;
     } catch (error) {
-        console.error('Error fetching events:', error.message);
+        console.error('Error fetching events:', error.normalizedMessage || error.message);
     }
 }
 
 async function addEvent(event) {
     try {
-        const response = await fetch(`${API_URL}/api/calendar/add`, {
-            method: 'POST',
-            body: JSON.stringify(event),
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        });
-        const data = await response.json();
-        return data;
+        const response = await apiClient.post('/calendar/add', event);
+        return response.data;
     } catch (error) {
-        console.error('Error fetching events:', error.message);
+        console.error('Error fetching events:', error.normalizedMessage || error.message);
     }
 }
 
@@ -112,7 +104,7 @@ function Events() {
         handleCloseModal();
 
         try {
-            const data = await addEvent(event);
+            await addEvent(event);
             fetchData();
         } catch (error) {
             console.error('Error fetching events:', error.message);
@@ -121,14 +113,11 @@ function Events() {
 
     async function deleteEvent(eventId) {
         try {
-            const response = await fetch(`${API_URL}/api/calendar/` + eventId, {
-                method: 'DELETE',
-            });
-            const data = await response.json();
+            const response = await apiClient.delete(`/calendar/${eventId}`);
             fetchData();
-            return data;
+            return response.data;
         } catch (error) {
-            console.error('Error fetching events:', error.message);
+            console.error('Error fetching events:', error.normalizedMessage || error.message);
         }
     }
 
@@ -141,7 +130,7 @@ function Events() {
                         <span className="loading loading-spinner loading-lg"></span>
                     </div>
                     )}
-                    {!loading && <iframe src="https://calendar.google.com/calendar/embed?height=600&wkst=1&ctz=UTC&bgcolor=%23616161&mode=MONTH&src=bHplbWluOEBnbWFpbC5jb20&src=YWRkcmVzc2Jvb2sjY29udGFjdHNAZ3JvdXAudi5jYWxlbmRhci5nb29nbGUuY29t&color=%23039BE5&color=%2333B679" style={{border:"solid 1px #777",width:"800",height:"600",frameborder:"0",scrolling:"no"}}></iframe>}
+                    {!loading && <iframe title="Airost Event Calendar" src="https://calendar.google.com/calendar/embed?height=600&wkst=1&ctz=UTC&bgcolor=%23616161&mode=MONTH&src=bHplbWluOEBnbWFpbC5jb20&src=YWRkcmVzc2Jvb2sjY29udGFjdHNAZ3JvdXAudi5jYWxlbmRhci5nb29nbGUuY29t&color=%23039BE5&color=%2333B679" style={{border:"solid 1px #777",width:"800",height:"600",frameborder:"0",scrolling:"no"}}></iframe>}
                 </div>
                 <div className="interactions">
                     <button className="btn btn-primary" onClick={handleShowModal}>Add Events</button>

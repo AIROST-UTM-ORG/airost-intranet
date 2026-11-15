@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { API_URL } from '../../config/api.js';
+import apiClient from '../../shared/api/client.js';
 import useAuth from '../../hooks/useAuth.js';
 import EditProfileForm from './components/EditProfileForm.js';
 import { makeSquarePhoto } from './utils/photo.js';
@@ -25,7 +24,7 @@ const EditProfile = () => {
   }, [user]);
 
   useEffect(() => {
-    axios.get(`${API_URL}/projects`, { withCredentials: true })
+    apiClient.get('/projects')
       .then((response) => setProjects(Array.isArray(response.data) ? response.data : []))
       .catch(() => setProjects([]));
   }, []);
@@ -100,9 +99,7 @@ const EditProfile = () => {
     setIsSaving(true);
     setErrorMessage('');
     try {
-      const response = await axios.patch(`${API_URL}/api/user/${userId}`, payload, {
-        withCredentials: true,
-      });
+      const response = await apiClient.patch(`/user/${userId}`, payload);
       setUser((current) => ({ ...current, ...response.data }));
       await queryClient.invalidateQueries({ queryKey: ['users'] });
       navigate('/profile');

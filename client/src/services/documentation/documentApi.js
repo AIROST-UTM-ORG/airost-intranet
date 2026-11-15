@@ -50,7 +50,7 @@ export const listDocuments = async (spaceId, { area, includeArchived = false } =
     params.archivedOnly = "true";
   }
 
-  const response = await realApiClient.get(`/doc/spaces/${spaceId}/documents`, { params });
+  const response = await realApiClient.get(`/airost/doc/spaces/${spaceId}/documents`, { params });
   const docs = response.data || [];
   return docs.filter((d) => (includeArchived ? Boolean(d.archived) : !d.archived));
 };
@@ -71,7 +71,7 @@ export const getDocument = async (documentId) => {
     return doc;
   }
 
-  const response = await realApiClient.get(`/doc/documents/${documentId}`);
+  const response = await realApiClient.get(`/airost/doc/documents/${documentId}`);
   return response.data;
 };
 
@@ -133,7 +133,7 @@ export const createDocument = async (spaceId, payload) => {
     return newDoc;
   }
 
-  const response = await realApiClient.post(`/doc/spaces/${spaceId}/documents`, payload);
+  const response = await realApiClient.post(`/airost/doc/spaces/${spaceId}/documents`, payload);
   return response.data;
 };
 
@@ -193,7 +193,7 @@ export const updateDocument = async (documentId, payload) => {
     return updated;
   }
 
-  const response = await realApiClient.patch(`/doc/documents/${documentId}`, payload);
+  const response = await realApiClient.patch(`/airost/doc/documents/${documentId}`, payload);
   return response.data;
 };
 
@@ -220,7 +220,7 @@ export const archiveDocument = async (documentId) => {
     };
   }
 
-  const response = await realApiClient.delete(`/doc/documents/${documentId}`);
+  const response = await realApiClient.delete(`/airost/doc/documents/${documentId}`);
   return response.data;
 };
 
@@ -257,7 +257,7 @@ export const permanentlyDeleteDocument = async (documentId) => {
     };
   }
 
-  const response = await realApiClient.delete(`/doc/documents/${documentId}/permanent`);
+  const response = await realApiClient.delete(`/airost/doc/documents/${documentId}/permanent`);
   return response.data;
 };
 
@@ -322,7 +322,7 @@ export const searchDocuments = async ({ q, limit = 10, signal } = {}) => {
     };
   }
 
-  const response = await realApiClient.get("/doc/search", {
+  const response = await realApiClient.get("/airost/doc/search", {
     params: { q, limit },
     signal,
   });

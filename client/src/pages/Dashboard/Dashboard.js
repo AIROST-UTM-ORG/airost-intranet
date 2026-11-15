@@ -1,8 +1,7 @@
 import "./Dashboard.css";
 import useAuth from "../../hooks/useAuth";
-import axios from "axios";
 import { useState, useEffect } from "react";
-import { API_URL } from "../../config/api";
+import apiClient from "../../shared/api/client";
 import Modal from "../../shared/components/Dialog/Modal";
 
 function Dashboard() {
@@ -70,16 +69,13 @@ function Dashboard() {
     setErrorMessage("");
 
     try {
-      const response = await axios.patch(
-        `${API_URL}/api/user/${userId}`,
+      const response = await apiClient.patch(
+        `/user/${userId}`,
         {
           description,
           year,
           course,
           instagramUrl,
-        },
-        {
-          withCredentials: true,
         }
       );
 

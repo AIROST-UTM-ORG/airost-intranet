@@ -1,11 +1,10 @@
-import axios from 'axios';
 import { useQuery } from '@tanstack/react-query';
-import { API_URL } from '../../../config/api';
+import apiClient from '../../../shared/api/client';
 
 const useGetProjects = () => {
     const getProjects = async () => {
         try {
-          const res = await axios.get(`${API_URL}/api/projects`);
+          const res = await apiClient.get('/projects');
           return res.data;
         } catch (err) {
           throw new Error("Failed to fetch projects");
