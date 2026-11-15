@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Column from "./Column";
 import BurnBarrel from "./BurnBarrel";
 import { useQuery } from '@tanstack/react-query';
@@ -17,19 +17,19 @@ const Board = () => {
         ?.find(project => String(project.projectId) === String(projectId))?.title;
 
     const getProjectBoard = async () => {
-        return apiClient.get(`/projects/tracking/${projectId}`)
-        .then(res => {
-            setCards(res.data.tasks);
-            return res.data;
-        })
-        .catch(err => console.log(err));
+        const response = await apiClient.get(`/projects/tracking/${projectId}`);
+        return response.data;
     };
 
-    useQuery({
-        queryKey:["projectBoard"],
+    const { data: projectBoard } = useQuery({
+        queryKey:["projectBoard", projectId],
         queryFn: getProjectBoard,
-        enabled: !isNaN(projectId)
+        enabled: !Number.isNaN(Number(projectId))
     });
+
+    useEffect(() => {
+        setCards(projectBoard?.tasks ?? []);
+    }, [projectId, projectBoard]);
 
     useFetchUsers();
 

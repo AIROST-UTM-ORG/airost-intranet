@@ -8,7 +8,7 @@ const usePBMRefresh = ({projectId, cards}) => {
         console.log("Sending pending update data to backend");
         const response=await apiClient.put('/projects/tracking',{
             projectId:projectId,
-            tasks: cards, //should be only a single task (not a whole array)
+            tasks: updatedCards ?? cards,
         });
         return response;
     }catch(err){
