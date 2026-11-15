@@ -3,6 +3,7 @@ import useAuth from "../../hooks/useAuth";
 import axios from "axios";
 import { useState, useEffect } from "react";
 import { API_URL } from "../../config/api";
+import Modal from "../../shared/components/Dialog/Modal";
 
 function Dashboard() {
   const { user, setUser } = useAuth();
@@ -13,6 +14,7 @@ function Dashboard() {
   const [instagramUrl, setInstagramUrl] = useState(user?.instagramUrl || "");
   const [isUpdating, setIsUpdating] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const [profile, setProfile] = useState({
     description: user?.description || "",
@@ -42,10 +44,16 @@ function Dashboard() {
     setCourse(profile.course || "");
     setInstagramUrl(profile.instagramUrl || "");
     setErrorMessage("");
-    const modal = document.getElementById("my_modal_2");
-    if (modal) {
-      modal.showModal();
-    }
+    setIsEditModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsEditModalOpen(false);
+    setDescription(profile.description || "");
+    setYear(profile.year || "");
+    setCourse(profile.course || "");
+    setInstagramUrl(profile.instagramUrl || "");
+    setErrorMessage("");
   };
 
   const handleSubmit = async (e) => {
@@ -90,10 +98,7 @@ function Dashboard() {
             ...updated,
           }));
         }
-        const modal = document.getElementById("my_modal_2");
-        if (modal) {
-          modal.close();
-        }
+        setIsEditModalOpen(false);
       }
     } catch (err) {
       console.error("Error updating user profile:", err);
@@ -151,86 +156,84 @@ function Dashboard() {
           <button className=""></button>
         </div>
       </div>
-      <dialog id="my_modal_2" className="modal">
-        <div className="modal-box">
-          <form className="form grid grid-cols-1 gap-2" id="userForm" onSubmit={handleSubmit}>
-            <div className="subtitle">Profile Info</div>
-            {errorMessage && (
-              <div className="alert alert-error text-sm py-2">
-                <span>{errorMessage}</span>
-              </div>
-            )}
-            <label className="w-full max-w-xs">
-              <div className="label">
-                <span className="label-text">Description</span>
-              </div>
-              <input
-                id="profile-description"
-                className="input input-bordered w-full max-w-xs"
-                type="text"
-                placeholder={profile.description || "Description"}
-                value={description}
-                onChange={(e) => {
-                  setDescription(e.target.value);
-                }}
-              />
-            </label>
-            <label className="w-full max-w-xs">
-              <div className="label">
-                <span className="label-text">Year</span>
-              </div>
-              <input
-                id="profile-year"
-                className="input input-bordered w-full max-w-xs"
-                type="text"
-                placeholder={profile.year || "Year"}
-                value={year}
-                onChange={(e) => {
-                  setYear(e.target.value);
-                }}
-              />
-            </label>
-            <label className="w-full max-w-xs">
-              <div className="label">
-                <span className="label-text">Course</span>
-              </div>
-              <input
-                id="profile-course"
-                className="input input-bordered w-full max-w-xs"
-                type="text"
-                placeholder={profile.course || "Course"}
-                value={course}
-                onChange={(e) => {
-                  setCourse(e.target.value);
-                }}
-              />
-            </label>
-            <label className="w-full max-w-xs">
-              <div className="label">
-                <span className="label-text">Instagram</span>
-              </div>
-              <input
-                id="profile-instagram"
-                className="input input-bordered w-full max-w-xs"
-                type="text"
-                placeholder={profile.instagramUrl || "Instagram"}
-                value={instagramUrl}
-                onChange={(e) => {
-                  setInstagramUrl(e.target.value);
-                }}
-              />
-            </label>
-            <div className="modal-action">
-              <button type="submit" disabled={isUpdating} className="btn btn-neutral">
-                {isUpdating ? "Updating..." : "Update"}
-              </button>
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={handleCloseModal}
+        title="Profile Info"
+      >
+        <form className="form grid grid-cols-1 gap-2 mt-2" id="userForm" onSubmit={handleSubmit}>
+          {errorMessage && (
+            <div className="alert alert-error text-sm py-2">
+              <span>{errorMessage}</span>
             </div>
-          </form>
-        </div>
-        <form method="dialog" className="modal-backdrop">
-          <button>close</button>
+          )}
+          <label className="w-full max-w-xs">
+            <div className="label">
+              <span className="label-text">Description</span>
+            </div>
+            <input
+              id="profile-description"
+              className="input input-bordered w-full max-w-xs"
+              type="text"
+              placeholder={profile.description || "Description"}
+              value={description}
+              onChange={(e) => {
+                setDescription(e.target.value);
+              }}
+            />
+          </label>
+          <label className="w-full max-w-xs">
+            <div className="label">
+              <span className="label-text">Year</span>
+            </div>
+            <input
+              id="profile-year"
+              className="input input-bordered w-full max-w-xs"
+              type="text"
+              placeholder={profile.year || "Year"}
+              value={year}
+              onChange={(e) => {
+                setYear(e.target.value);
+              }}
+            />
+          </label>
+          <label className="w-full max-w-xs">
+            <div className="label">
+              <span className="label-text">Course</span>
+            </div>
+            <input
+              id="profile-course"
+              className="input input-bordered w-full max-w-xs"
+              type="text"
+              placeholder={profile.course || "Course"}
+              value={course}
+              onChange={(e) => {
+                setCourse(e.target.value);
+              }}
+            />
+          </label>
+          <label className="w-full max-w-xs">
+            <div className="label">
+              <span className="label-text">Instagram</span>
+            </div>
+            <input
+              id="profile-instagram"
+              className="input input-bordered w-full max-w-xs"
+              type="text"
+              placeholder={profile.instagramUrl || "Instagram"}
+              value={instagramUrl}
+              onChange={(e) => {
+                setInstagramUrl(e.target.value);
+              }}
+            />
+          </label>
+          <div className="modal-action">
+            <button type="submit" disabled={isUpdating} className="btn btn-neutral">
+              {isUpdating ? "Updating..." : "Update"}
+            </button>
+          </div>
         </form>
-      </dialog>
+      </Modal>
     </div>
   );
 }

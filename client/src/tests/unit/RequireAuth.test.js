@@ -11,7 +11,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
-import RequireAuth from '../../components/RequireAuth';
+import RequireAuth from '../../app/router/RequireAuth';
 import { AuthContext } from '../../context/authContext';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
