@@ -142,7 +142,7 @@ describe('auth HTTP routes', () => {
     const req = {
       baseUrl: '/api/auth',
       logout: (callback) => callback(),
-      session: { destroy: (callback) => callback() },
+      session: { save: (callback) => callback(), destroy: (callback) => callback() },
       accepts: (type) => type === 'json',
     };
     const { res } = await invoke(controller.logout, req);
@@ -154,7 +154,7 @@ describe('auth HTTP routes', () => {
   test('legacy logout retains its prior JSON response contract', async () => {
     const { res } = await invoke(controller.logout, {
       baseUrl: '/auth', logout: (callback) => callback(),
-      session: { destroy: (callback) => callback() }, accepts: (type) => type === 'json',
+      session: { save: (callback) => callback(), destroy: (callback) => callback() }, accepts: (type) => type === 'json',
     });
     expect(res.body).toEqual({ success: true, message: 'Successfully logged out' });
   });
@@ -165,7 +165,7 @@ describe('auth HTTP routes', () => {
     try {
       const req = {
         baseUrl: '/api/auth', logout: (callback) => callback(),
-        session: { destroy: (callback) => callback() },
+        session: { save: (callback) => callback(), destroy: (callback) => callback() },
         accepts: (type) => type === 'html',
       };
       const { res } = await invoke(controller.logout, req);
@@ -191,7 +191,7 @@ describe('auth HTTP routes', () => {
     const req = {
       baseUrl: '/api/auth',
       logout: (callback) => callback(new Error('logout failed')),
-      session: { destroy }, accepts: (type) => type === 'json',
+      session: { save: (callback) => callback(), destroy }, accepts: (type) => type === 'json',
     };
     const { res, nextError } = await invoke(controller.logout, req);
     expect(destroy).toHaveBeenCalledTimes(1);
@@ -207,13 +207,13 @@ describe('auth HTTP routes', () => {
     const error = new Error('session store unavailable');
     const { res, nextError } = await invoke(controller.logout, {
       baseUrl: '/api/auth', logout: (callback) => callback(),
-      session: { destroy: (callback) => callback(error) },
+      session: { save: (callback) => callback(), destroy: (callback) => callback(error) },
       accepts: (type) => type === 'json',
     });
     expect(res.clearCookie).toHaveBeenCalled();
     expect(nextError).toMatchObject({
       status: 500, code: 'LOGOUT_FAILED',
-      details: { passportLogoutCompleted: true, sessionPresent: true, sessionDestroyed: false },
+      details: { passportLogoutCompleted: true, sessionPresent: true, sessionLogoutPersisted: true, sessionDestroyed: false },
     });
     expect(nextError.cause).toBe(error);
   });
@@ -223,7 +223,7 @@ describe('auth HTTP routes', () => {
     const error = new Error('synchronous logout failure');
     const { res, nextError } = await invoke(controller.logout, {
       baseUrl: '/api/auth', logout() { throw error; },
-      session: { destroy }, accepts: (type) => type === 'json',
+      session: { save: (callback) => callback(), destroy }, accepts: (type) => type === 'json',
     });
     expect(destroy).toHaveBeenCalledTimes(1);
     expect(res.clearCookie).toHaveBeenCalled();

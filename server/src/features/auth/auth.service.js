@@ -23,6 +23,7 @@ const logoutSession = async (req) => {
   const passportLogoutAvailable = typeof req.logout === 'function';
   let passportLogoutCompleted = !passportLogoutAvailable;
   const sessionPresent = Boolean(req.session);
+  let sessionLogoutPersisted = sessionPresent ? false : null;
   let sessionDestroyed = sessionPresent ? false : null;
 
   if (passportLogoutAvailable) {
@@ -43,6 +44,15 @@ const logoutSession = async (req) => {
   if (req.session) {
     try {
       await new Promise((resolve, reject) => {
+        req.session.save((error) => error ? reject(error) : resolve());
+      });
+      sessionLogoutPersisted = true;
+    } catch (error) {
+      failures.push(error);
+    }
+
+    try {
+      await new Promise((resolve, reject) => {
         req.session.destroy((error) => error ? reject(error) : resolve());
       });
       sessionDestroyed = true;
@@ -56,7 +66,7 @@ const logoutSession = async (req) => {
       INTERNAL_SERVER_ERROR,
       'LOGOUT_FAILED',
       'Logout could not be completed fully',
-      { passportLogoutCompleted, sessionPresent, sessionDestroyed }
+      { passportLogoutCompleted, sessionPresent, sessionLogoutPersisted, sessionDestroyed }
     );
     error.cause = failures.length === 1
       ? failures[0]

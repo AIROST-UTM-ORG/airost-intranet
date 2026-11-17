@@ -148,7 +148,10 @@ describe('auth feature migration integration', () => {
       const storeApp = createApp({ sessionStore: store });
       const user = await createUser();
       const agent = request.agent(storeApp);
-      await agent.post('/test/auth/login').send({ userId: user.id }).expect(200);
+      const loginResponse = await agent.post('/test/auth/login').send({ userId: user.id }).expect(200);
+      const sessionCookie = loginResponse.headers['set-cookie']
+        .find((cookie) => cookie.startsWith('connect.sid='))
+        .split(';')[0];
       failDestroy = true;
 
       const response = await agent
@@ -161,12 +164,19 @@ describe('auth feature migration integration', () => {
       expect(response.body.error.details).toEqual({
         passportLogoutCompleted: true,
         sessionPresent: true,
+        sessionLogoutPersisted: true,
         sessionDestroyed: false,
       });
       expect(JSON.stringify(response.body)).not.toContain(privateStoreError);
       expect(response.headers['set-cookie']).toEqual(
         expect.arrayContaining([expect.stringMatching(/^connect\.sid=;/)])
       );
+
+      const replay = await request(storeApp)
+        .get('/api/auth/login/success')
+        .set('Cookie', sessionCookie)
+        .expect(401);
+      expect(replay.body.error.code).toBe('UNAUTHENTICATED');
     });
 
     test('GET logout redirects browsers to login and clears the cookie', async () => {
