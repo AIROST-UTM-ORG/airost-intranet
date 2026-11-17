@@ -47,7 +47,6 @@ router.get('/login/success', async (req, res) => {
       });
     }
   } catch (error) {
-    console.error("Error in login success route:", error);
     res.status(500).json({
       success: false,
       message: "Internal server error during authentication check",
