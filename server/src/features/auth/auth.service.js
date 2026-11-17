@@ -12,7 +12,6 @@ const getSessionUser = async (user) => {
   await user.populate({ path: 'featuredProjectIds', select: '_id projectId title description lead' });
   const result = user.toObject();
   delete result.googleId;
-  delete result.googleID;
   delete result.__v;
   return result;
 };
