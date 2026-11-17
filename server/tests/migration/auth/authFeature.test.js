@@ -186,12 +186,59 @@ describe('auth HTTP routes', () => {
     expect(res.clearCookie).toHaveBeenCalled();
   });
 
-  test('logout failures are forwarded to centralized error handling', async () => {
-    const { nextError } = await invoke(controller.logout, {
-      baseUrl: '/api/auth', logout: (callback) => callback(new Error('logout failed')),
+  test('logout continues session destruction and clears the cookie after a Passport callback error', async () => {
+    const destroy = jest.fn((callback) => callback());
+    const req = {
+      baseUrl: '/api/auth',
+      logout: (callback) => callback(new Error('logout failed')),
+      session: { destroy }, accepts: (type) => type === 'json',
+    };
+    const { res, nextError } = await invoke(controller.logout, req);
+    expect(destroy).toHaveBeenCalledTimes(1);
+    expect(res.clearCookie).toHaveBeenCalled();
+    expect(nextError).toMatchObject({
+      status: 500, code: 'LOGOUT_FAILED',
+      details: { passportLogoutCompleted: false, sessionPresent: true, sessionDestroyed: true },
+    });
+    expect(nextError.cause.message).toBe('logout failed');
+  });
+
+  test('logout clears the cookie and reports session destruction callback failures', async () => {
+    const error = new Error('session store unavailable');
+    const { res, nextError } = await invoke(controller.logout, {
+      baseUrl: '/api/auth', logout: (callback) => callback(),
+      session: { destroy: (callback) => callback(error) },
       accepts: (type) => type === 'json',
     });
-    expect(nextError).toEqual(new Error('logout failed'));
+    expect(res.clearCookie).toHaveBeenCalled();
+    expect(nextError).toMatchObject({
+      status: 500, code: 'LOGOUT_FAILED',
+      details: { passportLogoutCompleted: true, sessionPresent: true, sessionDestroyed: false },
+    });
+    expect(nextError.cause).toBe(error);
+  });
+
+  test('logout clears the cookie after a synchronous Passport logout throw', async () => {
+    const destroy = jest.fn((callback) => callback());
+    const error = new Error('synchronous logout failure');
+    const { res, nextError } = await invoke(controller.logout, {
+      baseUrl: '/api/auth', logout() { throw error; },
+      session: { destroy }, accepts: (type) => type === 'json',
+    });
+    expect(destroy).toHaveBeenCalledTimes(1);
+    expect(res.clearCookie).toHaveBeenCalled();
+    expect(nextError.code).toBe('LOGOUT_FAILED');
+    expect(nextError.cause).toBe(error);
+  });
+
+  test('logout supports synchronous Passport logout and reports absent sessions accurately', async () => {
+    const logout = jest.fn();
+    const { res } = await invoke(controller.logout, {
+      baseUrl: '/api/auth', logout, accepts: (type) => type === 'json',
+    });
+    expect(logout).toHaveBeenCalledTimes(1);
+    expect(res.body).toEqual({ success: true, data: { message: 'Successfully logged out' } });
+    expect(res.clearCookie).toHaveBeenCalled();
   });
 
   test('Google entry and callback invoke Passport with the required options', async () => {
@@ -234,7 +281,7 @@ describe('auth HTTP routes', () => {
 });
 
 describe('test login validation', () => {
-  test.each([undefined, null, {}, { userId: '' }, { userId: 1 }, { userId: null }])(
+  test.each([undefined, null, {}, [], { userId: '' }, { userId: '   ' }, { userId: 1 }, { userId: null }])(
     'rejects invalid test login body %p', (body) => {
       expect(validateTestLoginPayload(body)).toEqual({ valid: false, message: 'userId is required' });
     }
@@ -242,6 +289,12 @@ describe('test login validation', () => {
 
   test('preserves a non-empty string user id', () => {
     expect(validateTestLoginPayload({ userId: 'user-123', extra: true })).toEqual({
+      valid: true, sanitizedData: { userId: 'user-123' },
+    });
+  });
+
+  test('trims whitespace surrounding a valid user id before use', () => {
+    expect(validateTestLoginPayload({ userId: '  user-123  ' })).toEqual({
       valid: true, sanitizedData: { userId: 'user-123' },
     });
   });
