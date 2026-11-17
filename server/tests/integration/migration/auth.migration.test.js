@@ -1,5 +1,6 @@
 const request = require('supertest');
 const passport = require('passport');
+const session = require('express-session');
 const { connect, clearDatabase, closeDatabase } = require('../../setup/mongoSetup');
 const { createApp } = require('../../../app');
 const User = require('../../../models/User');
@@ -132,6 +133,40 @@ describe('auth feature migration integration', () => {
         expect.arrayContaining([expect.stringMatching(/^connect\.sid=;/)])
       );
       await agent.get('/auth/login/success').expect(401);
+    });
+
+    test('session-store destruction failure returns a safe error and still clears the cookie', async () => {
+      const store = new session.MemoryStore();
+      const destroySession = store.destroy.bind(store);
+      let failDestroy = false;
+      const privateStoreError = 'private session-store failure detail';
+      store.destroy = (sessionId, callback) => {
+        if (failDestroy) return callback(new Error(privateStoreError));
+        return destroySession(sessionId, callback);
+      };
+
+      const storeApp = createApp({ sessionStore: store });
+      const user = await createUser();
+      const agent = request.agent(storeApp);
+      await agent.post('/test/auth/login').send({ userId: user.id }).expect(200);
+      failDestroy = true;
+
+      const response = await agent
+        .post('/api/auth/logout')
+        .set('Accept', 'application/json')
+        .expect(500);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.error.code).toBe('LOGOUT_FAILED');
+      expect(response.body.error.details).toEqual({
+        passportLogoutCompleted: true,
+        sessionPresent: true,
+        sessionDestroyed: false,
+      });
+      expect(JSON.stringify(response.body)).not.toContain(privateStoreError);
+      expect(response.headers['set-cookie']).toEqual(
+        expect.arrayContaining([expect.stringMatching(/^connect\.sid=;/)])
+      );
     });
 
     test('GET logout redirects browsers to login and clears the cookie', async () => {
