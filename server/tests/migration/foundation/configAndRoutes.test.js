@@ -243,6 +243,15 @@ describe('shared route assembly', () => {
     expect(res.body).toEqual({ success: true, user });
   });
 
+  test('test login endpoint trims the user id before database lookup', async () => {
+    const user = { id: 'user-1', name: 'Test User' };
+    const userModel = { findById: jest.fn().mockResolvedValue(user) };
+    const app = createRouteApp({ userModel });
+    const res = await request(app).post('/test/auth/login').send({ userId: '  user-1  ' });
+    expect(res.status).toBe(200);
+    expect(userModel.findById).toHaveBeenCalledWith('user-1');
+  });
+
   test('test login endpoint catches database errors', async () => {
     const userModel = { findById: jest.fn().mockRejectedValue(new Error('lookup failure')) };
     const app = createRouteApp({ userModel });

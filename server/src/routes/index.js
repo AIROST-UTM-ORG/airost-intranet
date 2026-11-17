@@ -36,7 +36,7 @@ if (process.env.NODE_ENV === 'test') {
   router.post('/test/auth/login', validate((req) => validateTestLoginPayload(req.body)), async (req, res) => {
     try {
       const User = require('../../models/User');
-      const user = await User.findById(req.body.userId);
+      const user = await User.findById(req.sanitizedData.userId);
       if (!user) return res.status(404).json({ error: 'User not found' });
       req.login(user, (error) => {
         if (error) return res.status(500).json({ error: error.message });
