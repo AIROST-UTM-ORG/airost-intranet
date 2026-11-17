@@ -7,12 +7,12 @@ const { connectDatabase } = require('../../../src/config/database');
 const { validateEnv } = require('../../../src/config/env');
 
 const ROUTE_MODULES = [
-  ['../../routes/auth', 'auth'],
-  ['../../routes/docRoutes', 'documents'],
-  ['../../routes/adminRoutes', 'admin'],
-  ['../../routes/userRoutes', 'users'],
-  ['../../routes/eventRoutes', 'events'],
-  ['../../routes/projectsRoutes', 'projects'],
+  ['../../../src/features/auth/auth.routes', 'auth'],
+  ['../../../routes/docRoutes', 'documents'],
+  ['../../../routes/adminRoutes', 'admin'],
+  ['../../../routes/userRoutes', 'users'],
+  ['../../../routes/eventRoutes', 'events'],
+  ['../../../routes/projectsRoutes', 'projects'],
 ];
 
 const registerRouteMocks = () => {
@@ -29,7 +29,7 @@ const createRouteApp = ({ nodeEnv = 'test', userModel, loginError = null } = {})
   jest.resetModules();
   process.env.NODE_ENV = nodeEnv;
   registerRouteMocks();
-  if (userModel) jest.doMock('../../models/User', () => userModel);
+  if (userModel) jest.doMock('../../../models/User', () => userModel);
 
   const router = require('../../../src/routes');
   const app = express();
@@ -193,7 +193,7 @@ describe('CORS origin policy', () => {
 describe('shared route assembly', () => {
   const originalNodeEnv = process.env.NODE_ENV;
   afterEach(() => {
-    jest.dontMock('../../models/User');
+    jest.dontMock('../../../models/User');
     for (const [modulePath] of ROUTE_MODULES) jest.dontMock(modulePath);
     jest.resetModules();
     if (originalNodeEnv === undefined) delete process.env.NODE_ENV;
