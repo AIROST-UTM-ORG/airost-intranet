@@ -44,7 +44,7 @@ describe('auth feature service', () => {
 
   test('populates featured projects and removes provider/internal identifiers', async () => {
     const object = {
-      _id: 'u1', googleId: 'secret', googleID: 'secret-alias', __v: 4,
+      _id: 'u1', googleId: 'secret', __v: 4,
       featuredProjectIds: ['p1'], email: 'member@example.com',
     };
     const user = { populate: jest.fn().mockResolvedValue(undefined), toObject: () => ({ ...object }) };
