@@ -4,28 +4,28 @@
  * controllers even when the happy path appears to work.
  */
 
-const AppError = require('../../src/shared/errors/AppError');
-const User = require('../../models/User');
-const { sendSuccess, sendError } = require('../../src/shared/utils/apiResponse');
-const { globalErrorHandler } = require('../../src/middleware/errorHandler');
-const { notFoundHandler } = require('../../src/middleware/notFound');
-const { authenticate } = require('../../src/middleware/authenticate');
-const { requireAdmin, requireRole } = require('../../src/middleware/authorize');
-const { validate } = require('../../src/middleware/validate');
-const asyncHandler = require('../../src/shared/utils/asyncHandler');
+const AppError = require('../../../src/shared/errors/AppError');
+const User = require('../../../models/User');
+const { sendSuccess, sendError } = require('../../../src/shared/utils/apiResponse');
+const { globalErrorHandler } = require('../../../src/middleware/errorHandler');
+const { notFoundHandler } = require('../../../src/middleware/notFound');
+const { authenticate } = require('../../../src/middleware/authenticate');
+const { requireAdmin, requireRole } = require('../../../src/middleware/authorize');
+const { validate } = require('../../../src/middleware/validate');
+const asyncHandler = require('../../../src/shared/utils/asyncHandler');
 const {
   isValidDate,
   toISOString,
   startOfDay,
   endOfDay,
-} = require('../../src/shared/utils/dateUtils');
+} = require('../../../src/shared/utils/dateUtils');
 const {
   isValidObjectId,
   escapeRegex,
   normalizeWhitespace,
-} = require('../../src/shared/utils/validators');
-const { PLATFORM_ROLES, PROJECT_ROLES } = require('../../src/shared/constants/roles');
-const HTTP_STATUS = require('../../src/shared/constants/httpStatus');
+} = require('../../../src/shared/utils/validators');
+const { PLATFORM_ROLES, PROJECT_ROLES } = require('../../../src/shared/constants/roles');
+const HTTP_STATUS = require('../../../src/shared/constants/httpStatus');
 
 const response = () => {
   const res = { statusCode: null, body: null };
