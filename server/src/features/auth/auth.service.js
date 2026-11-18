@@ -23,7 +23,7 @@ const logoutSession = async (req) => {
   const passportLogoutAvailable = typeof req.logout === 'function';
   let passportLogoutCompleted = !passportLogoutAvailable;
   const sessionPresent = Boolean(req.session);
-  let sessionLogoutPersisted = sessionPresent ? false : null;
+  let sessionLogoutPersisted = null;
   let sessionDestroyed = sessionPresent ? false : null;
 
   if (passportLogoutAvailable) {
@@ -42,13 +42,20 @@ const logoutSession = async (req) => {
   }
 
   if (req.session) {
-    try {
-      await new Promise((resolve, reject) => {
-        req.session.save((error) => error ? reject(error) : resolve());
-      });
-      sessionLogoutPersisted = true;
-    } catch (error) {
-      failures.push(error);
+    if (
+      passportLogoutAvailable
+      && passportLogoutCompleted
+      && req.session.passport
+      && typeof req.session.save === 'function'
+    ) {
+      try {
+        await new Promise((resolve, reject) => {
+          req.session.save((error) => error ? reject(error) : resolve());
+        });
+        sessionLogoutPersisted = true;
+      } catch (error) {
+        failures.push(error);
+      }
     }
 
     try {
