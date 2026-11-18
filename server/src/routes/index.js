@@ -3,7 +3,7 @@
  */
 const express = require('express');
 
-const authRoutes = require('../../routes/auth');
+const authRoutes = require('../features/auth/auth.routes');
 const docRoutes = require('../../routes/docRoutes');
 const adminRoutes = require('../../routes/adminRoutes');
 const userRoutes = require('../../routes/userRoutes');
@@ -31,10 +31,12 @@ router.use('/calendar', eventRoutes);
 
 // Test-only session bootstrap used by the existing Supertest integration suite.
 if (process.env.NODE_ENV === 'test') {
-  router.post('/test/auth/login', async (req, res) => {
+  const { validate } = require('../middleware/validate');
+  const { validateTestLoginPayload } = require('../features/auth/auth.validation');
+  router.post('/test/auth/login', validate((req) => validateTestLoginPayload(req.body)), async (req, res) => {
     try {
       const User = require('../../models/User');
-      const user = await User.findById(req.body.userId);
+      const user = await User.findById(req.sanitizedData.userId);
       if (!user) return res.status(404).json({ error: 'User not found' });
       req.login(user, (error) => {
         if (error) return res.status(500).json({ error: error.message });

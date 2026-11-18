@@ -3,16 +3,16 @@
 const express = require('express');
 const request = require('supertest');
 const mongoose = require('mongoose');
-const { connectDatabase } = require('../../src/config/database');
-const { validateEnv } = require('../../src/config/env');
+const { connectDatabase } = require('../../../src/config/database');
+const { validateEnv } = require('../../../src/config/env');
 
 const ROUTE_MODULES = [
-  ['../../routes/auth', 'auth'],
-  ['../../routes/docRoutes', 'documents'],
-  ['../../routes/adminRoutes', 'admin'],
-  ['../../routes/userRoutes', 'users'],
-  ['../../routes/eventRoutes', 'events'],
-  ['../../routes/projectsRoutes', 'projects'],
+  ['../../../src/features/auth/auth.routes', 'auth'],
+  ['../../../routes/docRoutes', 'documents'],
+  ['../../../routes/adminRoutes', 'admin'],
+  ['../../../routes/userRoutes', 'users'],
+  ['../../../routes/eventRoutes', 'events'],
+  ['../../../routes/projectsRoutes', 'projects'],
 ];
 
 const registerRouteMocks = () => {
@@ -29,9 +29,9 @@ const createRouteApp = ({ nodeEnv = 'test', userModel, loginError = null } = {})
   jest.resetModules();
   process.env.NODE_ENV = nodeEnv;
   registerRouteMocks();
-  if (userModel) jest.doMock('../../models/User', () => userModel);
+  if (userModel) jest.doMock('../../../models/User', () => userModel);
 
-  const router = require('../../src/routes');
+  const router = require('../../../src/routes');
   const app = express();
   app.use(express.json());
   app.use((req, res, next) => {
@@ -140,7 +140,7 @@ describe('CORS origin policy', () => {
     ['https://localhost.attacker.example', false],
     ['ftp://localhost:3000', false],
   ])('evaluates origin %s', async (origin, expectedAllowed) => {
-    const { corsOptions } = require('../../src/config/cors');
+    const { corsOptions } = require('../../../src/config/cors');
     const result = await invokeOrigin(corsOptions, origin);
     if (expectedAllowed) {
       expect(result).toEqual({ error: null, allowed: true });
@@ -155,7 +155,7 @@ describe('CORS origin policy', () => {
     process.env.REACT_APP_URL = ' https://app.example.test/// ';
     jest.resetModules();
     try {
-      const { corsOptions } = require('../../src/config/cors');
+      const { corsOptions } = require('../../../src/config/cors');
       const result = await invokeOrigin(corsOptions, 'https://app.example.test');
       expect(result).toEqual({ error: null, allowed: true });
     } finally {
@@ -170,7 +170,7 @@ describe('CORS origin policy', () => {
     delete process.env.REACT_APP_URL;
     jest.resetModules();
     try {
-      const { corsOptions } = require('../../src/config/cors');
+      const { corsOptions } = require('../../../src/config/cors');
       const localOrigin = await invokeOrigin(corsOptions, 'http://localhost:1234');
       const externalOrigin = await invokeOrigin(corsOptions, 'https://app.example.test');
       expect(localOrigin).toEqual({ error: null, allowed: true });
@@ -183,7 +183,7 @@ describe('CORS origin policy', () => {
   });
 
   test('configures credentials, supported methods, and exposed headers', () => {
-    const { corsOptions } = require('../../src/config/cors');
+    const { corsOptions } = require('../../../src/config/cors');
     expect(corsOptions.credentials).toBe(true);
     expect(corsOptions.methods).toEqual(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']);
     expect(corsOptions.exposedHeaders).toEqual(['set-cookie']);
@@ -193,7 +193,7 @@ describe('CORS origin policy', () => {
 describe('shared route assembly', () => {
   const originalNodeEnv = process.env.NODE_ENV;
   afterEach(() => {
-    jest.dontMock('../../models/User');
+    jest.dontMock('../../../models/User');
     for (const [modulePath] of ROUTE_MODULES) jest.dontMock(modulePath);
     jest.resetModules();
     if (originalNodeEnv === undefined) delete process.env.NODE_ENV;
@@ -241,6 +241,15 @@ describe('shared route assembly', () => {
     const res = await request(app).post('/test/auth/login').send({ userId: 'user-1' });
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ success: true, user });
+  });
+
+  test('test login endpoint trims the user id before database lookup', async () => {
+    const user = { id: 'user-1', name: 'Test User' };
+    const userModel = { findById: jest.fn().mockResolvedValue(user) };
+    const app = createRouteApp({ userModel });
+    const res = await request(app).post('/test/auth/login').send({ userId: '  user-1  ' });
+    expect(res.status).toBe(200);
+    expect(userModel.findById).toHaveBeenCalledWith('user-1');
   });
 
   test('test login endpoint catches database errors', async () => {
