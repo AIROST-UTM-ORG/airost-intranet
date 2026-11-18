@@ -8,7 +8,7 @@ import {
   FiTrash2,
   FiMoreHorizontal,
 } from "react-icons/fi";
-import { formatAccessType, formatUpdateType } from "./utils/formatters";
+import { formatAccessType, formatUpdateType } from "../utils/formatters";
 
 const AdminDocumentationTable = ({
   spaces,

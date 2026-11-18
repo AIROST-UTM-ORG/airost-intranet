@@ -4,9 +4,9 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import apiClient from "../../../shared/api/client";
 import Admin from "../../../pages/Admin/Admin";
-import AdminDocumentationPanel from "../../../pages/Admin/AdminDocumentationPanel";
+import AdminDocumentationPanel from "../../../features/documentation/admin";
 import { AuthContext } from "../../../context/authContext";
-import * as docApi from "../../../pages/Documentation/documentationApi";
+import * as docApi from "../../../features/documentation/services";
 
 jest.mock("../../../shared/api/client", () => {
   const mockClient = {

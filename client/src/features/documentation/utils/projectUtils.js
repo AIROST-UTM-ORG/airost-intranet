@@ -1,4 +1,4 @@
-import { SEED_PROJECTS } from "../documentationApi";
+import { SEED_PROJECTS } from "../services";
 
 /**
  * Resolves a raw projectId or project object to an effective project ID.

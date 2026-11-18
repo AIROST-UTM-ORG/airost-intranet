@@ -4,7 +4,7 @@ import {
   listDocuments,
   archiveDocument,
   restoreDocument,
-} from "../../../services/documentation";
+} from "../services";
 
 /**
  * Custom hook to manage active space detail, documents, archived documents,

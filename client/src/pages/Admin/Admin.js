@@ -3,7 +3,7 @@ import './Admin.css';
 import { FaCheck } from "react-icons/fa6";
 import apiClient from '../../shared/api/client';
 import useAuth from "../../hooks/useAuth";
-import AdminDocumentationPanel from "./AdminDocumentationPanel";
+import AdminDocumentationPanel from "features/documentation/admin";
 
 const Admin = () => {
     const { user: currentUser } = useAuth();

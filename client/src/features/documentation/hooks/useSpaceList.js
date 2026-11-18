@@ -6,7 +6,7 @@ import {
   SEED_PROJECTS,
   SEED_USERS,
   isMockMode,
-} from "../documentationApi";
+} from "../services";
 
 /**
  * Custom hook to manage spaces overview, projects, members, and initial data loading.

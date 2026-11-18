@@ -1,7 +1,8 @@
-import React, { useState, useRef, useEffect } from "react";
+import React from "react";
 import { FiFolder, FiSearch } from "react-icons/fi";
 import SpaceListHeader from "./SpaceListHeader";
 import SpaceCard from "./SpaceCard";
+import { useSpaceListFilter } from "../hooks/useSpaceListFilter";
 
 /**
  * SpaceListScreen - Covers Screens 1, 2, 3, and 4
@@ -16,36 +17,19 @@ const SpaceListScreen = ({
   onManagePermissions,
   onRetry,
 }) => {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [activeMenuSpaceId, setActiveMenuSpaceId] = useState(null);
-  const menuRef = useRef(null);
-
-  // Close overflow menu on click outside
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) {
-        setActiveMenuSpaceId(null);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  const {
+    searchQuery,
+    setSearchQuery,
+    activeMenuSpaceId,
+    setActiveMenuSpaceId,
+    menuRef,
+    filteredSpaces,
+  } = useSpaceListFilter(spaces);
 
   const totalDocuments = spaces.reduce(
     (acc, s) => acc + (s.activeDocumentCount ?? s.documentCount ?? 0),
     0
   );
-
-  const filteredSpaces = spaces.filter((space) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    const titleMatch = (space.title || "").toLowerCase().includes(q);
-    const descMatch = (space.description || "").toLowerCase().includes(q);
-    const projectMatch = space.projectId?.title
-      ? space.projectId.title.toLowerCase().includes(q)
-      : false;
-    return titleMatch || descMatch || projectMatch;
-  });
 
   const isFirstUse = !loading && spaces.length === 0;
   const isNoSearchResults = !loading && spaces.length > 0 && filteredSpaces.length === 0;
