@@ -6,7 +6,7 @@ const express = require('express');
 const authRoutes = require('../features/auth/auth.routes');
 const docRoutes = require('../../routes/docRoutes');
 const adminRoutes = require('../../routes/adminRoutes');
-const userRoutes = require('../../routes/userRoutes');
+const userRoutes = require('../features/members/member.routes');
 const eventRoutes = require('../../routes/eventRoutes');
 const projectRoutes = require('../../routes/projectsRoutes');
 
