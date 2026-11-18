@@ -20,14 +20,25 @@ const MAX_MODULARITY_LINES = 400;
 /**
  * Strips comments from JavaScript/TypeScript source code while preserving
  * newline characters so line numbers remain accurate.
- * Handles strings, single-line (//), and multi-line (/*) comments.
+ * Handles strings, regular expression literals, single-line (//), and multi-line (/*) comments.
+ *
+ * Options:
+ * - maskNonImportStrings: when true, masks content of string literals that are not import specifiers
+ *   with spaces (preserving newlines) so subsequent regex scans avoid false positives.
  */
-function stripComments(code) {
+function stripComments(code, options = {}) {
   if (typeof code !== 'string') return '';
+  const { maskNonImportStrings = false } = options;
+
   let inString = false;
   let quoteChar = '';
   let inBlockComment = false;
   let inLineComment = false;
+  let inRegex = false;
+  let inCharClass = false;
+  let lastNonWs = '';
+  let lastWord = '';
+  let isImportString = false;
   let result = '';
 
   for (let i = 0; i < code.length; i++) {
@@ -48,17 +59,52 @@ function stripComments(code) {
       if (char === '\n') {
         inLineComment = false;
         result += '\n';
+        lastNonWs = '\n';
+        lastWord = '';
+      }
+      continue;
+    }
+
+    if (inRegex) {
+      result += char;
+      if (char === '\\') {
+        i++;
+        if (i < code.length) result += code[i];
+      } else if (char === '[' && !inCharClass) {
+        inCharClass = true;
+      } else if (char === ']' && inCharClass) {
+        inCharClass = false;
+      } else if (char === '/' && !inCharClass) {
+        inRegex = false;
+        lastNonWs = '/';
+        lastWord = '';
+      } else if (char === '\n') {
+        inRegex = false;
+        inCharClass = false;
+        lastNonWs = '\n';
+        lastWord = '';
       }
       continue;
     }
 
     if (inString) {
-      result += char;
       if (char === '\\') {
+        if (maskNonImportStrings && !isImportString) {
+          result += '  ';
+        } else {
+          result += char;
+          if (i + 1 < code.length) result += code[i + 1];
+        }
         i++;
-        if (i < code.length) result += code[i];
       } else if (char === quoteChar) {
         inString = false;
+        result += quoteChar;
+        lastNonWs = quoteChar;
+        lastWord = '';
+      } else if (char === '\n') {
+        result += '\n';
+      } else {
+        result += (maskNonImportStrings && !isImportString) ? ' ' : char;
       }
       continue;
     }
@@ -75,14 +121,43 @@ function stripComments(code) {
       continue;
     }
 
+    // Check if '/' begins a regular expression literal
+    if (char === '/') {
+      const isRegexStart = /^[=(:[!&|?+*%,;~^<>\n-]$/.test(lastNonWs) ||
+        /^(return|throw|yield|await|case|delete|typeof|void|default)$/.test(lastWord) ||
+        lastNonWs === '';
+      if (isRegexStart) {
+        inRegex = true;
+        inCharClass = false;
+        result += char;
+        continue;
+      }
+    }
+
     if (char === "'" || char === '"' || char === '`') {
       inString = true;
       quoteChar = char;
+      const before = result.trimEnd();
+      isImportString = (
+        /(?:\brequire|\brequire\.resolve|\bimport)\s*\(\s*$/.test(before) ||
+        /\bfrom\s*$/.test(before) ||
+        /\bimport\s*$/.test(before)
+      );
       result += char;
       continue;
     }
 
     result += char;
+    if (!/\s/.test(char)) {
+      lastNonWs = char;
+      if (/[a-zA-Z0-9_$]/.test(char)) {
+        lastWord += char;
+      } else {
+        lastWord = '';
+      }
+    } else {
+      lastWord = '';
+    }
   }
 
   return result;
@@ -91,22 +166,25 @@ function stripComments(code) {
 /**
  * Extracts import and require specifiers with line numbers from source code.
  * Matches:
- * - require('...')
+ * - require('...') and require.resolve('...')
  * - import ... from '...'
  * - import('...') (dynamic import)
  * - export ... from '...' (re-export)
+ *
+ * Masks normal string literals to prevent false positives and constrains import/export
+ * clauses to single statements so line numbers remain accurate in multi-export files.
  */
 function extractImports(sourceCode) {
-  const stripped = stripComments(sourceCode);
+  const stripped = stripComments(sourceCode, { maskNonImportStrings: true });
   const importRegexes = [
-    // require('specifier')
-    /\brequire\s*\(\s*['"]([^'"]+)['"]\s*\)/g,
+    // require('specifier') or require.resolve('specifier')
+    /\brequire(?:\.resolve)?\s*\(\s*['"`]([^'"`]+)['"`]\s*\)/g,
     // dynamic import('specifier')
-    /\bimport\s*\(\s*['"]([^'"]+)['"]\s*\)/g,
+    /\bimport\s*\(\s*['"`]([^'"`]+)['"`]\s*\)/g,
     // import ... from 'specifier' or import 'specifier'
-    /\bimport\s+(?:(?:[\s\S]*?\s+from\s+)?|(?:\s*))['"]([^'"]+)['"]/g,
+    /\bimport\s+(?:(?:[^;]*?\s+from\s+)|(?:\s*))['"`]([^'"`]+)['"`]/g,
     // export ... from 'specifier'
-    /\bexport\s+(?:[\s\S]*?\s+from\s+)['"]([^'"]+)['"]/g,
+    /\bexport\s+(?:[^;]*?\s+from\s+)['"`]([^'"`]+)['"`]/g,
   ];
 
   const results = [];
@@ -129,6 +207,14 @@ function extractImports(sourceCode) {
 
 /**
  * Checks whether an import specifier in a source file violates vertical slice boundaries.
+ *
+ * Rules:
+ * 1. Bare specifiers (e.g. 'express', 'passport') are permitted.
+ * 2. Intra-feature relative imports within the same feature slice are permitted.
+ * 3. Imports from shared layers (server/src/shared/) are permitted.
+ * 4. Cross-feature imports to sibling features must target the public interface
+ *    (feature root '../featureName' or index file '../featureName/index.js').
+ * 5. Direct imports of private internal files (e.g. '../otherFeature/other.service.js') are rejected.
  */
 function checkImportBoundary({ sourceFilePath, importSpecifier, featuresDir, srcDir }) {
   if (!importSpecifier || !importSpecifier.startsWith('.')) {
@@ -208,7 +294,7 @@ function findCrossFeatureViolations(filePathOrOptions, maybeContent, maybeOption
     featuresDir = path.resolve(__dirname, '../../src/features');
   }
   if (!srcDir) {
-    srcDir = path.resolve(__dirname, '../../src');
+    srcDir = path.resolve(featuresDir, '..');
   }
 
   if (content === undefined && filePath && fs.existsSync(filePath)) {
@@ -280,6 +366,8 @@ function checkFeatureBoundaries(featuresDirectory) {
 
 /**
  * Determines whether a file path represents a controller, service, or route.
+ * Matches standard dot-separated names (*.controller.js, *.service.js, *.routes.js),
+ * camelCase names (*Controller.js, *Service.js, *Routes.js), and directory placement.
  */
 function isControllerServiceOrRoute(filePath) {
   if (typeof filePath !== 'string') return false;
@@ -289,8 +377,8 @@ function isControllerServiceOrRoute(filePath) {
 
   const normalized = filePath.replace(/\\/g, '/');
 
-  // Naming convention: *.controller.js, *.service.js, *.routes.js
-  if (/\.(controller|service|routes?)\.[a-zA-Z]+$/.test(normalized)) {
+  // Naming convention: *.controller.js, *.service.js, *.routes.js and camelCase
+  if (/(?:^|\/|\.|[a-z0-9])(controller|service|routes?)\.[a-zA-Z]+$/i.test(normalized)) {
     return true;
   }
 
@@ -304,10 +392,12 @@ function isControllerServiceOrRoute(filePath) {
 
 /**
  * Counts total lines in file content.
+ * Normalizes trailing newline so standard POSIX files are not off-by-one.
  */
 function countLines(content) {
   if (typeof content !== 'string' || content.length === 0) return 0;
-  return content.split(/\r\n|\r|\n/).length;
+  const normalized = content.replace(/(?:\r\n|\r|\n)$/, '');
+  return normalized.length === 0 ? 1 : normalized.split(/\r\n|\r|\n/).length;
 }
 
 /**
@@ -524,6 +614,66 @@ describe('Phase 3 Architecture Guardrails - Vertical Slice Boundaries', () => {
       expect(violations[0].specifier).toBe('../users/users.controller.js');
     });
 
+    test('handles regular expression literals containing quotes without misparsing subsequent comments', () => {
+      const code = `
+        const stripQuote = /'/g;
+        // const commentedOut = require('../users/users.service.js');
+        const stripBoth = /['"]/g;
+        /*
+          const multilineCommented = require('../projects/projects.service.js');
+        */
+        const valid = require('../users/index');
+      `;
+      const violations = findCrossFeatureViolations({
+        filePath: authServicePath,
+        content: code,
+        featuresDir: virtualFeaturesDir,
+      });
+      expect(violations).toHaveLength(0);
+    });
+
+    test('ignores require and from mentions inside ordinary string literals', () => {
+      const code = `
+        const message = "Do not call require('../users/users.service.js')";
+        export const note = 'Migrated from "../projects/projects.service.js"';
+        const docMsg = \`Refer to import('../documents/doc.service.js') in docs\`;
+        const valid = require('../users/index');
+      `;
+      const violations = findCrossFeatureViolations({
+        filePath: authServicePath,
+        content: code,
+        featuresDir: virtualFeaturesDir,
+      });
+      expect(violations).toHaveLength(0);
+    });
+
+    test('reports correct line numbers for export ... from without spanning across preceding statements', () => {
+      const code = `export const A = 1;\nexport const B = 2;\nexport { x } from "../users/users.service.js";`;
+      const violations = findCrossFeatureViolations({
+        filePath: authServicePath,
+        content: code,
+        featuresDir: virtualFeaturesDir,
+      });
+      expect(violations).toHaveLength(1);
+      expect(violations[0].line).toBe(3);
+      expect(violations[0].specifier).toBe('../users/users.service.js');
+    });
+
+    test('supports require.resolve and template literals', () => {
+      const code = `
+        const resolved = require.resolve(\`../users/users.service.js\`);
+        const dyn = import(\`../projects/projects.service.js\`);
+      `;
+      const violations = findCrossFeatureViolations({
+        filePath: authServicePath,
+        content: code,
+        featuresDir: virtualFeaturesDir,
+      });
+      expect(violations).toHaveLength(2);
+      expect(violations[0].specifier).toBe('../users/users.service.js');
+      expect(violations[1].specifier).toBe('../projects/projects.service.js');
+    });
+
     test('returns empty array when source file is not in features directory', () => {
       const outsidePath = '/project/server/src/shared/utils/dateUtils.js';
       const code = `const helper = require('../other');`;
@@ -553,6 +703,12 @@ describe('Phase 3 Architecture Guardrails - Modularity Threshold (400 lines)', (
       expect(isControllerServiceOrRoute('server/src/features/user/user.route.js')).toBe(true);
     });
 
+    test('detects camelCase files matching *Controller.js, *Service.js, *Routes.js', () => {
+      expect(isControllerServiceOrRoute('server/src/controller/projectsController.js')).toBe(true);
+      expect(isControllerServiceOrRoute('server/src/services/docService.js')).toBe(true);
+      expect(isControllerServiceOrRoute('server/src/routes/apiRoutes.js')).toBe(true);
+    });
+
     test('detects files within controllers/, services/, routes/ directories', () => {
       expect(isControllerServiceOrRoute('server/src/routes/index.js')).toBe(true);
       expect(isControllerServiceOrRoute('server/src/controllers/auth.js')).toBe(true);
@@ -574,16 +730,22 @@ describe('Phase 3 Architecture Guardrails - Modularity Threshold (400 lines)', (
   });
 
   describe('Synthetic modularity threshold checks (checkModularityThreshold & countLines)', () => {
-    test('accurately counts lines across various newline formats', () => {
+    test('accurately counts lines across various newline formats and handles trailing newlines', () => {
       expect(countLines('')).toBe(0);
+      expect(countLines('\n')).toBe(1);
+      expect(countLines('\r\n')).toBe(1);
       expect(countLines('one')).toBe(1);
+      expect(countLines('one\n')).toBe(1);
+      expect(countLines('one\r\n')).toBe(1);
       expect(countLines('one\ntwo')).toBe(2);
+      expect(countLines('one\ntwo\n')).toBe(2);
+      expect(countLines('one\r\ntwo\r\n')).toBe(2);
       expect(countLines('one\r\ntwo\r\nthree')).toBe(3);
     });
 
-    test('passes files with line count below or equal to 400 lines', () => {
-      const content100 = Array.from({ length: 100 }, (_, i) => `// Line ${i + 1}`).join('\n');
-      const content400 = Array.from({ length: 400 }, (_, i) => `// Line ${i + 1}`).join('\n');
+    test('passes files with line count below or equal to 400 lines including trailing newline', () => {
+      const content100 = Array.from({ length: 100 }, (_, i) => `// Line ${i + 1}`).join('\n') + '\n';
+      const content400 = Array.from({ length: 400 }, (_, i) => `// Line ${i + 1}`).join('\n') + '\n';
 
       const result100 = checkModularityThreshold({
         filePath: 'synthetic.controller.js',
@@ -605,8 +767,8 @@ describe('Phase 3 Architecture Guardrails - Modularity Threshold (400 lines)', (
     });
 
     test('fails files with line count exceeding 400 lines with clear violation message', () => {
-      const content401 = Array.from({ length: 401 }, (_, i) => `// Line ${i + 1}`).join('\n');
-      const content600 = Array.from({ length: 600 }, (_, i) => `// Line ${i + 1}`).join('\n');
+      const content401 = Array.from({ length: 401 }, (_, i) => `// Line ${i + 1}`).join('\n') + '\n';
+      const content600 = Array.from({ length: 600 }, (_, i) => `// Line ${i + 1}`).join('\n') + '\n';
 
       const result401 = checkModularityThreshold({
         filePath: 'bloated.controller.js',
