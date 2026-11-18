@@ -142,7 +142,7 @@ describe('auth HTTP routes', () => {
     const req = {
       baseUrl: '/api/auth',
       logout: (callback) => callback(),
-      session: { save: (callback) => callback(), destroy: (callback) => callback() },
+      session: { passport: {}, save: (callback) => callback(), destroy: (callback) => callback() },
       accepts: (type) => type === 'json',
     };
     const { res } = await invoke(controller.logout, req);
@@ -154,7 +154,7 @@ describe('auth HTTP routes', () => {
   test('legacy logout retains its prior JSON response contract', async () => {
     const { res } = await invoke(controller.logout, {
       baseUrl: '/auth', logout: (callback) => callback(),
-      session: { save: (callback) => callback(), destroy: (callback) => callback() }, accepts: (type) => type === 'json',
+      session: { passport: {}, save: (callback) => callback(), destroy: (callback) => callback() }, accepts: (type) => type === 'json',
     });
     expect(res.body).toEqual({ success: true, message: 'Successfully logged out' });
   });
@@ -165,7 +165,7 @@ describe('auth HTTP routes', () => {
     try {
       const req = {
         baseUrl: '/api/auth', logout: (callback) => callback(),
-        session: { save: (callback) => callback(), destroy: (callback) => callback() },
+        session: { passport: {}, save: (callback) => callback(), destroy: (callback) => callback() },
         accepts: (type) => type === 'html',
       };
       const { res } = await invoke(controller.logout, req);
@@ -191,14 +191,15 @@ describe('auth HTTP routes', () => {
     const req = {
       baseUrl: '/api/auth',
       logout: (callback) => callback(new Error('logout failed')),
-      session: { save: (callback) => callback(), destroy }, accepts: (type) => type === 'json',
+      session: { passport: {}, save: jest.fn((callback) => callback()), destroy }, accepts: (type) => type === 'json',
     };
     const { res, nextError } = await invoke(controller.logout, req);
+    expect(req.session.save).not.toHaveBeenCalled();
     expect(destroy).toHaveBeenCalledTimes(1);
     expect(res.clearCookie).toHaveBeenCalled();
     expect(nextError).toMatchObject({
       status: 500, code: 'LOGOUT_FAILED',
-      details: { passportLogoutCompleted: false, sessionPresent: true, sessionDestroyed: true },
+      details: { passportLogoutCompleted: false, sessionPresent: true, sessionLogoutPersisted: null, sessionDestroyed: true },
     });
     expect(nextError.cause.message).toBe('logout failed');
   });
@@ -207,7 +208,7 @@ describe('auth HTTP routes', () => {
     const error = new Error('session store unavailable');
     const { res, nextError } = await invoke(controller.logout, {
       baseUrl: '/api/auth', logout: (callback) => callback(),
-      session: { save: (callback) => callback(), destroy: (callback) => callback(error) },
+      session: { passport: {}, save: (callback) => callback(), destroy: (callback) => callback(error) },
       accepts: (type) => type === 'json',
     });
     expect(res.clearCookie).toHaveBeenCalled();
