@@ -82,8 +82,10 @@ describe('User directory and profile API', () => {
     const res = await request(app).get('/api/user/users').set('Cookie', cookie);
 
     expect(res.status).toBe(200);
-    expect(res.body).toHaveLength(2);
-    expect(res.body[0]).toEqual(expect.objectContaining({
+    expect(res.body.success).toBe(true);
+    expect(res.body.meta).toMatchObject({ page: 1, total: 2 });
+    expect(res.body.data).toHaveLength(2);
+    expect(res.body.data[0]).toEqual(expect.objectContaining({
       name: 'Alice',
       positions: ['member'],
       photoUrl: 'https://example.com/alice.png',
@@ -91,9 +93,9 @@ describe('User directory and profile API', () => {
       loggedIn: true,
       verified: true,
     }));
-    expect(res.body[0]).not.toHaveProperty('googleId');
-    expect(res.body[0]).not.toHaveProperty('isActive');
-    expect(res.body[1]).toEqual(expect.objectContaining({
+    expect(res.body.data[0]).not.toHaveProperty('googleId');
+    expect(res.body.data[0]).not.toHaveProperty('isActive');
+    expect(res.body.data[1]).toEqual(expect.objectContaining({
       name: 'Bob',
       positions: ['member'],
       loggedIn: false,
@@ -114,8 +116,9 @@ describe('User directory and profile API', () => {
       .set('Cookie', cookie);
 
     expect(res.status).toBe(200);
-    expect(res.body).toHaveLength(1);
-    expect(res.body[0].name).toBe('Alice');
+    expect(res.body.success).toBe(true);
+    expect(res.body.data).toHaveLength(1);
+    expect(res.body.data[0].name).toBe('Alice');
   });
 
   test('applies pagination defaults when only one pagination parameter is provided', async () => {
@@ -129,7 +132,8 @@ describe('User directory and profile API', () => {
     const res = await request(app).get('/api/user/users?page=1').set('Cookie', cookie);
 
     expect(res.status).toBe(200);
-    expect(res.body).toHaveLength(2);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data).toHaveLength(2);
   });
 
   test('returns 400 for malformed directory query parameters', async () => {
@@ -137,7 +141,7 @@ describe('User directory and profile API', () => {
     const cookie = await authenticatedCookie(authUser._id);
     const res = await request(app).get('/api/user/users?page=0&limit=not-a-number').set('Cookie', cookie);
     expect(res.status).toBe(400);
-    expect(res.body.error).toBe('Invalid page parameter.');
+    expect(res.body.error).toMatchObject({ code: 'VALIDATION_ERROR', message: 'Invalid page parameter.' });
   });
 
   test('returns all active directory users when no query or pagination is provided', async () => {
@@ -149,8 +153,9 @@ describe('User directory and profile API', () => {
     const cookie = await authenticatedCookie(authUser._id);
     const res = await request(app).get('/api/user/users').set('Cookie', cookie);
     expect(res.status).toBe(200);
-    expect(res.body).toHaveLength(1);
-    expect(res.body[0].name).toBe('Active');
+    expect(res.body.success).toBe(true);
+    expect(res.body.data).toHaveLength(1);
+    expect(res.body.data[0].name).toBe('Active');
   });
 
   test('returns 404 when id is not a valid ObjectId', async () => {
@@ -163,7 +168,7 @@ describe('User directory and profile API', () => {
       .send({ name: 'New Name' });
 
     expect(res.status).toBe(404);
-    expect(res.body.error).toBe('No such User');
+    expect(res.body.error).toMatchObject({ code: 'NOT_FOUND', message: 'No such User' });
   });
 
   test('returns 403 when the requested profile does not belong to the caller', async () => {
@@ -176,7 +181,7 @@ describe('User directory and profile API', () => {
       .send({ name: 'Nonexistent User' });
 
     expect(res.status).toBe(403);
-    expect(res.body.error).toBe('Forbidden');
+    expect(res.body.error).toMatchObject({ code: 'FORBIDDEN' });
   });
 
   test('updates user successfully and returns 200 with updated user', async () => {
@@ -199,9 +204,10 @@ describe('User directory and profile API', () => {
       });
 
     expect(res.status).toBe(200);
-    expect(res.body._id).toBe(createdUser._id.toString());
-    expect(res.body.name).toBe('Updated Name');
-    expect(res.body.description).toBe('Updated description');
+    expect(res.body.success).toBe(true);
+    expect(res.body.data._id).toBe(createdUser._id.toString());
+    expect(res.body.data.name).toBe('Updated Name');
+    expect(res.body.data.description).toBe('Updated description');
 
     // Verify persisted document in MongoDB
     const persisted = await User.findById(createdUser._id);
@@ -221,7 +227,7 @@ describe('User directory and profile API', () => {
       .send({ featuredProjectIds: [firstProject._id.toString(), secondProject._id.toString()] });
 
     expect(res.status).toBe(200);
-    expect(res.body.featuredProjectIds).toEqual([
+    expect(res.body.data.featuredProjectIds).toEqual([
       expect.objectContaining({ _id: firstProject._id.toString(), title: 'Portal' }),
       expect.objectContaining({ _id: secondProject._id.toString(), title: 'Analytics' }),
     ]);
@@ -244,7 +250,7 @@ describe('User directory and profile API', () => {
       .set('Cookie', cookie)
       .send({ positions: ['admin'] });
     expect(protectedField.status).toBe(400);
-    expect(protectedField.body.unsupportedFields).toContain('positions');
+    expect(protectedField.body.error.details.unsupportedFields).toContain('positions');
   });
 
   test('returns 401 when updating a profile without a session', async () => {
@@ -278,7 +284,7 @@ describe('User directory and profile API', () => {
       .send({ name: 'Updated by Admin' });
 
     expect(res.status).toBe(200);
-    expect(res.body.name).toBe('Updated by Admin');
+    expect(res.body.data.name).toBe('Updated by Admin');
   });
 
   test('rejects null origin values', async () => {
@@ -312,7 +318,7 @@ describe('User directory and profile API', () => {
       .set('Cookie', cookie)
       .send({ linkedinUrl: 'https://leehom.com' });
     expect(wrongPlatformUrl.status).toBe(400);
-    expect(wrongPlatformUrl.body.error).toMatch(/linkedinUrl/);
+    expect(wrongPlatformUrl.body.error.message).toMatch(/linkedinUrl/);
 
     const wrongInstagramDomain = await request(app)
       .patch(`/api/user/${user._id}`)
@@ -347,9 +353,9 @@ describe('User directory and profile API', () => {
         photoUrl: 'data:image/jpeg;base64,samplebase64',
       });
     expect(res.status).toBe(200);
-    expect(res.body.instagramUrl).toBe('https://www.instagram.com/alice/');
-    expect(res.body.githubUrl).toBe('https://github.com/alice-dev');
-    expect(res.body.linkedinUrl).toBe('https://www.linkedin.com/in/alice');
+    expect(res.body.data.instagramUrl).toBe('https://www.instagram.com/alice/');
+    expect(res.body.data.githubUrl).toBe('https://github.com/alice-dev');
+    expect(res.body.data.linkedinUrl).toBe('https://www.linkedin.com/in/alice');
   });
 
   test('rejects fields exceeding maximum length constraints', async () => {

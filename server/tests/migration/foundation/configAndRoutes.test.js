@@ -10,7 +10,7 @@ const ROUTE_MODULES = [
   ['../../../src/features/auth/auth.routes', 'auth'],
   ['../../../routes/docRoutes', 'documents'],
   ['../../../routes/adminRoutes', 'admin'],
-  ['../../../routes/userRoutes', 'users'],
+  ['../../../src/features/members/member.routes', 'users'],
   ['../../../routes/eventRoutes', 'events'],
   ['../../../routes/projectsRoutes', 'projects'],
 ];
