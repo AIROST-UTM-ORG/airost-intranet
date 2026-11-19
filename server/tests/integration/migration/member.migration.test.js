@@ -183,6 +183,29 @@ describe('members feature migration integration', () => {
       expect((await User.findById(user.id)).linkedinUrl).toBe('');
     });
 
+    test('rejects non-profile social URL paths, queries, and fragments', async () => {
+      const user = await createUser();
+      const agent = await createAuthenticatedAgent(user);
+      const invalidLinks = [
+        { githubUrl: 'https://github.com/ada/settings' },
+        { instagramUrl: 'https://instagram.com/ada/reels' },
+        { linkedinUrl: 'https://linkedin.com/company/ada' },
+        { linkedinUrl: 'https://linkedin.com/in/ada/details' },
+        { githubUrl: 'https://github.com/ada?tab=repositories' },
+        { instagramUrl: 'https://instagram.com/ada#posts' },
+      ];
+
+      for (const profile of invalidLinks) {
+        const response = await agent.patch(`/api/user/${user.id}`).send(profile).expect(400);
+        expect(response.body.error.code).toBe('VALIDATION_ERROR');
+      }
+
+      const persisted = await User.findById(user.id);
+      expect(persisted.githubUrl).toBe('');
+      expect(persisted.instagramUrl).toBe('');
+      expect(persisted.linkedinUrl).toBe('');
+    });
+
     test('returns 403 when a non-admin member attempts to update another profile', async () => {
       const member = await createUser();
       const target = await createUser({ name: 'Protected Member' });

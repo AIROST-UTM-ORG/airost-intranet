@@ -45,6 +45,11 @@ const validateUpdateProfile = (req) => {
   }
   const hosts = { instagram: ['instagram.com', 'www.instagram.com'], linkedin: ['linkedin.com', 'www.linkedin.com'], github: ['github.com', 'www.github.com'] };
   const canonical = { instagram: 'www.instagram.com', linkedin: 'www.linkedin.com', github: 'github.com' };
+  const profilePaths = {
+    instagram: /^\/[a-zA-Z0-9._-]+\/?$/,
+    linkedin: /^\/in\/[a-zA-Z0-9._-]+\/?$/,
+    github: /^\/[a-zA-Z0-9._-]+\/?$/,
+  };
   for (const network of Object.keys(hosts)) {
     const field = `${network}Url`;
     if (updates[field] === undefined) continue;
@@ -54,7 +59,15 @@ const validateUpdateProfile = (req) => {
     if (!trimmed) { updates[field] = ''; continue; }
     if (trimmed.startsWith('https://')) {
       const url = new URL(trimmed);
-      if (!hosts[network].includes(url.hostname.toLowerCase()) || (url.port && url.port !== '443') || url.username || url.password) invalid(`${field} must be an HTTPS profile URL for the correct platform or a valid handle.`);
+      if (
+        !hosts[network].includes(url.hostname.toLowerCase()) ||
+        (url.port && url.port !== '443') ||
+        url.username ||
+        url.password ||
+        !profilePaths[network].test(url.pathname) ||
+        url.search ||
+        url.hash
+      ) invalid(`${field} must be an HTTPS profile URL for the correct platform or a valid handle.`);
       url.hostname = canonical[network];
       updates[field] = url.href;
     } else {

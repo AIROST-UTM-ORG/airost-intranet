@@ -86,6 +86,12 @@ describe('member request validation', () => {
       ['invalid social protocol', { instagramUrl: 'http://instagram.com/ada' }, undefined, 400, 'VALIDATION_ERROR'],
       ['wrong social network', { githubUrl: 'https://linkedin.com/in/ada' }, undefined, 400, 'VALIDATION_ERROR'],
       ['social URL with credentials', { githubUrl: 'https://ada@github.com/ada' }, undefined, 400, 'VALIDATION_ERROR'],
+      ['GitHub repository path', { githubUrl: 'https://github.com/ada/settings' }, undefined, 400, 'VALIDATION_ERROR'],
+      ['Instagram nested path', { instagramUrl: 'https://instagram.com/ada/reels' }, undefined, 400, 'VALIDATION_ERROR'],
+      ['LinkedIn non-profile path', { linkedinUrl: 'https://linkedin.com/company/ada' }, undefined, 400, 'VALIDATION_ERROR'],
+      ['LinkedIn nested profile path', { linkedinUrl: 'https://linkedin.com/in/ada/details' }, undefined, 400, 'VALIDATION_ERROR'],
+      ['social URL query string', { githubUrl: 'https://github.com/ada?tab=repositories' }, undefined, 400, 'VALIDATION_ERROR'],
+      ['social URL fragment', { instagramUrl: 'https://instagram.com/ada#posts' }, undefined, 400, 'VALIDATION_ERROR'],
       ['social URL over length', { instagramUrl: 'a'.repeat(301) }, undefined, 400, 'VALIDATION_ERROR'],
     ])('rejects %s with the expected API error', (_label, body, id, status, code) => {
       let thrown;
