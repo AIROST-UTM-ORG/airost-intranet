@@ -22,6 +22,9 @@ const validateUpdateProfile = (req) => {
   if (!body || typeof body !== 'object' || Array.isArray(body)) invalid('Request body must be an object.');
   const editable = ['name', 'photoUrl', 'year', 'course', 'origin', 'description', 'instagramUrl', 'linkedinUrl', 'githubUrl', 'featuredProjectIds'];
   const entries = Object.entries(body);
+    if (entries.length === 0) {
+    invalid('At least one editable field is required.');
+  }
   const unsupportedFields = entries.map(([key]) => key).filter((key) => !editable.includes(key));
   if (unsupportedFields.length) invalid('Payload contains unsupported fields.', { unsupportedFields });
   const updates = Object.fromEntries(entries);
