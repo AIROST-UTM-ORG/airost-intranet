@@ -197,6 +197,20 @@ describe('members feature migration integration', () => {
       expect((await User.findById(target.id)).name).toBe('Protected Member');
     });
 
+    test('legacy profile route also blocks a non-admin from changing another member', async () => {
+      const member = await createUser();
+      const target = await createUser({ name: 'Legacy Protected Member' });
+      const agent = await createAuthenticatedAgent(member);
+
+      const response = await agent
+        .patch(`/user/${target.id}`)
+        .send({ name: 'Legacy Unauthorized Change' })
+        .expect(403);
+
+      expect(response.body.error.code).toBe('FORBIDDEN');
+      expect((await User.findById(target.id)).name).toBe('Legacy Protected Member');
+    });
+
     test('allows an administrator to update another member profile', async () => {
       const admin = await createUser({ positions: ['admin'] });
       const target = await createUser({ name: 'Admin Target' });

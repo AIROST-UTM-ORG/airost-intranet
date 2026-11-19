@@ -56,6 +56,17 @@ describe('registered member HTTP routes', () => {
     expect(repository.findById).not.toHaveBeenCalled();
   });
 
+  test('rejects a malformed profile ID before attempting a database lookup', async () => {
+    const response = await request(app)
+      .patch('/api/user/not-an-object-id')
+      .set('x-user-id', '507f1f77bcf86cd799439011')
+      .send({ name: 'Changed' });
+
+    expect(response.status).toBe(404);
+    expect(response.body.error.code).toBe('NOT_FOUND');
+    expect(repository.findById).not.toHaveBeenCalled();
+  });
+
   test('valid requests from non-admin users cannot update another profile', async () => {
     const response = await request(app)
       .patch('/api/user/507f1f77bcf86cd799439011')

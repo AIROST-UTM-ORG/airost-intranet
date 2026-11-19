@@ -15,4 +15,12 @@ describe('member persistence models', () => {
     expect(VerifiedUser.schema.path('name').isRequired).toBe(true);
     expect(VerifiedUser.schema.path('position').isRequired).toBe(true);
   });
+
+  test('rejects a User document without its required name', () => {
+    const User = require('../../../src/features/members/member.model');
+    const validationError = new User({ email: 'missing-name@example.com' }).validateSync();
+
+    expect(validationError).toBeDefined();
+    expect(validationError.errors.name).toBeDefined();
+  });
 });

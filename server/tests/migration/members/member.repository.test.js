@@ -60,6 +60,12 @@ describe('member persistence behavior', () => {
     expect(User.findById).toHaveBeenCalledWith('member-id');
   });
 
+  test('returns null when a profile ID does not match a stored user', async () => {
+    User.findById.mockResolvedValue(null);
+
+    await expect(repository.findById('missing-member-id')).resolves.toBeNull();
+  });
+
   test('loads an updated public profile with populated featured projects', async () => {
     const profile = { _id: 'member-id', name: 'Ada' };
     const query = makeQuery(profile);

@@ -39,4 +39,18 @@ describe('member response formatting', () => {
     expect(formatUser(null)).toBeNull();
     expect(formatUser(undefined)).toBeUndefined();
   });
+
+  test('never exposes private fields when formatting multiple directory users', () => {
+    const users = formatUsers([
+      { name: 'Ada', googleId: 'private-google-id', __v: 2, isActive: true },
+      { name: 'Lin', googleID: 'legacy-private-id', __v: 3, isActive: false },
+    ]);
+
+    for (const user of users) {
+      expect(user).not.toHaveProperty('googleId');
+      expect(user).not.toHaveProperty('googleID');
+      expect(user).not.toHaveProperty('__v');
+      expect(user).not.toHaveProperty('isActive');
+    }
+  });
 });

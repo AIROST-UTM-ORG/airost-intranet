@@ -100,6 +100,11 @@ describe('member request validation', () => {
       expect(thrown.details).toEqual({ unsupportedFields: ['positions', 'email'] });
     });
 
+    test('rejects a social URL whose hostname only imitates the approved platform', () => {
+      expect(() => validateUpdateProfile(update({ linkedinUrl: 'https://linkedin.com.attacker.test/in/ada' })))
+        .toThrow(expect.objectContaining({ code: 'VALIDATION_ERROR', status: 400 }));
+    });
+
     test('accepts exact length limits, blank optional URLs, HTTP photo URLs, and supported image data URLs', () => {
       const result = validateUpdateProfile(update({
         name: 'n'.repeat(100), year: 'y'.repeat(50), course: 'c'.repeat(120), description: 'd'.repeat(1000),

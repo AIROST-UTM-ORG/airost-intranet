@@ -82,6 +82,16 @@ describe('member service behavior', () => {
       .rejects.toMatchObject({ status: 404, code: 'NOT_FOUND' });
   });
 
+  test('propagates a profile persistence failure instead of returning success', async () => {
+    const error = new Error('profile persistence failed');
+    const user = { _id: '507f1f77bcf86cd799439011', save: jest.fn().mockRejectedValue(error) };
+    repository.findById.mockResolvedValue(user);
+
+    await expect(service.updateProfile(user._id, { name: 'Updated' }, { _id: user._id }))
+      .rejects.toBe(error);
+    expect(repository.findProfileById).not.toHaveBeenCalled();
+  });
+
   test('recognizes only the platform admin role', () => {
     expect(service.isAdmin({ positions: ['member', 'ADMIN'] })).toBe(true);
     expect(service.isAdmin({ positions: ['project lead'] })).toBe(false);
