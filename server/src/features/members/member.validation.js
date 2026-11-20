@@ -22,7 +22,7 @@ const validateUpdateProfile = (req) => {
   if (!body || typeof body !== 'object' || Array.isArray(body)) invalid('Request body must be an object.');
   const editable = ['name', 'photoUrl', 'year', 'course', 'origin', 'description', 'instagramUrl', 'linkedinUrl', 'githubUrl', 'featuredProjectIds'];
   const entries = Object.entries(body);
-    if (entries.length === 0) {
+  if (entries.length === 0) {
     invalid('At least one editable field is required.');
   }
   const unsupportedFields = entries.map(([key]) => key).filter((key) => !editable.includes(key));
@@ -37,11 +37,15 @@ const validateUpdateProfile = (req) => {
   if (updates.description !== undefined && (typeof updates.description !== 'string' || updates.description.length > 1000)) invalid('Description must be a string under 1000 characters.');
   if (updates.photoUrl !== undefined) {
     const value = updates.photoUrl;
+    if (typeof value !== 'string') {
+      invalid('photoUrl must be a string.');
+    }
+    const trimmed = value.trim();
     let httpUrl = false;
-    try { httpUrl = ['http:', 'https:'].includes(new URL(value).protocol) && value.length <= 2048; } catch { /* malformed URL */ }
+    try { httpUrl = ['http:', 'https:'].includes(new URL(trimmed).protocol) && trimmed.length <= 2048; } catch { /* malformed URL */ }
     const dataUrl = typeof value === 'string' && value.length <= 2 * 1024 * 1024 && /^data:image\/(?:jpeg|png|webp);base64,[a-zA-Z0-9+/]+={0,2}$/i.test(value);
-    if (typeof value !== 'string' || (value.trim() && !httpUrl && !dataUrl)) invalid('photoUrl must be a valid HTTP/HTTPS URL or supported image data URI.');
-    updates.photoUrl = value.trim();
+    if (typeof value !== 'string' || (trimmed && !httpUrl && !dataUrl)) invalid('photoUrl must be a valid HTTP/HTTPS URL or supported image data URI.');
+    updates.photoUrl = trimmed;
   }
   const hosts = { instagram: ['instagram.com', 'www.instagram.com'], linkedin: ['linkedin.com', 'www.linkedin.com'], github: ['github.com', 'www.github.com'] };
   const canonical = { instagram: 'www.instagram.com', linkedin: 'www.linkedin.com', github: 'github.com' };
