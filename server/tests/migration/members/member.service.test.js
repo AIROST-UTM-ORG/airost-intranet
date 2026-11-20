@@ -3,10 +3,16 @@ jest.mock('../../../src/features/members/member.repository', () => ({
   countDirectoryUsers: jest.fn(),
   findByIdAndUpdate: jest.fn(),
   findProfileById: jest.fn(),
+  findAllUsers: jest.fn(),
+  findAllVerifiedUsers: jest.fn(),
+  findUserByEmail: jest.fn(),
+  addPositionToUser: jest.fn(),
+  createUser: jest.fn(),
 }));
 
 const repository = require('../../../src/features/members/member.repository');
 const service = require('../../../src/features/members/member.service');
+const adminService = require('../../../src/features/members/admin/admin.service');
 
 describe('member service behavior', () => {
   beforeEach(() => jest.resetAllMocks());
@@ -93,8 +99,49 @@ describe('member service behavior', () => {
   });
 
   test('recognizes only the platform admin role', () => {
-    expect(service.isAdmin({ positions: ['member', 'ADMIN'] })).toBe(true);
-    expect(service.isAdmin({ positions: ['project lead'] })).toBe(false);
-    expect(service.isAdmin(null)).toBe(false);
+    expect(adminService.isAdmin({ positions: ['member', 'ADMIN'] })).toBe(true);
+    expect(adminService.isAdmin({ positions: ['project lead'] })).toBe(false);
+    expect(adminService.isAdmin(null)).toBe(false);
+  });
+
+  test('merges logged-in users with verified placeholders and sets flags from VerifiedUser records', async () => {
+    repository.findAllUsers.mockResolvedValue([
+      { _id: 'logged-verified', email: 'verified@example.com', name: 'Verified', googleId: 'private-id', positions: ['member'] },
+      { _id: 'logged-unverified', email: 'unverified@example.com', name: 'Unverified', googleId: 'private-id-2', positions: [] },
+    ]);
+    repository.findAllVerifiedUsers.mockResolvedValue([
+      { _id: 'verified-row', email: 'verified@example.com', name: 'Verified', position: ['member'] },
+      { _id: 'placeholder-row', email: 'placeholder@example.com', name: 'Placeholder', position: ['member'] },
+    ]);
+
+    const result = await adminService.getMergedUserList();
+
+    expect(result).toEqual([
+      expect.objectContaining({ email: 'verified@example.com', loggedIn: true, verified: true }),
+      expect.objectContaining({ email: 'unverified@example.com', loggedIn: true, verified: false }),
+      expect.objectContaining({ email: 'placeholder@example.com', loggedIn: false, verified: true }),
+    ]);
+    expect(result).toHaveLength(3);
+    expect(result[0]).not.toHaveProperty('googleId');
+  });
+
+  test('creates a placeholder User and reports CREATED when the email is new', async () => {
+    repository.findUserByEmail.mockResolvedValue(null);
+    repository.createUser.mockResolvedValue({ _id: 'created-id' });
+
+    await expect(adminService.createVerifiedUser({ name: 'New Member', email: 'new@example.com', position: 'member' }))
+      .resolves.toEqual({ status: 201, data: { createStatus: 'success' } });
+    expect(repository.createUser).toHaveBeenCalledWith({ name: 'New Member', email: 'new@example.com', positions: ['member'] });
+    expect(repository.addPositionToUser).not.toHaveBeenCalled();
+  });
+
+  test('adds a position to an existing User without creating a duplicate', async () => {
+    repository.findUserByEmail.mockResolvedValue({ _id: 'existing-id' });
+    repository.addPositionToUser.mockResolvedValue({ modifiedCount: 1 });
+
+    await expect(adminService.createVerifiedUser({ name: 'Existing', email: 'existing@example.com', position: 'advisor' }))
+      .resolves.toEqual({ status: 200, data: { createStatus: 'success' } });
+    expect(repository.addPositionToUser).toHaveBeenCalledWith('existing-id', 'advisor');
+    expect(repository.createUser).not.toHaveBeenCalled();
   });
 });
