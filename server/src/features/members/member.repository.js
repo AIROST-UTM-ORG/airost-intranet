@@ -11,6 +11,7 @@ const findDirectoryUsers = (filter, { skip, limit }) => User.find(filter)
 
 const countDirectoryUsers = (filter) => User.countDocuments(filter);
 const findById = (id) => User.findById(id);
+const findByIdAndUpdate = (id, updates) => User.findByIdAndUpdate(id, { $set: updates }, { new: true, runValidators: true });
 const findProfileById = (id) => User.findById(id).select('-googleId -__v').populate(projectProjection);
 
-module.exports = { findDirectoryUsers, countDirectoryUsers, findById, findProfileById };
+module.exports = { findDirectoryUsers, countDirectoryUsers, findById, findByIdAndUpdate, findProfileById };

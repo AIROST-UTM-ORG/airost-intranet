@@ -1,7 +1,7 @@
 jest.mock('../../../src/features/members/member.repository', () => ({
   findDirectoryUsers: jest.fn(),
   countDirectoryUsers: jest.fn(),
-  findById: jest.fn(),
+  findByIdAndUpdate: jest.fn(),
   findProfileById: jest.fn(),
 }));
 
@@ -53,7 +53,7 @@ describe('registered member HTTP routes', () => {
       .send({ positions: ['admin'] });
     expect(response.status).toBe(400);
     expect(response.body).toMatchObject({ success: false, error: { code: 'VALIDATION_ERROR' } });
-    expect(repository.findById).not.toHaveBeenCalled();
+    expect(repository.findByIdAndUpdate).not.toHaveBeenCalled();
   });
 
   test('rejects a malformed profile ID before attempting a database lookup', async () => {
@@ -64,7 +64,7 @@ describe('registered member HTTP routes', () => {
 
     expect(response.status).toBe(404);
     expect(response.body.error.code).toBe('NOT_FOUND');
-    expect(repository.findById).not.toHaveBeenCalled();
+    expect(repository.findByIdAndUpdate).not.toHaveBeenCalled();
   });
 
   test('valid requests from non-admin users cannot update another profile', async () => {
@@ -75,12 +75,12 @@ describe('registered member HTTP routes', () => {
       .send({ name: 'Changed' });
     expect(response.status).toBe(403);
     expect(response.body).toMatchObject({ success: false, error: { code: 'FORBIDDEN' } });
-    expect(repository.findById).not.toHaveBeenCalled();
+    expect(repository.findByIdAndUpdate).not.toHaveBeenCalled();
   });
 
   test('profile updates return a sanitized success envelope', async () => {
-    const user = { _id: '507f1f77bcf86cd799439011', name: 'Old', save: jest.fn().mockResolvedValue(undefined) };
-    repository.findById.mockResolvedValue(user);
+    const user = { _id: '507f1f77bcf86cd799439011', name: 'New', save: jest.fn() };
+    repository.findByIdAndUpdate.mockResolvedValue(user);
     repository.findProfileById.mockResolvedValue({ _id: user._id, name: 'New', googleId: 'secret', __v: 1 });
     const response = await request(app)
       .patch(`/api/user/${user._id}`)
@@ -90,6 +90,7 @@ describe('registered member HTTP routes', () => {
     expect(response.body).toMatchObject({ success: true, data: { _id: user._id, name: 'New' } });
     expect(response.body.data).not.toHaveProperty('googleId');
     expect(response.body.data).not.toHaveProperty('__v');
-    expect(user.save).toHaveBeenCalledTimes(1);
+    expect(repository.findByIdAndUpdate).toHaveBeenCalledWith(user._id, { name: 'New' });
+    expect(user.save).not.toHaveBeenCalled();
   });
 });

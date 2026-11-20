@@ -34,10 +34,8 @@ const isAdmin = (user) => {
 
 const updateProfile = async (id, updates, caller) => {
   if (caller?._id?.toString().toLowerCase() !== id.toLowerCase() && !isAdmin(caller)) throw new AppError(FORBIDDEN, 'FORBIDDEN', 'You do not have permission to modify this profile');
-  const user = await repository.findById(id);
+  const user = await repository.findByIdAndUpdate(id, updates);
   if (!user) throw new AppError(NOT_FOUND, 'NOT_FOUND', 'Not found');
-  Object.assign(user, updates);
-  await user.save();
   return formatUser(await repository.findProfileById(user._id));
 };
 

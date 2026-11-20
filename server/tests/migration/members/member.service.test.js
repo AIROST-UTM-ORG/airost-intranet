@@ -1,7 +1,7 @@
 jest.mock('../../../src/features/members/member.repository', () => ({
   findDirectoryUsers: jest.fn(),
   countDirectoryUsers: jest.fn(),
-  findById: jest.fn(),
+  findByIdAndUpdate: jest.fn(),
   findProfileById: jest.fn(),
 }));
 
@@ -48,46 +48,46 @@ describe('member service behavior', () => {
   });
 
   test('allows a member to update their own profile and returns a formatted persisted profile', async () => {
-    const user = { _id: '507f1f77bcf86cd799439011', name: 'Before', save: jest.fn().mockResolvedValue(undefined) };
-    repository.findById.mockResolvedValue(user);
+    const user = { _id: '507f1f77bcf86cd799439011', name: 'After', save: jest.fn() };
+    repository.findByIdAndUpdate.mockResolvedValue(user);
     repository.findProfileById.mockResolvedValue({ _id: user._id, name: 'After', googleId: 'secret', __v: 1 });
 
     const result = await service.updateProfile(user._id, { name: 'After' }, { _id: user._id, positions: ['member'] });
 
-    expect(user.name).toBe('After');
-    expect(user.save).toHaveBeenCalledTimes(1);
+    expect(repository.findByIdAndUpdate).toHaveBeenCalledWith(user._id, { name: 'After' });
+    expect(user.save).not.toHaveBeenCalled();
     expect(result).toEqual(expect.objectContaining({ name: 'After' }));
     expect(result).not.toHaveProperty('googleId');
     expect(result).not.toHaveProperty('__v');
   });
 
   test('allows a case-insensitive platform admin to update another profile', async () => {
-    const user = { _id: '507f1f77bcf86cd799439012', name: 'Before', save: jest.fn() };
-    repository.findById.mockResolvedValue(user);
+    const user = { _id: '507f1f77bcf86cd799439012', name: 'After', save: jest.fn() };
+    repository.findByIdAndUpdate.mockResolvedValue(user);
     repository.findProfileById.mockResolvedValue({ _id: user._id, name: 'After' });
     await service.updateProfile(user._id, { name: 'After' }, { _id: '507f1f77bcf86cd799439013', positions: ['AdMiN'] });
-    expect(user.save).toHaveBeenCalled();
+    expect(repository.findByIdAndUpdate).toHaveBeenCalledWith(user._id, { name: 'After' });
+    expect(user.save).not.toHaveBeenCalled();
   });
 
   test('rejects a non-admin changing another member before reading or writing the target', async () => {
     await expect(service.updateProfile('507f1f77bcf86cd799439011', { name: 'Intruder' }, {
       _id: '507f1f77bcf86cd799439012', positions: ['member'],
     })).rejects.toMatchObject({ status: 403, code: 'FORBIDDEN' });
-    expect(repository.findById).not.toHaveBeenCalled();
+    expect(repository.findByIdAndUpdate).not.toHaveBeenCalled();
   });
 
   test('returns a not found error when an authorized target does not exist', async () => {
-    repository.findById.mockResolvedValue(null);
+    repository.findByIdAndUpdate.mockResolvedValue(null);
     await expect(service.updateProfile('507f1f77bcf86cd799439011', {}, { _id: '507f1f77bcf86cd799439011' }))
       .rejects.toMatchObject({ status: 404, code: 'NOT_FOUND' });
   });
 
   test('propagates a profile persistence failure instead of returning success', async () => {
     const error = new Error('profile persistence failed');
-    const user = { _id: '507f1f77bcf86cd799439011', save: jest.fn().mockRejectedValue(error) };
-    repository.findById.mockResolvedValue(user);
+    repository.findByIdAndUpdate.mockRejectedValue(error);
 
-    await expect(service.updateProfile(user._id, { name: 'Updated' }, { _id: user._id }))
+    await expect(service.updateProfile('507f1f77bcf86cd799439011', { name: 'Updated' }, { _id: '507f1f77bcf86cd799439011' }))
       .rejects.toBe(error);
     expect(repository.findProfileById).not.toHaveBeenCalled();
   });
