@@ -17,6 +17,9 @@ export function Modal({
   footer,
   className = "",
   children,
+  dataTestId,
+  titleTestId,
+  ...rest
 }) {
   const dialogRef = useRef(null);
   const boxRef = useRef(null);
@@ -84,8 +87,10 @@ export function Modal({
       aria-labelledby={title ? titleId : undefined}
       aria-describedby={description ? descId : undefined}
       aria-label={!title ? ariaLabel : undefined}
+      data-testid={dataTestId || rest["data-testid"]}
       onCancel={handleCancel}
       onClose={handleNativeClose}
+      {...rest}
     >
       <div
         ref={boxRef}
@@ -103,7 +108,11 @@ export function Modal({
             ✕
           </button>
         )}
-        {title && <h3 id={titleId} className="font-bold text-lg">{title}</h3>}
+        {title && (
+          <h3 id={titleId} data-testid={titleTestId} className="font-bold text-lg">
+            {title}
+          </h3>
+        )}
         {description && <p id={descId} className="py-2">{description}</p>}
         {isOpen && children}
         {footer && <div className="modal-action">{footer}</div>}
