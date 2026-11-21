@@ -7,7 +7,10 @@ const formatUser = (source) => {
     positions: publicUser.positions || [],
     year: publicUser.year || '',
     course: publicUser.course || '',
-    origin: publicUser.origin || { state: '', country: '' },
+    origin: {
+      state: publicUser.origin?.state ?? '',
+      country: publicUser.origin?.country ?? '',
+    },
     description: publicUser.description || '',
     photoUrl: publicUser.photoUrl || '',
     instagramUrl: publicUser.instagramUrl || '',

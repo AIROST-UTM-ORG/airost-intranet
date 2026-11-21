@@ -16,7 +16,7 @@ const buildFilter = ({ search, role, year }) => {
   return filter;
 };
 
-const getUsers = async ({ search, role, year, page, limit }) => {
+const getUsers = async ({ search, role, year, page, limit } = {}) => {
   const filter = buildFilter({ search, role, year });
   const currentPage = page ?? 1;
   const pageSize = limit ?? 20;
@@ -28,8 +28,9 @@ const getUsers = async ({ search, role, year, page, limit }) => {
 };
 
 const isAdmin = (user) => {
-  const positions = Array.isArray(user?.positions) ? user.positions : [user?.positions];
-  return positions.some((role) => typeof role === 'string' && role.trim().toLowerCase() === PLATFORM_ROLES.ADMIN);
+  const positions = user?.positions ?? user?.position;
+  const roles = Array.isArray(positions) ? positions : [positions];
+  return roles.some((role) => typeof role === 'string' && role.trim().toLowerCase() === PLATFORM_ROLES.ADMIN);
 };
 
 const updateProfile = async (id, updates, caller) => {

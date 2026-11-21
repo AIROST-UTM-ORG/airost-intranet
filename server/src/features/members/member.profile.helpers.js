@@ -38,7 +38,7 @@ const normalizeSocialUrl = (value, network) => {
   if (value.length > 300 || (trimmed && !SOCIAL_URL_REGEX[network].test(trimmed))) return null;
   if (!trimmed) return '';
 
-  if (trimmed.startsWith('https://')) {
+  if (/^https:\/\//i.test(trimmed)) {
     let url;
     try {
       url = new URL(trimmed);
