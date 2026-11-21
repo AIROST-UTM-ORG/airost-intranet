@@ -40,7 +40,7 @@ describe('validate-and-assign-reviewers', () => {
       assert.strictEqual(evaluateRisk(nestedMiddleware, [], 'feat: validation'), 2);
     });
 
-    it('evaluates to 2 approvals for PR touching database schemas in server/src/features/**/models/**', () => {
+    it('evaluates to 2 approvals for PR touching database schemas in server/src/features/**/models/** and flat *.model.js', () => {
       const projectModel = ['server/src/features/projects/models/Project.js'];
       assert.strictEqual(evaluateRisk(projectModel, [], 'feat: project schema'), 2);
 
@@ -49,6 +49,12 @@ describe('validate-and-assign-reviewers', () => {
 
       const eventModel = ['server/src/features/events/models/Event.js'];
       assert.strictEqual(evaluateRisk(eventModel, [], 'feat: event schema'), 2);
+
+      const flatModel = ['server/src/features/members/member.model.js'];
+      assert.strictEqual(evaluateRisk(flatModel, [], 'feat: member schema update'), 2);
+
+      const verifiedUserModel = ['server/src/features/members/verifiedUser.model.js'];
+      assert.strictEqual(evaluateRisk(verifiedUserModel, [], 'feat: verified user schema update'), 2);
     });
 
     it('evaluates to 2 approvals for PR touching database schemas in server/src/models/**', () => {
@@ -59,9 +65,12 @@ describe('validate-and-assign-reviewers', () => {
       assert.strictEqual(evaluateRisk(commonModel, [], 'refactor: base schema'), 2);
     });
 
-    it('evaluates to 2 approvals for PR touching server/src/config/passport.js', () => {
-      const files = ['server/src/config/passport.js'];
-      assert.strictEqual(evaluateRisk(files, [], 'chore: configure passport strategy'), 2);
+    it('evaluates to 2 approvals for PR touching configuration files in server/src/config/** and server/config/**', () => {
+      assert.strictEqual(evaluateRisk(['server/src/config/passport.js'], [], 'chore: configure passport strategy'), 2);
+      assert.strictEqual(evaluateRisk(['server/src/config/cors.js'], [], 'chore: configure cors policy'), 2);
+      assert.strictEqual(evaluateRisk(['server/src/config/database.js'], [], 'chore: configure database connection'), 2);
+      assert.strictEqual(evaluateRisk(['server/src/config/env.js'], [], 'chore: configure env validation'), 2);
+      assert.strictEqual(evaluateRisk(['server/config/database.js'], [], 'chore: legacy server config'), 2);
     });
 
     it('evaluates to 2 approvals for PR touching server/src/app.js or server/src/server.js', () => {

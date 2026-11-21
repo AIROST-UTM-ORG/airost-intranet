@@ -77,12 +77,13 @@ function evaluateRisk(files = [], labels = [], title = '') {
     /\.github\/(?:workflows|scripts)\//i,
     /docker/i,
     /nginx/i,
-    /server\/(?:src\/config\/passport\.js|(?:src\/)?(?:passport\.js|app\.js|server\.js))/i,
+    /server\/(?:src\/)?config\//i,
+    /server\/(?:src\/)?(?:passport\.js|app\.js|server\.js)/i,
     /server\/routes\/(?:adminRoutes|auth)/i,
     /server\/src\/features\/(?:auth|admin)\//i,
     /server\/(?:src\/)?middleware\//i,
     /server\/(?:src\/)?models\//i,
-    /server\/src\/features\/.*\/models\//i
+    /server\/src\/features\/.*(?:models\/|\.model\.js)/i
   ];
 
   if ((files || []).some(f => sensitivePatterns.some(p => p.test(f)))) {
