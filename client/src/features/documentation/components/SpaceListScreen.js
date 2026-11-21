@@ -1,11 +1,13 @@
 import React from "react";
-import { FiFolder, FiSearch } from "react-icons/fi";
 import SpaceListHeader from "./SpaceListHeader";
 import SpaceCard from "./SpaceCard";
+import SpaceListSkeleton from "./SpaceListSkeleton";
+import SpaceFirstUseCard from "./SpaceFirstUseCard";
+import SpaceNoSearchResultsCard from "./SpaceNoSearchResultsCard";
 import { useSpaceListFilter } from "../hooks/useSpaceListFilter";
 
 /**
- * SpaceListScreen - Covers Screens 1, 2, 3, and 4
+ * SpaceListScreen - Covers Screens 1, 2, 3, and 4 (< 150 lines)
  */
 const SpaceListScreen = ({
   spaces = [],
@@ -60,26 +62,7 @@ const SpaceListScreen = ({
       )}
 
       {/* Loading Skeleton */}
-      {loading && !error && (
-        <div className="flex flex-col gap-[24px]" data-testid="spaces-loading">
-          {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="doc-card h-[149px] p-[24px] flex justify-between animate-pulse bg-gray-50"
-            >
-              <div className="w-2/3 space-y-3">
-                <div className="h-6 bg-gray-200 rounded w-1/2"></div>
-                <div className="h-4 bg-gray-200 rounded w-1/3"></div>
-                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-              </div>
-              <div className="w-24 flex flex-col items-end justify-between">
-                <div className="h-6 w-6 bg-gray-200 rounded-full"></div>
-                <div className="h-10 w-20 bg-gray-200 rounded"></div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      {loading && !error && <SpaceListSkeleton />}
 
       {/* Loaded Content */}
       {!loading && !error && (
@@ -121,57 +104,14 @@ const SpaceListScreen = ({
           </div>
 
           {/* Screen 2: First Use Empty State */}
-          {isFirstUse && (
-            <div
-              className="doc-card w-full min-h-[330px] p-[32px] flex flex-col items-center justify-center text-center"
-              data-testid="first-use-card"
-            >
-              <div className="w-[56px] h-[56px] rounded-full bg-[#F5F5F5] flex items-center justify-center mb-[18px]">
-                <FiFolder className="w-[24px] h-[24px] text-[#686868]" strokeWidth={2} />
-              </div>
-              <h3 className="font-varela text-[22px] text-[#171717] mb-[12px] font-normal">
-                A home for your documentation
-              </h3>
-              <p className="font-varela text-[14px] text-[#686868] max-w-[520px] leading-[150%] mb-[24px]">
-                Create your first Documentation Space, then add links to Google Docs or Drive.
-                Connect it to a project or keep it open to the team.
-              </p>
-              <button
-                type="button"
-                onClick={onCreateSpace}
-                className="doc-btn-primary h-[42px] px-[24px] gap-[8px]"
-                data-testid="create-first-space-btn"
-              >
-                <span className="font-varela text-[14px] capitalize">+ Create Documentation Space</span>
-              </button>
-            </div>
-          )}
+          {isFirstUse && <SpaceFirstUseCard onCreateSpace={onCreateSpace} />}
 
           {/* Screen 3: No Search Results */}
           {isNoSearchResults && (
-            <div
-              className="doc-card w-full min-h-[315px] p-[32px] flex flex-col items-center justify-center text-center"
-              data-testid="no-search-results-card"
-            >
-              <div className="w-[56px] h-[56px] rounded-full bg-[#F5F5F5] flex items-center justify-center mb-[18px]">
-                <FiSearch className="w-[24px] h-[24px] text-[#686868]" strokeWidth={2} />
-              </div>
-              <h3 className="font-varela text-[22px] text-[#171717] mb-[12px] font-normal">
-                No spaces found for “{searchQuery}”
-              </h3>
-              <p className="font-varela text-[14px] text-[#686868] max-w-[520px] leading-[150%] mb-[24px]">
-                Try another space title or project name, or clear your search to see all Documentation
-                Spaces.
-              </p>
-              <button
-                type="button"
-                onClick={() => setSearchQuery("")}
-                className="doc-btn-primary h-[42px] px-[20px] gap-[6px]"
-                data-testid="clear-search-cta"
-              >
-                <span className="font-varela text-[14px]">✕ Clear search</span>
-              </button>
-            </div>
+            <SpaceNoSearchResultsCard
+              searchQuery={searchQuery}
+              onClearSearch={() => setSearchQuery("")}
+            />
           )}
 
           {/* Screen 1 & Screen 4: Populated Space Cards */}
