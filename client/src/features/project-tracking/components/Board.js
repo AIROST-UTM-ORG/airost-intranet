@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import useFetchUsers from "../../../hooks/useFetchUsers";
 import { useParams } from "react-router-dom";
 import useAuth from "../../../hooks/useAuth";
-import useGetProjects from "../../Projects/hooks/useGetProjects";
+import useGetProjects from "../../projects/hooks/useGetProjects";
 import apiClient from "../../../shared/api/client";
 
 const Board = () => {
