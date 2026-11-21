@@ -6,7 +6,8 @@ const express = require('express');
 const authRoutes = require('../features/auth/auth.routes');
 const docRoutes = require('../../routes/docRoutes');
 const adminRoutes = require('../../routes/adminRoutes');
-const userRoutes = require('../../routes/userRoutes');
+const userRoutes = require('../features/members/member.routes');
+const memberRepository = require('../features/members/member.repository');
 const eventRoutes = require('../../routes/eventRoutes');
 const projectRoutes = require('../../routes/projectsRoutes');
 
@@ -35,8 +36,7 @@ if (process.env.NODE_ENV === 'test') {
   const { validateTestLoginPayload } = require('../features/auth/auth.validation');
   router.post('/test/auth/login', validate((req) => validateTestLoginPayload(req.body)), async (req, res) => {
     try {
-      const User = require('../../models/User');
-      const user = await User.findById(req.sanitizedData.userId);
+      const user = await memberRepository.findById(req.sanitizedData.userId);
       if (!user) return res.status(404).json({ error: 'User not found' });
       req.login(user, (error) => {
         if (error) return res.status(500).json({ error: error.message });

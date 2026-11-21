@@ -10,7 +10,7 @@ const ROUTE_MODULES = [
   ['../../../src/features/auth/auth.routes', 'auth'],
   ['../../../routes/docRoutes', 'documents'],
   ['../../../routes/adminRoutes', 'admin'],
-  ['../../../routes/userRoutes', 'users'],
+  ['../../../src/features/members/member.routes', 'users'],
   ['../../../routes/eventRoutes', 'events'],
   ['../../../routes/projectsRoutes', 'projects'],
 ];
@@ -25,11 +25,11 @@ const registerRouteMocks = () => {
   }
 };
 
-const createRouteApp = ({ nodeEnv = 'test', userModel, loginError = null } = {}) => {
+const createRouteApp = ({ nodeEnv = 'test', memberRepository, loginError = null } = {}) => {
   jest.resetModules();
   process.env.NODE_ENV = nodeEnv;
   registerRouteMocks();
-  if (userModel) jest.doMock('../../../models/User', () => userModel);
+  jest.doMock('../../../src/features/members/member.repository', () => memberRepository || ({ findById: jest.fn() }));
 
   const router = require('../../../src/routes');
   const app = express();
@@ -193,7 +193,7 @@ describe('CORS origin policy', () => {
 describe('shared route assembly', () => {
   const originalNodeEnv = process.env.NODE_ENV;
   afterEach(() => {
-    jest.dontMock('../../../models/User');
+    jest.dontMock('../../../src/features/members/member.repository');
     for (const [modulePath] of ROUTE_MODULES) jest.dontMock(modulePath);
     jest.resetModules();
     if (originalNodeEnv === undefined) delete process.env.NODE_ENV;
@@ -217,18 +217,18 @@ describe('shared route assembly', () => {
   });
 
   test('test login endpoint returns 404 when the requested user is missing', async () => {
-    const userModel = { findById: jest.fn().mockResolvedValue(null) };
-    const app = createRouteApp({ userModel });
+    const memberRepository = { findById: jest.fn().mockResolvedValue(null) };
+    const app = createRouteApp({ memberRepository });
     const res = await request(app).post('/test/auth/login').send({ userId: 'missing' });
     expect(res.status).toBe(404);
     expect(res.body).toEqual({ error: 'User not found' });
-    expect(userModel.findById).toHaveBeenCalledWith('missing');
+    expect(memberRepository.findById).toHaveBeenCalledWith('missing');
   });
 
   test('test login endpoint returns 500 when session login fails', async () => {
     const user = { id: 'user-1' };
-    const userModel = { findById: jest.fn().mockResolvedValue(user) };
-    const app = createRouteApp({ userModel, loginError: new Error('session failure') });
+    const memberRepository = { findById: jest.fn().mockResolvedValue(user) };
+    const app = createRouteApp({ memberRepository, loginError: new Error('session failure') });
     const res = await request(app).post('/test/auth/login').send({ userId: 'user-1' });
     expect(res.status).toBe(500);
     expect(res.body).toEqual({ error: 'session failure' });
@@ -236,8 +236,8 @@ describe('shared route assembly', () => {
 
   test('test login endpoint logs in a found user and returns success', async () => {
     const user = { id: 'user-1', name: 'Test User' };
-    const userModel = { findById: jest.fn().mockResolvedValue(user) };
-    const app = createRouteApp({ userModel });
+    const memberRepository = { findById: jest.fn().mockResolvedValue(user) };
+    const app = createRouteApp({ memberRepository });
     const res = await request(app).post('/test/auth/login').send({ userId: 'user-1' });
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ success: true, user });
@@ -245,16 +245,16 @@ describe('shared route assembly', () => {
 
   test('test login endpoint trims the user id before database lookup', async () => {
     const user = { id: 'user-1', name: 'Test User' };
-    const userModel = { findById: jest.fn().mockResolvedValue(user) };
-    const app = createRouteApp({ userModel });
+    const memberRepository = { findById: jest.fn().mockResolvedValue(user) };
+    const app = createRouteApp({ memberRepository });
     const res = await request(app).post('/test/auth/login').send({ userId: '  user-1  ' });
     expect(res.status).toBe(200);
-    expect(userModel.findById).toHaveBeenCalledWith('user-1');
+    expect(memberRepository.findById).toHaveBeenCalledWith('user-1');
   });
 
   test('test login endpoint catches database errors', async () => {
-    const userModel = { findById: jest.fn().mockRejectedValue(new Error('lookup failure')) };
-    const app = createRouteApp({ userModel });
+    const memberRepository = { findById: jest.fn().mockRejectedValue(new Error('lookup failure')) };
+    const app = createRouteApp({ memberRepository });
     const res = await request(app).post('/test/auth/login').send({ userId: 'user-1' });
     expect(res.status).toBe(500);
     expect(res.body).toEqual({ error: 'lookup failure' });
