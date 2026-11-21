@@ -2,6 +2,7 @@ jest.mock('../../../src/features/members/member.model', () => ({
   find: jest.fn(),
   countDocuments: jest.fn(),
   findById: jest.fn(),
+  findByIdAndUpdate: jest.fn(),
 }));
 
 const User = require('../../../src/features/members/member.model');
@@ -64,6 +65,34 @@ describe('member persistence behavior', () => {
     User.findById.mockResolvedValue(null);
 
     await expect(repository.findById('missing-member-id')).resolves.toBeNull();
+  });
+
+  test('updates only the supplied nested origin fields without replacing the embedded object', async () => {
+    const updatedUser = { _id: 'member-id', origin: { state: 'Johor', country: 'Malaysia' } };
+    User.findByIdAndUpdate.mockResolvedValue(updatedUser);
+
+    await expect(repository.findByIdAndUpdate('member-id', { origin: { state: 'Johor' } })).resolves.toBe(updatedUser);
+
+    expect(User.findByIdAndUpdate).toHaveBeenCalledWith(
+      'member-id',
+      { $set: { 'origin.state': 'Johor' } },
+      { new: true, runValidators: true },
+    );
+  });
+
+  test('updates multiple supplied origin fields and preserves partial update semantics for other fields', async () => {
+    User.findByIdAndUpdate.mockResolvedValue({ _id: 'member-id' });
+
+    await repository.findByIdAndUpdate('member-id', {
+      name: 'Ada',
+      origin: { state: 'Johor', country: 'Malaysia' },
+    });
+
+    expect(User.findByIdAndUpdate).toHaveBeenCalledWith(
+      'member-id',
+      { $set: { name: 'Ada', 'origin.state': 'Johor', 'origin.country': 'Malaysia' } },
+      { new: true, runValidators: true },
+    );
   });
 
   test('loads an updated public profile with populated featured projects', async () => {

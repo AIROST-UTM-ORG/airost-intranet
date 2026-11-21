@@ -11,7 +11,23 @@ const findDirectoryUsers = (filter, { skip, limit }) => User.find(filter)
 
 const countDirectoryUsers = (filter) => User.countDocuments(filter);
 const findById = (id) => User.findById(id);
-const findByIdAndUpdate = (id, updates) => User.findByIdAndUpdate(id, { $set: updates }, { new: true, runValidators: true });
+const buildProfileUpdate = (updates) => Object.entries(updates).reduce((set, [field, value]) => {
+  if (field === 'origin' && value && typeof value === 'object' && !Array.isArray(value)) {
+    for (const [originField, originValue] of Object.entries(value)) {
+      if (originField === 'state' || originField === 'country') set[`origin.${originField}`] = originValue;
+    }
+    return set;
+  }
+
+  set[field] = value;
+  return set;
+}, {});
+
+const findByIdAndUpdate = (id, updates) => User.findByIdAndUpdate(
+  id,
+  { $set: buildProfileUpdate(updates) },
+  { new: true, runValidators: true },
+);
 const findProfileById = (id) => User.findById(id).select('-googleId -__v').populate(projectProjection);
 
 module.exports = { findDirectoryUsers, countDirectoryUsers, findById, findByIdAndUpdate, findProfileById };

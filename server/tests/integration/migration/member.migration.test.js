@@ -151,6 +151,20 @@ describe('members feature migration integration', () => {
       expect(persisted.featuredProjectIds.map(String)).toEqual([project.id]);
     });
 
+    test('preserves omitted origin fields when updating part of the origin object', async () => {
+      const user = await createUser({ origin: { state: 'Selangor', country: 'Malaysia' } });
+      const agent = await createAuthenticatedAgent(user);
+
+      const response = await agent
+        .patch(`/api/user/${user.id}`)
+        .send({ origin: { state: 'Johor' } })
+        .expect(200);
+
+      expect(response.body.data.origin).toEqual({ state: 'Johor', country: 'Malaysia' });
+      const persisted = await User.findById(user.id);
+      expect(persisted.origin.toObject()).toEqual({ state: 'Johor', country: 'Malaysia' });
+    });
+
     test('rejects unsupported profile fields with a 400 validation error', async () => {
       const user = await createUser();
       const agent = await createAuthenticatedAgent(user);
