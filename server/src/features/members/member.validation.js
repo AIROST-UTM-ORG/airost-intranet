@@ -1,6 +1,9 @@
 const AppError = require('../../shared/errors/AppError');
 const { BAD_REQUEST, NOT_FOUND } = require('../../shared/constants/httpStatus');
-const { isValidObjectId, SOCIAL_URL_REGEX } = require('../../shared/utils/validators');
+const { isValidObjectId } = require('../../shared/utils/validators');
+const { isValidPhotoUrl, normalizeSocialUrl } = require('./member.profile.helpers');
+
+const MAX_DIRECTORY_OFFSET = 1000000;
 
 const invalid = (message, details) => { throw new AppError(BAD_REQUEST, 'VALIDATION_ERROR', message, details); };
 
@@ -13,6 +16,7 @@ const validateGetUsers = (req) => {
   if (year !== undefined && (typeof year !== 'string' || !year.trim() || year.length > 40)) invalid('Invalid year parameter.');
   if (page !== undefined && (!Number.isInteger(page) || page < 1)) invalid('Invalid page parameter.');
   if (limit !== undefined && (!Number.isInteger(limit) || limit < 1 || limit > 100)) invalid('Invalid limit parameter.');
+  if (((page ?? 1) - 1) * (limit ?? 20) > MAX_DIRECTORY_OFFSET) invalid('Requested page exceeds the maximum directory offset.');
   return { search, role, year, page, limit };
 };
 
@@ -37,48 +41,16 @@ const validateUpdateProfile = (req) => {
   if (updates.description !== undefined && (typeof updates.description !== 'string' || updates.description.length > 1000)) invalid('Description must be a string under 1000 characters.');
   if (updates.photoUrl !== undefined) {
     const value = updates.photoUrl;
-    if (typeof value !== 'string') {
-      invalid('photoUrl must be a string.');
-    }
-    const trimmed = value.trim();
-    let httpUrl = false;
-    try { httpUrl = ['http:', 'https:'].includes(new URL(trimmed).protocol) && trimmed.length <= 2048; } catch { /* malformed URL */ }
-    const dataUrl = typeof value === 'string' && value.length <= 2 * 1024 * 1024 && /^data:image\/(?:jpeg|png|webp);base64,[a-zA-Z0-9+/]+={0,2}$/i.test(value);
-    if (typeof value !== 'string' || (trimmed && !httpUrl && !dataUrl)) invalid('photoUrl must be a valid HTTP/HTTPS URL or supported image data URI.');
-    updates.photoUrl = trimmed;
+    if (typeof value !== 'string') invalid('photoUrl must be a string.');
+    if (!isValidPhotoUrl(value)) invalid('photoUrl must be a valid HTTP/HTTPS URL or supported image data URI.');
+    updates.photoUrl = value.trim();
   }
-  const hosts = { instagram: ['instagram.com', 'www.instagram.com'], linkedin: ['linkedin.com', 'www.linkedin.com'], github: ['github.com', 'www.github.com'] };
-  const canonical = { instagram: 'www.instagram.com', linkedin: 'www.linkedin.com', github: 'github.com' };
-  const profilePaths = {
-    instagram: /^\/[a-zA-Z0-9._-]+\/?$/,
-    linkedin: /^\/in\/[a-zA-Z0-9._-]+\/?$/,
-    github: /^\/[a-zA-Z0-9._-]+\/?$/,
-  };
-  for (const network of Object.keys(hosts)) {
+  for (const network of ['instagram', 'linkedin', 'github']) {
     const field = `${network}Url`;
     if (updates[field] === undefined) continue;
-    const input = updates[field];
-    if (typeof input !== 'string' || input.length > 300 || (input.trim() && !SOCIAL_URL_REGEX[network].test(input.trim()))) invalid(`${field} must be an HTTPS profile URL for the correct platform or a valid handle.`);
-    const trimmed = input.trim();
-    if (!trimmed) { updates[field] = ''; continue; }
-    if (trimmed.startsWith('https://')) {
-      const url = new URL(trimmed);
-      if (
-        !hosts[network].includes(url.hostname.toLowerCase()) ||
-        (url.port && url.port !== '443') ||
-        url.username ||
-        url.password ||
-        !profilePaths[network].test(url.pathname) ||
-        url.search ||
-        url.hash
-      ) invalid(`${field} must be an HTTPS profile URL for the correct platform or a valid handle.`);
-      url.hostname = canonical[network];
-      updates[field] = url.href;
-    } else {
-      const handle = trimmed.replace(/^@/, '').replace(/\/$/, '');
-      const path = network === 'linkedin' ? `/in/${encodeURIComponent(handle)}/` : `/${encodeURIComponent(handle)}${network === 'instagram' ? '/' : ''}`;
-      updates[field] = `https://${canonical[network]}${path}`;
-    }
+    const normalizedUrl = normalizeSocialUrl(updates[field], network);
+    if (normalizedUrl === null) invalid(`${field} must be an HTTPS profile URL for the correct platform or a valid handle.`);
+    updates[field] = normalizedUrl;
   }
   return { sanitizedData: updates };
 };
