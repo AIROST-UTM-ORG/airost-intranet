@@ -1,6 +1,6 @@
 const repository = require('./member.repository');
-const { isAdmin } = require('./admin/admin.service');
 const { formatUser, formatUsers } = require('./member.formatter');
+const { PLATFORM_ROLES } = require('../../shared/constants/roles');
 const { escapeRegex } = require('../../shared/utils/validators');
 const AppError = require('../../shared/errors/AppError');
 const { FORBIDDEN, NOT_FOUND } = require('../../shared/constants/httpStatus');
@@ -27,6 +27,10 @@ const getUsers = async ({ search, role, year, page, limit }) => {
   return { data: formatUsers(users), meta: { page: currentPage, limit: pageSize, total } };
 };
 
+const isAdmin = (user) => {
+  const positions = Array.isArray(user?.positions) ? user.positions : [user?.positions];
+  return positions.some((role) => typeof role === 'string' && role.trim().toLowerCase() === PLATFORM_ROLES.ADMIN);
+};
 
 const updateProfile = async (id, updates, caller) => {
   if (caller?._id?.toString().toLowerCase() !== id.toLowerCase() && !isAdmin(caller)) throw new AppError(FORBIDDEN, 'FORBIDDEN', 'You do not have permission to modify this profile');
@@ -35,4 +39,4 @@ const updateProfile = async (id, updates, caller) => {
   return formatUser(await repository.findProfileById(user._id));
 };
 
-module.exports = { getUsers, updateProfile };
+module.exports = { getUsers, updateProfile, isAdmin };

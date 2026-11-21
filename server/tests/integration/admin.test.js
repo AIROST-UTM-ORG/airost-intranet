@@ -153,7 +153,7 @@ describe('POST /admin/users/verified', () => {
     const res = await request(app).post('/admin/users/verified').set('Cookie', cookie).send(payload);
 
     expect(res.status).toBe(201);
-    expect(res.body).toEqual({ success: true, data: { createStatus: 'success' } });
+    expect(res.body.createStatus).toBe('success');
 
     const saved = await User.findOne({ email: 'dave@airost.com' });
     expect(saved).not.toBeNull();
@@ -172,7 +172,7 @@ describe('POST /admin/users/verified', () => {
       .send({ name: 'Duplicate', email: 'existing@airost.com', position: 'member' });
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ success: true, data: { createStatus: 'success' } });
+    expect(res.body.createStatus).toBe('success');
     const updated = await User.find({ email: 'existing@airost.com' });
     expect(updated).toHaveLength(1);
     expect(updated[0].positions).toContain('member');

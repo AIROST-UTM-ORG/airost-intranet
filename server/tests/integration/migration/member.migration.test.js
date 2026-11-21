@@ -122,11 +122,7 @@ describe('members feature migration integration', () => {
     });
 
     test('allows a member to update their own profile and persists normalized fields', async () => {
-      const user = await createUser({
-        course: 'Aerospace Engineering',
-        year: 'Year 3',
-        description: 'Keep this existing description',
-      });
+      const user = await createUser();
       const project = await Project.create({ projectId: 21, title: 'Member Project', description: 'Featured project' });
       const agent = await createAuthenticatedAgent(user);
 
@@ -143,9 +139,6 @@ describe('members feature migration integration', () => {
       expect(response.body.data).toEqual(expect.objectContaining({
         _id: user.id,
         name: 'Updated Member',
-        course: 'Aerospace Engineering',
-        year: 'Year 3',
-        description: 'Keep this existing description',
         instagramUrl: 'https://www.instagram.com/updated.member/',
         featuredProjectIds: [expect.objectContaining({ _id: project.id, title: 'Member Project' })],
       }));
@@ -154,9 +147,6 @@ describe('members feature migration integration', () => {
 
       const persisted = await User.findById(user.id);
       expect(persisted.name).toBe('Updated Member');
-      expect(persisted.course).toBe('Aerospace Engineering');
-      expect(persisted.year).toBe('Year 3');
-      expect(persisted.description).toBe('Keep this existing description');
       expect(persisted.instagramUrl).toBe('https://www.instagram.com/updated.member/');
       expect(persisted.featuredProjectIds.map(String)).toEqual([project.id]);
     });

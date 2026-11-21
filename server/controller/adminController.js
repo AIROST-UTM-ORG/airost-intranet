@@ -77,9 +77,7 @@ const createVerifiedUser = async (req, res) => {
     }
 };
 
-// module.exports = {
-//     createVerifiedUser,
-//     getUsers
-// }
-
-module.exports = require('../src/features/members/admin/admin.controller');
+module.exports = {
+    createVerifiedUser,
+    getUsers
+}
