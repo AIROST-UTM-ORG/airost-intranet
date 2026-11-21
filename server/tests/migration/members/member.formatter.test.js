@@ -28,6 +28,11 @@ describe('member response formatting', () => {
     }));
   });
 
+  test('fills missing fields in a partial origin object', () => {
+    expect(formatUser({ origin: { state: 'Johor' } }).origin).toEqual({ state: 'Johor', country: '' });
+    expect(formatUser({ origin: { country: 'Malaysia' } }).origin).toEqual({ state: '', country: 'Malaysia' });
+  });
+
   test('maps every user in a directory response', () => {
     expect(formatUsers([{ name: 'Ada', googleId: 'g1' }, { name: 'Lin', __v: 2 }])).toEqual([
       expect.objectContaining({ name: 'Ada', loggedIn: true }),

@@ -24,6 +24,17 @@ describe('member service behavior', () => {
     expect(repository.findDirectoryUsers).toHaveBeenCalledWith({ isActive: true }, { skip: 0, limit: 20 });
   });
 
+  test('returns the default directory page when called without options', async () => {
+    repository.findDirectoryUsers.mockResolvedValue([]);
+    repository.countDirectoryUsers.mockResolvedValue(0);
+
+    await expect(service.getUsers()).resolves.toEqual({
+      data: [],
+      meta: { page: 1, limit: 20, total: 0 },
+    });
+    expect(repository.findDirectoryUsers).toHaveBeenCalledWith({ isActive: true }, { skip: 0, limit: 20 });
+  });
+
   test('applies search, role, year, and requested page to the directory result', async () => {
     repository.findDirectoryUsers.mockResolvedValue([]);
     repository.countDirectoryUsers.mockResolvedValue(0);
@@ -101,7 +112,9 @@ describe('member service behavior', () => {
 
   test('recognizes only the platform admin role', () => {
     expect(service.isAdmin({ positions: ['member', 'ADMIN'] })).toBe(true);
+    expect(service.isAdmin({ position: 'ADMIN' })).toBe(true);
     expect(service.isAdmin({ positions: ['project lead'] })).toBe(false);
+    expect(service.isAdmin({ position: 'project lead' })).toBe(false);
     expect(service.isAdmin(null)).toBe(false);
   });
 });

@@ -15,6 +15,7 @@ describe('member profile URL helpers', () => {
   test.each([
     ['@ada', 'instagram', 'https://www.instagram.com/ada/'],
     ['https://github.com/ada', 'github', 'https://github.com/ada'],
+    ['HTTPS://GITHUB.COM/ada', 'github', 'https://github.com/ada'],
     ['https://linkedin.com/in/ada', 'linkedin', 'https://www.linkedin.com/in/ada'],
     ['', 'github', ''],
   ])('normalizes valid %s %s URL', (value, network, expected) => {
