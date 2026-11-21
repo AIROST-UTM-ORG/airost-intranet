@@ -1,27 +1,2 @@
-const mongoose = require('mongoose');
-
-const originSchema = new mongoose.Schema({
-  state: { type: String, default: '' },
-  country: { type: String, default: '' },
-}, { _id: false });
-
-const userSchema = new mongoose.Schema({
-  googleId: { type: String, unique: true, sparse: true, trim: true, alias: 'googleID' },
-  email: { type: String, unique: true, sparse: true, trim: true, lowercase: true },
-  name: { type: String, required: true, trim: true },
-  photoUrl: { type: String, default: '' },
-  positions: { type: [String], default: [], alias: 'position' },
-  year: { type: String, default: '' },
-  course: { type: String, default: '' },
-  origin: { type: originSchema, default: () => ({}) },
-  description: { type: String, default: '' },
-  linkedinUrl: { type: String, default: '' },
-  githubUrl: { type: String, default: '' },
-  instagramUrl: { type: String, default: '' },
-  featuredProjectIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Project' }],
-  isActive: { type: Boolean, default: true },
-}, { timestamps: true });
-
-// Keep the legacy schema here for reference and compatibility with unmigrated modules.
-// The members feature owns the active model and may have registered it already.
-module.exports = mongoose.models.User || mongoose.model('User', userSchema);
+// Compatibility forwarding module; the members feature owns the User schema.
+module.exports = require('../src/features/members/member.model');

@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const userService = require('../services/userService');
+const memberService = require('../src/features/members/member.service');
 
 // Return directory users with optional search, role, year, and pagination filters.
 const getUsers = async (req, res) => {
@@ -109,7 +110,7 @@ const updateUser = async (req, res) => {
   }
 
   try {
-    const updatedUser = await userService.updateUser(id, updates);
+    const updatedUser = await memberService.updateProfile(id, updates, req.user);
     if (!updatedUser) {
       return res.status(404).json({ error: 'Not found' });
     }
