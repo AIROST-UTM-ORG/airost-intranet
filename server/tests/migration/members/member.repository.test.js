@@ -1,11 +1,11 @@
-jest.mock('../../../src/features/members/member.model', () => ({
+jest.mock('../../../src/features/members/models/member.model', () => ({
   find: jest.fn(),
   countDocuments: jest.fn(),
   findById: jest.fn(),
   findByIdAndUpdate: jest.fn(),
 }));
 
-const User = require('../../../src/features/members/member.model');
+const User = require('../../../src/features/members/models/member.model');
 const repository = require('../../../src/features/members/member.repository');
 
 const makeQuery = (result) => {

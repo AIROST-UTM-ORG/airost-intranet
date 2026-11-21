@@ -1,7 +1,7 @@
 describe('member persistence models', () => {
   test('reuses the User model when the legacy model was loaded first', () => {
     const LegacyUser = require('../../../models/User');
-    const User = require('../../../src/features/members/member.model');
+    const User = require('../../../src/features/members/models/member.model');
     expect(User).toBe(LegacyUser);
     expect(User.modelName).toBe('User');
     expect(User.schema.path('name').isRequired).toBe(true);
@@ -12,7 +12,7 @@ describe('member persistence models', () => {
 
   test('reuses the VerifiedUser model when the legacy model was loaded first', () => {
     const LegacyVerifiedUser = require('../../../models/VerifiedUser');
-    const VerifiedUser = require('../../../src/features/members/verifiedUser.model');
+    const VerifiedUser = require('../../../src/features/members/models/verifiedUser.model');
     expect(VerifiedUser).toBe(LegacyVerifiedUser);
     expect(VerifiedUser.modelName).toBe('VerifiedUser');
     expect(VerifiedUser.schema.path('email').isRequired).toBe(true);
@@ -21,7 +21,7 @@ describe('member persistence models', () => {
   });
 
   test('rejects a User document without its required name', () => {
-    const User = require('../../../src/features/members/member.model');
+    const User = require('../../../src/features/members/models/member.model');
     const validationError = new User({ email: 'missing-name@example.com' }).validateSync();
 
     expect(validationError).toBeDefined();

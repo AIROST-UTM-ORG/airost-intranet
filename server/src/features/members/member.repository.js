@@ -1,4 +1,4 @@
-const User = require('./member.model');
+const User = require('./models/member.model');
 const projectProjection = { path: 'featuredProjectIds', select: '_id projectId title description lead' };
 
 const findDirectoryUsers = (filter, { skip, limit }) => User.find(filter)
@@ -28,6 +28,7 @@ const findByIdAndUpdate = (id, updates) => User.findByIdAndUpdate(
   { $set: buildProfileUpdate(updates) },
   { new: true, runValidators: true },
 ).populate(projectProjection);
+
 const findProfileById = (id) => User.findById(id).select('-googleId -__v').populate(projectProjection);
 
 module.exports = { findDirectoryUsers, countDirectoryUsers, findById, findByIdAndUpdate, findProfileById };
