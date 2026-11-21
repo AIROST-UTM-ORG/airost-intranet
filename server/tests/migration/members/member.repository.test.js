@@ -69,7 +69,8 @@ describe('member persistence behavior', () => {
 
   test('updates only the supplied nested origin fields without replacing the embedded object', async () => {
     const updatedUser = { _id: 'member-id', origin: { state: 'Johor', country: 'Malaysia' } };
-    User.findByIdAndUpdate.mockResolvedValue(updatedUser);
+    const query = makeQuery(updatedUser);
+    User.findByIdAndUpdate.mockReturnValue(query);
 
     await expect(repository.findByIdAndUpdate('member-id', { origin: { state: 'Johor' } })).resolves.toBe(updatedUser);
 
@@ -78,10 +79,12 @@ describe('member persistence behavior', () => {
       { $set: { 'origin.state': 'Johor' } },
       { new: true, runValidators: true },
     );
+    expect(query.populate).toHaveBeenCalledWith({ path: 'featuredProjectIds', select: '_id projectId title description lead' });
   });
 
   test('updates multiple supplied origin fields and preserves partial update semantics for other fields', async () => {
-    User.findByIdAndUpdate.mockResolvedValue({ _id: 'member-id' });
+    const query = makeQuery({ _id: 'member-id' });
+    User.findByIdAndUpdate.mockReturnValue(query);
 
     await repository.findByIdAndUpdate('member-id', {
       name: 'Ada',
@@ -93,6 +96,7 @@ describe('member persistence behavior', () => {
       { $set: { name: 'Ada', 'origin.state': 'Johor', 'origin.country': 'Malaysia' } },
       { new: true, runValidators: true },
     );
+    expect(query.populate).toHaveBeenCalledWith({ path: 'featuredProjectIds', select: '_id projectId title description lead' });
   });
 
   test('loads an updated public profile with populated featured projects', async () => {

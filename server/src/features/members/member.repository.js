@@ -27,7 +27,7 @@ const findByIdAndUpdate = (id, updates) => User.findByIdAndUpdate(
   id,
   { $set: buildProfileUpdate(updates) },
   { new: true, runValidators: true },
-);
+).populate(projectProjection);
 const findProfileById = (id) => User.findById(id).select('-googleId -__v').populate(projectProjection);
 
 module.exports = { findDirectoryUsers, countDirectoryUsers, findById, findByIdAndUpdate, findProfileById };

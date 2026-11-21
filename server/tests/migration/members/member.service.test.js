@@ -48,17 +48,24 @@ describe('member service behavior', () => {
   });
 
   test('allows a member to update their own profile and returns a formatted persisted profile', async () => {
-    const user = { _id: '507f1f77bcf86cd799439011', name: 'After', save: jest.fn() };
+    const user = {
+      _id: '507f1f77bcf86cd799439011',
+      name: 'After',
+      googleId: 'private-google-id',
+      featuredProjectIds: [{ _id: 'project-id', title: 'Featured project' }],
+      save: jest.fn(),
+    };
     repository.findByIdAndUpdate.mockResolvedValue(user);
-    repository.findProfileById.mockResolvedValue({ _id: user._id, name: 'After', googleId: 'secret', __v: 1 });
 
     const result = await service.updateProfile(user._id, { name: 'After' }, { _id: user._id, positions: ['member'] });
 
     expect(repository.findByIdAndUpdate).toHaveBeenCalledWith(user._id, { name: 'After' });
+    expect(repository.findProfileById).not.toHaveBeenCalled();
     expect(user.save).not.toHaveBeenCalled();
     expect(result).toEqual(expect.objectContaining({ name: 'After' }));
     expect(result).not.toHaveProperty('googleId');
     expect(result).not.toHaveProperty('__v');
+    expect(result.featuredProjectIds).toEqual([{ _id: 'project-id', title: 'Featured project' }]);
   });
 
   test('allows a case-insensitive platform admin to update another profile', async () => {
