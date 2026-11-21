@@ -37,6 +37,14 @@ describe('member request validation', () => {
     test('accepts exact maximum query lengths and pagination boundaries', () => {
       expect(validateGetUsers(query({ search: 's'.repeat(100), role: 'r'.repeat(80), year: 'y'.repeat(40), page: '1', limit: '100' }))).toMatchObject({ page: 1, limit: 100 });
     });
+
+    test('caps the computed directory offset while allowing the exact maximum', () => {
+      expect(validateGetUsers(query({ page: '10001', limit: '100' }))).toMatchObject({ page: 10001, limit: 100 });
+      expect(() => validateGetUsers(query({ page: '10002', limit: '100' })))
+        .toThrow(expect.objectContaining({ status: 400, code: 'VALIDATION_ERROR' }));
+      expect(() => validateGetUsers(query({ page: String(Number.MAX_SAFE_INTEGER) })))
+        .toThrow(expect.objectContaining({ status: 400, code: 'VALIDATION_ERROR' }));
+    });
   });
 
   describe('profile update body', () => {
