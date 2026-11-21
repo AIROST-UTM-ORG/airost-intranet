@@ -1,6 +1,8 @@
 describe('member persistence models', () => {
-  test('defines User profile fields and project references in the feature model', () => {
+  test('reuses the User model when the legacy model was loaded first', () => {
+    const LegacyUser = require('../../../models/User');
     const User = require('../../../src/features/members/member.model');
+    expect(User).toBe(LegacyUser);
     expect(User.modelName).toBe('User');
     expect(User.schema.path('name').isRequired).toBe(true);
     expect(User.schema.path('email')).toBeDefined();
@@ -8,8 +10,10 @@ describe('member persistence models', () => {
     expect(User.schema.path('featuredProjectIds').caster.options.ref).toBe('Project');
   });
 
-  test('defines the legacy VerifiedUser model under the feature folder', () => {
+  test('reuses the VerifiedUser model when the legacy model was loaded first', () => {
+    const LegacyVerifiedUser = require('../../../models/VerifiedUser');
     const VerifiedUser = require('../../../src/features/members/verifiedUser.model');
+    expect(VerifiedUser).toBe(LegacyVerifiedUser);
     expect(VerifiedUser.modelName).toBe('VerifiedUser');
     expect(VerifiedUser.schema.path('email').isRequired).toBe(true);
     expect(VerifiedUser.schema.path('name').isRequired).toBe(true);

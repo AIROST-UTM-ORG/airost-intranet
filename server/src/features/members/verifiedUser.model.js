@@ -15,4 +15,4 @@ const verifiedUserSchema = new mongoose.Schema({
     },
 });
 
-module.exports = mongoose.model('VerifiedUser', verifiedUserSchema);
+module.exports = mongoose.models.VerifiedUser || mongoose.model('VerifiedUser', verifiedUserSchema);
