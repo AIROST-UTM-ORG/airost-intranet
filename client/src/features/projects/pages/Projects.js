@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import './Projects.css';
-import ProjectList from '../../components/ProjectList';
+import '../styles/Projects.css';
+import ProjectList from '../components/ProjectList';
 import { useForm } from "react-hook-form";
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import useFetchUsers from "../../hooks/useFetchUsers";
-import useGetProjects from './hooks/useGetProjects';
-import apiClient from '../../shared/api/client';
-import Modal from '../../shared/components/Dialog/Modal';
+import useFetchUsers from "../../../hooks/useFetchUsers";
+import useGetProjects from '../hooks/useGetProjects';
+import apiClient from '../../../shared/api/client';
+import Modal from '../../../shared/components/Dialog/Modal';
 
 function Projects() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);

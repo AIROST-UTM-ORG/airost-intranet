@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { FiSearch, FiUser, FiFolder, FiArrowRight, FiGrid, FiList } from "react-icons/fi";
-import useGetProjects from "../Projects/hooks/useGetProjects";
-import "./ProjectTracking.css";
+import useGetProjects from "../../projects/hooks/useGetProjects";
+import "../styles/ProjectTracking.css";
 
 export const ProjectTracking = () => {
   const { data: projects, isLoading, isError } = useGetProjects();

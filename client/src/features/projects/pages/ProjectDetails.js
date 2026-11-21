@@ -1,7 +1,7 @@
-import { projectsData } from '../../data/project-data';
+import { projectsData } from '../../../data/project-data';
 import { useParams } from "react-router-dom";
-import ProjectDocumentationLink from '../Documentation/components/ProjectDocumentationLink';
-import './ProjectDetail.css';
+import ProjectDocumentationLink from '../../../pages/Documentation/components/ProjectDocumentationLink';
+import '../styles/ProjectDetail.css';
 
 const ProjectDetails = () => {
 

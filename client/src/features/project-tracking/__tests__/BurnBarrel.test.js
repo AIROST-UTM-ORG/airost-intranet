@@ -1,9 +1,9 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import BurnBarrel from '../../../pages/ProjectTracking/components/BurnBarrel';
-import usePBMRefresh from '../../../pages/ProjectTracking/hooks/usePBMRefresh';
+import BurnBarrel from '../components/BurnBarrel';
+import usePBMRefresh from '../hooks/usePBMRefresh';
 
-jest.mock('../../../pages/ProjectTracking/hooks/usePBMRefresh', () => ({
+jest.mock('../hooks/usePBMRefresh', () => ({
   __esModule: true,
   default: jest.fn(),
 }));

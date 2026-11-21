@@ -3,7 +3,7 @@ import "@testing-library/jest-dom";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import ProjectDocumentationLink from "../../../pages/Documentation/components/ProjectDocumentationLink";
-import ProjectDetails from "../../../pages/Projects/ProjectDetails";
+import ProjectDetails from "../../../features/projects/pages/ProjectDetails";
 import Documentation from "../../../pages/Documentation/Documentation";
 import { AuthContext } from "../../../context/authContext";
 import * as docApi from "../../../pages/Documentation/documentationApi";
