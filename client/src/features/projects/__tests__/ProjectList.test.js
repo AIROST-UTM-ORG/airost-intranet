@@ -11,8 +11,8 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
-import ProjectList from '../../components/ProjectList';
-import { AuthContext } from '../../context/authContext';
+import ProjectList from '../components/ProjectList';
+import { AuthContext } from '../../../context/authContext';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
