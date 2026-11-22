@@ -33,9 +33,15 @@ const isValidPhotoUrl = (value) => {
 };
 
 const normalizeSocialUrl = (value, network) => {
-  if (typeof value !== 'string' || !SOCIAL_URL_REGEX[network] || !SOCIAL_HOSTS[network]) return null;
+  if (typeof value !== 'string' || 
+    !SOCIAL_URL_REGEX[network] || 
+    !SOCIAL_HOSTS[network]) return null;
+
   const trimmed = value.trim();
-  if (value.length > 300 || (trimmed && !SOCIAL_URL_REGEX[network].test(trimmed))) return null;
+
+  if (value.length > 300 || (trimmed && !SOCIAL_URL_REGEX[network].test(trimmed))) 
+    return null;
+
   if (!trimmed) return '';
 
   if (/^https:\/\//i.test(trimmed)) {

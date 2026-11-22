@@ -10,7 +10,9 @@ const findDirectoryUsers = (filter, { skip, limit }) => User.find(filter)
   .lean();
 
 const countDirectoryUsers = (filter) => User.countDocuments(filter);
+
 const findById = (id) => User.findById(id);
+
 const buildProfileUpdate = (updates) => Object.entries(updates).reduce((set, [field, value]) => {
   if (field === 'origin' && value && typeof value === 'object' && !Array.isArray(value)) {
     for (const [originField, originValue] of Object.entries(value)) {

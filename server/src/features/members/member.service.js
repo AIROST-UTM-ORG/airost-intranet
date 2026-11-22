@@ -11,8 +11,10 @@ const buildFilter = ({ search, role, year }) => {
     const term = new RegExp(escapeRegex(search.trim()), 'i');
     filter.$or = [{ name: term }, { email: term }, { course: term }, { description: term }];
   }
-  if (role !== undefined) filter.positions = role.trim();
-  if (year !== undefined) filter.year = year.trim();
+  if (role !== undefined) 
+    filter.positions = role.trim();
+  if (year !== undefined) 
+    filter.year = year.trim();
   return filter;
 };
 
@@ -34,7 +36,8 @@ const isAdmin = (user) => {
 };
 
 const updateProfile = async (id, updates, caller) => {
-  if (caller?._id?.toString().toLowerCase() !== id.toLowerCase() && !isAdmin(caller)) throw new AppError(FORBIDDEN, 'FORBIDDEN', 'You do not have permission to modify this profile');
+  if (caller?._id?.toString().toLowerCase() !== id.toLowerCase() && !isAdmin(caller)) 
+    throw new AppError(FORBIDDEN, 'FORBIDDEN', 'You do not have permission to modify this profile');
   const user = await repository.findByIdAndUpdate(id, updates);
   if (!user) throw new AppError(NOT_FOUND, 'NOT_FOUND', 'Not found');
   return formatUser(user);
