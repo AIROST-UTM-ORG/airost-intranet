@@ -78,7 +78,7 @@ describe('members feature migration integration', () => {
       expect(response.body.data[0]).not.toHaveProperty('isActive');
     });
 
-    test('canonical and legacy directory routes return the same contract and results', async () => {
+    test('canonical directory routes return an envelope and legacy routes return the raw array', async () => {
       const viewer = await createUser({ isActive: false });
       await createUser({ name: 'Directory Member' });
       const agent = await createAuthenticatedAgent(viewer);
@@ -86,7 +86,7 @@ describe('members feature migration integration', () => {
       const canonical = await agent.get('/api/user/users?page=1&limit=10').expect(200);
       const legacy = await agent.get('/user/users?page=1&limit=10').expect(200);
 
-      expect(canonical.body).toEqual(legacy.body);
+      expect(legacy.body).toEqual(canonical.body.data);
       expect(canonical.body).toMatchObject({
         success: true,
         meta: { page: 1, limit: 10, total: 1 },
@@ -246,6 +246,24 @@ describe('members feature migration integration', () => {
 
       expect(response.body.error.code).toBe('FORBIDDEN');
       expect((await User.findById(target.id)).name).toBe('Legacy Protected Member');
+    });
+
+    test('legacy profile updates return the raw sanitized user', async () => {
+      const user = await createUser({ googleId: 'legacy-secret' });
+      const agent = await createAuthenticatedAgent(user);
+
+      const response = await agent
+        .patch(`/user/${user.id}`)
+        .send({ name: 'Legacy Updated Member' })
+        .expect(200);
+
+      expect(response.body).toEqual(expect.objectContaining({
+        _id: user.id,
+        name: 'Legacy Updated Member',
+      }));
+      expect(response.body).not.toHaveProperty('success');
+      expect(response.body).not.toHaveProperty('googleId');
+      expect(response.body).not.toHaveProperty('__v');
     });
 
     test('allows an administrator to update another member profile', async () => {

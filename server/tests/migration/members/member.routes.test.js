@@ -29,7 +29,7 @@ describe('registered member HTTP routes', () => {
     expect(repository.findDirectoryUsers).not.toHaveBeenCalled();
   });
 
-  test('canonical and legacy directory routes share the success envelope and metadata', async () => {
+  test('canonical directory routes return an envelope while legacy routes return the raw array', async () => {
     repository.findDirectoryUsers.mockResolvedValue([{ _id: 'member-1', name: 'Ada', googleId: 'secret', positions: ['member'] }]);
     repository.countDirectoryUsers.mockResolvedValue(1);
     const canonical = await request(app).get('/api/user/users?page=1&limit=5').set('x-user-id', 'viewer');
@@ -41,7 +41,8 @@ describe('registered member HTTP routes', () => {
       data: [expect.objectContaining({ _id: 'member-1', name: 'Ada', loggedIn: true })],
       meta: { page: 1, limit: 5, total: 1 },
     });
-    expect(canonical.body).toEqual(legacy.body);
+    expect(legacy.status).toBe(200);
+    expect(legacy.body).toEqual(canonical.body.data);
     expect(canonical.body.data[0]).not.toHaveProperty('googleId');
   });
 
@@ -90,5 +91,21 @@ describe('registered member HTTP routes', () => {
     expect(response.body.data).not.toHaveProperty('__v');
     expect(repository.findByIdAndUpdate).toHaveBeenCalledWith(user._id, { name: 'New' });
     expect(user.save).not.toHaveBeenCalled();
+  });
+
+  test('legacy profile updates return the raw sanitized user', async () => {
+    const user = { _id: '507f1f77bcf86cd799439011', name: 'Legacy New', googleId: 'secret', __v: 1, save: jest.fn() };
+    repository.findByIdAndUpdate.mockResolvedValue(user);
+
+    const response = await request(app)
+      .patch(`/user/${user._id}`)
+      .set('x-user-id', user._id)
+      .send({ name: 'Legacy New' });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual(expect.objectContaining({ _id: user._id, name: 'Legacy New' }));
+    expect(response.body).not.toHaveProperty('success');
+    expect(response.body).not.toHaveProperty('googleId');
+    expect(response.body).not.toHaveProperty('__v');
   });
 });
