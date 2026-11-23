@@ -3,7 +3,7 @@ import "@testing-library/jest-dom";
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import apiClient from "../../../shared/api/client";
-import Documentation from "../../../pages/Documentation/Documentation";
+import Documentation from "../../../features/documentation";
 import {
   resetMockData,
   setMockScenario,
@@ -11,7 +11,7 @@ import {
   MockScenarios,
   listProjects,
   listMembers,
-} from "../../../pages/Documentation/documentationApi";
+} from "../../../features/documentation/services";
 
 jest.mock("../../../shared/api/client", () => {
   const mockClient = {

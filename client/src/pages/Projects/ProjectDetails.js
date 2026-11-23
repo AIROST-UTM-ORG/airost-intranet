@@ -1,6 +1,6 @@
 import { projectsData } from '../../data/project-data';
 import { useParams } from "react-router-dom";
-import ProjectDocumentationLink from '../Documentation/components/ProjectDocumentationLink';
+import { ProjectDocumentationLink } from "features/documentation";
 import './ProjectDetail.css';
 
 const ProjectDetails = () => {

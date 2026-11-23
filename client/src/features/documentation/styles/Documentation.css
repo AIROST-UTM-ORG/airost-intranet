@@ -1,0 +1,259 @@
+/* ==========================================================================
+   Documentation Feature Styles (Strict DESIGN.md & SCREEN_SPEC.md Compliance)
+   ========================================================================== */
+
+.doc-feature-root {
+  font-family: 'Varela Round', sans-serif;
+  color: #171717;
+  background-color: #FFFFFF;
+  min-height: 100vh;
+  width: 100%;
+}
+
+.doc-feature-root * {
+  box-sizing: border-box;
+}
+
+/* Typography Helpers */
+.doc-font-varela {
+  font-family: 'Varela Round', sans-serif;
+}
+
+.doc-font-outfit {
+  font-family: 'Outfit', sans-serif;
+}
+
+.doc-font-poppins {
+  font-family: 'Poppins', sans-serif;
+}
+
+/* Page Title (48px Coral) */
+.doc-page-title {
+  font-family: 'Varela Round', sans-serif;
+  font-size: 48px;
+  line-height: 1.15;
+  color: #FF7B7B;
+  font-weight: 400;
+  margin: 0;
+}
+
+/* Primary Pill Button (+ ADD, Create Space, etc.) */
+.doc-btn-primary {
+  font-family: 'Outfit', sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  background-color: #0DC414;
+  color: #FFFFFF;
+  border-radius: 30px;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0px 4px 16px rgba(0, 0, 0, 0.15);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.doc-btn-primary:hover:not(:disabled) {
+  opacity: 0.92;
+}
+
+.doc-btn-primary:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.doc-btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Secondary Button (Cancel, Open, Restore) */
+.doc-btn-secondary {
+  font-family: 'Varela Round', sans-serif;
+  background-color: #F5F5F5;
+  color: #171717;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s ease;
+}
+
+.doc-btn-secondary:hover:not(:disabled) {
+  background-color: #EBEBEB;
+}
+
+.doc-btn-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Documentation Cards (10px radius, shadow 0 4px 5px rgba(0,0,0,0.15)) */
+.doc-card {
+  background-color: #FFFFFF;
+  border-radius: 10px;
+  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.15);
+}
+
+/* Form Container Card */
+.doc-form-card {
+  background-color: #FFFFFF;
+  border-radius: 10px;
+  box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.15);
+}
+
+/* Input / Select Trigger Border */
+.doc-input {
+  font-family: 'Varela Round', sans-serif;
+  font-size: 15px;
+  color: #171717;
+  border: 1px solid #DEDEDE;
+  border-radius: 6px;
+  background-color: #FFFFFF;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.doc-input:focus {
+  border-color: #0DC414;
+}
+
+.doc-input::placeholder {
+  color: #686868;
+}
+
+/* Search Field */
+.doc-search-input {
+  font-family: 'Varela Round', sans-serif;
+  font-size: 16px;
+  color: #171717;
+  border: 1px solid #DEDEDE;
+  border-radius: 6px;
+  background-color: #FFFFFF;
+  outline: none;
+  height: 50px;
+  width: 100%;
+}
+
+.doc-search-input::placeholder {
+  color: #686868;
+}
+
+.doc-search-input:focus {
+  border-color: #0DC414;
+}
+
+/* Popover Dropdown Menu */
+.doc-popover-menu {
+  background-color: #FFFFFF;
+  border-radius: 8px;
+  border: 1px solid #F0F0F0;
+  box-shadow: 0px 4px 16px rgba(0, 0, 0, 0.15);
+  z-index: 50;
+}
+
+.doc-menu-item {
+  height: 40px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: 'Varela Round', sans-serif;
+  font-size: 14px;
+  color: #171717;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  width: 100%;
+  text-align: left;
+  transition: background-color 0.12s ease;
+}
+
+.doc-menu-item:hover {
+  background-color: #F5F5F5;
+}
+
+/* Custom Green Radio Buttons */
+.doc-radio {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid #ADADAD;
+  border-radius: 50%;
+  outline: none;
+  cursor: pointer;
+  position: relative;
+  margin: 0;
+  display: inline-block;
+  vertical-align: middle;
+  background-color: #FFFFFF;
+  transition: border-color 0.15s ease;
+}
+
+.doc-radio:checked {
+  border-color: #0DC414;
+}
+
+.doc-radio:checked::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 8px;
+  height: 8px;
+  background-color: #0DC414;
+  border-radius: 50%;
+}
+
+/* Custom Green Checkboxes */
+.doc-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid #ADADAD;
+  border-radius: 4px;
+  outline: none;
+  cursor: pointer;
+  position: relative;
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #FFFFFF;
+  transition: all 0.15s ease;
+}
+
+.doc-checkbox:checked {
+  border-color: #0DC414;
+  background-color: #0DC414;
+}
+
+.doc-checkbox:checked::after {
+  content: '✓';
+  color: #FFFFFF;
+  font-size: 11px;
+  font-weight: bold;
+  line-height: 1;
+}
+
+/* Custom Scrollbar for Dropdown list */
+.doc-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.doc-scrollbar::-webkit-scrollbar-track {
+  background: #F5F5F5;
+  border-radius: 3px;
+}
+.doc-scrollbar::-webkit-scrollbar-thumb {
+  background: #DEDEDE;
+  border-radius: 3px;
+}
+.doc-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #ADADAD;
+}
