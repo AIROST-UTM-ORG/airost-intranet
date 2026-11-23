@@ -99,12 +99,4 @@ describe('member persistence behavior', () => {
     expect(query.populate).toHaveBeenCalledWith({ path: 'featuredProjectIds', select: '_id projectId title description lead' });
   });
 
-  test('loads an updated public profile with populated featured projects', async () => {
-    const profile = { _id: 'member-id', name: 'Ada' };
-    const query = makeQuery(profile);
-    User.findById.mockReturnValue(query);
-    await expect(repository.findProfileById('member-id')).resolves.toBe(profile);
-    expect(query.select).toHaveBeenCalledWith('-googleId -__v');
-    expect(query.populate).toHaveBeenCalledWith({ path: 'featuredProjectIds', select: '_id projectId title description lead' });
-  });
 });

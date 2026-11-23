@@ -2,7 +2,6 @@ jest.mock('../../../src/features/members/member.repository', () => ({
   findDirectoryUsers: jest.fn(),
   countDirectoryUsers: jest.fn(),
   findByIdAndUpdate: jest.fn(),
-  findProfileById: jest.fn(),
 }));
 
 const express = require('express');
@@ -81,7 +80,6 @@ describe('registered member HTTP routes', () => {
   test('profile updates return a sanitized success envelope', async () => {
     const user = { _id: '507f1f77bcf86cd799439011', name: 'New', save: jest.fn() };
     repository.findByIdAndUpdate.mockResolvedValue(user);
-    repository.findProfileById.mockResolvedValue({ _id: user._id, name: 'New', googleId: 'secret', __v: 1 });
     const response = await request(app)
       .patch(`/api/user/${user._id}`)
       .set('x-user-id', user._id)

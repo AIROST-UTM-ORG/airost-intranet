@@ -31,6 +31,4 @@ const findByIdAndUpdate = (id, updates) => User.findByIdAndUpdate(
   { new: true, runValidators: true },
 ).populate(projectProjection);
 
-const findProfileById = (id) => User.findById(id).select('-googleId -__v').populate(projectProjection);
-
-module.exports = { findDirectoryUsers, countDirectoryUsers, findById, findByIdAndUpdate, findProfileById };
+module.exports = { findDirectoryUsers, countDirectoryUsers, findById, findByIdAndUpdate };

@@ -2,7 +2,6 @@ jest.mock('../../../src/features/members/member.repository', () => ({
   findDirectoryUsers: jest.fn(),
   countDirectoryUsers: jest.fn(),
   findByIdAndUpdate: jest.fn(),
-  findProfileById: jest.fn(),
 }));
 
 const repository = require('../../../src/features/members/member.repository');
@@ -71,7 +70,6 @@ describe('member service behavior', () => {
     const result = await service.updateProfile(user._id, { name: 'After' }, { _id: user._id, positions: ['member'] });
 
     expect(repository.findByIdAndUpdate).toHaveBeenCalledWith(user._id, { name: 'After' });
-    expect(repository.findProfileById).not.toHaveBeenCalled();
     expect(user.save).not.toHaveBeenCalled();
     expect(result).toEqual(expect.objectContaining({ name: 'After' }));
     expect(result).not.toHaveProperty('googleId');
@@ -82,7 +80,6 @@ describe('member service behavior', () => {
   test('allows a case-insensitive platform admin to update another profile', async () => {
     const user = { _id: '507f1f77bcf86cd799439012', name: 'After', save: jest.fn() };
     repository.findByIdAndUpdate.mockResolvedValue(user);
-    repository.findProfileById.mockResolvedValue({ _id: user._id, name: 'After' });
     await service.updateProfile(user._id, { name: 'After' }, { _id: '507f1f77bcf86cd799439013', positions: ['AdMiN'] });
     expect(repository.findByIdAndUpdate).toHaveBeenCalledWith(user._id, { name: 'After' });
     expect(user.save).not.toHaveBeenCalled();
@@ -107,7 +104,6 @@ describe('member service behavior', () => {
 
     await expect(service.updateProfile('507f1f77bcf86cd799439011', { name: 'Updated' }, { _id: '507f1f77bcf86cd799439011' }))
       .rejects.toBe(error);
-    expect(repository.findProfileById).not.toHaveBeenCalled();
   });
 
   test('recognizes only the platform admin role', () => {
