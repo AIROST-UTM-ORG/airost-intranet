@@ -15,7 +15,6 @@
     "dotenv": "^16.4.5",
     "framer-motion": "^11.1.7",
     "lodash": "^4.17.21",
-    "mdb-react-ui-kit": "^6.0.0",
     "moment": "^2.30.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
@@ -25,7 +24,6 @@
     "react-redux": "^9.2.0",
     "react-router-dom": "^6.10.0",
     "react-scripts": "^5.0.1",
-    "react-select": "^5.7.7",
     "react-tailwindcss-datepicker": "^1.6.6",
     "uuid": "^11.1.0",
     "web-vitals": "^2.1.4"
@@ -42,7 +40,101 @@
     "extends": [
       "react-app",
       "react-app/jest"
+    ],
+    "rules": {
+      "no-restricted-globals": [
+        "error",
+        "addEventListener",
+        "blur",
+        "close",
+        "closed",
+        "confirm",
+        "defaultStatus",
+        "defaultstatus",
+        "event",
+        "external",
+        "find",
+        "focus",
+        "frameElement",
+        "frames",
+        "history",
+        "innerHeight",
+        "innerWidth",
+        "length",
+        "location",
+        "locationbar",
+        "menubar",
+        "moveBy",
+        "moveTo",
+        "name",
+        "onblur",
+        "onerror",
+        "onfocus",
+        "onload",
+        "onresize",
+        "onunload",
+        "open",
+        "opener",
+        "opera",
+        "outerHeight",
+        "outerWidth",
+        "pageXOffset",
+        "pageYOffset",
+        "parent",
+        "print",
+        "removeEventListener",
+        "resizeBy",
+        "resizeTo",
+        "screen",
+        "screenLeft",
+        "screenTop",
+        "screenX",
+        "screenY",
+        "scroll",
+        "scrollbars",
+        "scrollBy",
+        "scrollTo",
+        "scrollX",
+        "scrollY",
+        "self",
+        "status",
+        "statusbar",
+        "stop",
+        "toolbar",
+        "top",
+        {
+          "name": "fetch",
+          "message": "Use client/src/shared/api/client.js instead of calling fetch directly."
+        }
+      ],
+      "no-restricted-imports": [
+        "error",
+        {
+          "paths": [
+            {
+              "name": "axios",
+              "message": "Use client/src/shared/api/client.js instead of importing axios directly."
+            }
+          ]
+        }
+      ]
+    },
+    "overrides": [
+      {
+        "files": [
+          "src/shared/api/client.js",
+          "src/tests/unit/shared/apiClient.test.js"
+        ],
+        "rules": {
+          "no-restricted-imports": "off"
+        }
+      }
     ]
+  },
+  "jest": {
+    "moduleNameMapper": {
+      "^axios$": "axios/dist/node/axios.cjs"
+    }
   },
   "browserslist": {
     "production": [

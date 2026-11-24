@@ -4,14 +4,14 @@ import Dashboard from "./pages/Dashboard/Dashboard.js";
 import Projects from "./pages/Projects/Projects";
 import ProjectDetails from "./pages/Projects/ProjectDetails";
 import Login from "./pages/Login/Login";
-import Layout from "./components/Layout/Layout";
-import RequireAuth from "./components/RequireAuth";
+import Layout from "./app/layout/Layout";
+import RequireAuth from "./app/router/RequireAuth";
 import { useState } from "react";
 import { AuthProvider } from "./context/authContext";
 import useAuth from "./hooks/useAuth";
 import Admin from "./pages/Admin/Admin.js";
 import Unauthorized from "./pages/Unauthorized/Unauthorized";
-import Doc from "./pages/Documentation/Doc";
+import Documentation from "features/documentation";
 import DocBlog from "./pages/Documentation/component/Doc-blog";
 import Events from "./pages/Events/Events";
 import ProjectTracking from "./pages/ProjectTracking/ProjectTracking.js";
@@ -65,7 +65,7 @@ function AppRoutes() {
           <Route path="/projects" element={<Projects />} />
           <Route path="/projects/:id" element={<ProjectDetails />} />
           <Route path="/events" element={<Events />} />
-          <Route path="/doc/*" element={<Doc />} />
+          <Route path="/doc/*" element={<Documentation />} />
           <Route path="/doc/spaces" element={<Navigate to="/doc" replace />} />
           <Route path="/doc/:id" element={<DocBlog />} />
           <Route path="/doc/create/:id" element={<CreateDoc />} />

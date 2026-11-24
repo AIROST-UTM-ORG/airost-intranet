@@ -1,12 +1,12 @@
 import React, { createContext, useState, useEffect, useCallback, useMemo } from "react";
-import { API_URL } from "../config/api";
+import apiClient, { resetAuthUnauthorizedLock } from "../shared/api/client";
 
 export const AuthContext = createContext({
   user: null,
   loading: true,
   setUser: () => {},
   refreshUser: async () => {},
-  logout: () => {},
+  logout: async () => {},
 });
 
 export const AuthProvider = ({ children }) => {
@@ -15,23 +15,22 @@ export const AuthProvider = ({ children }) => {
 
   const fetchUser = useCallback(async () => {
     try {
-      const response = await fetch(`${API_URL}/auth/login/success`, {
-        method: "GET",
-        credentials: "include",
+      const response = await apiClient.get("/auth/login/success", {
+        skipAuthRedirect: true,
         headers: {
           Accept: "application/json",
-          "Content-Type": "application/json",
         },
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setUser(data.user || null);
-      } else {
-        setUser(null);
+      const authenticatedUser = response.data?.user || null;
+      if (authenticatedUser) {
+        resetAuthUnauthorizedLock();
       }
+      setUser(authenticatedUser);
     } catch (err) {
-      console.error("Auth initialization failed:", err);
+      if (err?.status !== 401 && err?.response?.status !== 401) {
+        console.error("Auth initialization failed:", err);
+      }
       setUser(null);
     } finally {
       setLoading(false);
@@ -42,11 +41,33 @@ export const AuthProvider = ({ children }) => {
     fetchUser();
   }, [fetchUser]);
 
-  const logout = useCallback(() => {
-    setUser(null);
-    sessionStorage.clear();
-    localStorage.removeItem("user");
-    window.location.href = `${API_URL}/auth/logout`;
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      setUser((prevUser) => (prevUser ? null : prevUser));
+    };
+
+    window.addEventListener("auth:unauthorized", handleUnauthorized);
+    return () => {
+      window.removeEventListener("auth:unauthorized", handleUnauthorized);
+    };
+  }, []);
+
+  const logout = useCallback(async () => {
+    try {
+      await apiClient.post("/auth/logout", null, {
+        skipAuthRedirect: true,
+        headers: {
+          Accept: "application/json",
+        },
+      });
+    } catch (err) {
+      console.error("Logout failed:", err);
+    } finally {
+      setUser(null);
+      sessionStorage.clear();
+      localStorage.removeItem("user");
+      window.location.href = "/login";
+    }
   }, []);
 
   const value = useMemo(

@@ -20,3 +20,4 @@ const SOCIAL_URL_REGEX = Object.freeze({
 });
 
 module.exports = { isValidObjectId, escapeRegex, normalizeWhitespace, SOCIAL_URL_REGEX };
+                                              

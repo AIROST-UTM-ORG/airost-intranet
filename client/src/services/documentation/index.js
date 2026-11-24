@@ -1,9 +1,6 @@
 /**
- * Unified Documentation API exports
+ * Legacy re-export barrier preserving backwards compatibility.
+ * All core documentation services now live in features/documentation/services.
  */
-export * from "./constants";
-export * from "./client";
-export * from "./mockData";
-export * from "./spaceApi";
-export * from "./documentApi";
-export * from "./adminApi";
+export * from "../../features/documentation/services";
+export { default } from "../../features/documentation/services";

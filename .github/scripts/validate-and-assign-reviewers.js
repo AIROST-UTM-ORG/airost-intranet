@@ -29,15 +29,7 @@ const owner = process.env.REPO_OWNER || process.env.GITHUB_REPOSITORY_OWNER;
 const repo = process.env.REPO_NAME || (process.env.GITHUB_REPOSITORY ? process.env.GITHUB_REPOSITORY.split('/')[1] : null);
 const prNumber = parseInt(process.env.PR_NUMBER, 10);
 
-if (!githubToken) {
-  console.error('::error::GITHUB_TOKEN is missing. GITHUB_TOKEN is required for PR validation and reviewer assignment.');
-  process.exit(1);
-}
 
-if (!owner || !repo || isNaN(prNumber)) {
-  console.error(`::error::Missing required params: owner=${owner}, repo=${repo}, prNumber=${prNumber}`);
-  process.exit(1);
-}
 
 function shuffle(array) {
   const arr = [...array];
@@ -80,33 +72,40 @@ async function graphql(query, variables = {}, authToken = githubToken) {
   return body.data;
 }
 
-function evaluateRisk(files, labels, title) {
+function evaluateRisk(files = [], labels = [], title = '') {
   const sensitivePatterns = [
     /\.github\/(?:workflows|scripts)\//i,
     /docker/i,
     /nginx/i,
-    /server\/(?:passport\.js|app\.js|server\.js)/i,
+    /server\/(?:src\/)?config\//i,
+    /server\/(?:src\/)?(?:passport\.js|app\.js|server\.js)/i,
     /server\/routes\/(?:adminRoutes|auth)/i,
-    /server\/middleware\/auth/i,
-    /server\/models\//i
+    /server\/src\/features\/(?:auth|admin)\//i,
+    /server\/(?:src\/)?middleware\//i,
+    /server\/(?:src\/)?models\//i,
+    /server\/src\/features\/.*(?:models\/|\.model\.js)/i
   ];
 
-  if (files.some(f => sensitivePatterns.some(p => p.test(f)))) {
+  if ((files || []).some(f => sensitivePatterns.some(p => p.test(f)))) {
     return 2;
   }
-  if (labels.some(l => ['module:auth', 'module:infra', 'module:refactor', 'phase:3-architecture'].includes(l))) {
+  if ((labels || []).some(l => ['module:auth', 'module:infra', 'module:refactor', 'phase:3-architecture'].includes(l))) {
     return 2;
   }
-  if (/\b(?:auth|jwt|security|permission|session|docker|deploy|ingress)\b/i.test(title)) {
+  if (title && /\b(?:auth|jwt|security|permission|session|docker|deploy|ingress)\b/i.test(title)) {
     return 2;
   }
   return 1;
 }
 
-async function validatePrTemplate(body) {
+async function validatePrTemplate(body, options = {}) {
   const errors = [];
   const warnings = [];
   const validIssues = [];
+
+  const targetOwner = options.owner || owner || process.env.REPO_OWNER || process.env.GITHUB_REPOSITORY_OWNER;
+  const targetRepo = options.repo || repo || (process.env.GITHUB_REPOSITORY ? process.env.GITHUB_REPOSITORY.split('/')[1] : null);
+  const targetToken = options.token || githubToken;
 
   if (!body || body.trim().length === 0) {
     errors.push('Pull request description is empty. Please fill in the required PR template.');
@@ -134,7 +133,7 @@ async function validatePrTemplate(body) {
   const issueNumbers = [...new Set(issueMatches.map(m => parseInt(m[1], 10)))];
   for (const issueNum of issueNumbers) {
     try {
-      const issue = await request(`https://api.github.com/repos/${owner}/${repo}/issues/${issueNum}`, {}, githubToken);
+      const issue = await request(`https://api.github.com/repos/${targetOwner}/${targetRepo}/issues/${issueNum}`, {}, targetToken);
       if (issue.pull_request) {
         errors.push(`Issue #${issueNum} is actually a pull request, not an issue.`);
       } else if (issue.state !== 'open') {
@@ -144,7 +143,7 @@ async function validatePrTemplate(body) {
         console.log(`✓ Verified linked issue #${issueNum}: "${issue.title}" (${issue.state})`);
       }
     } catch (err) {
-      errors.push(`Referenced issue #${issueNum} was not found in ${owner}/${repo}.`);
+      errors.push(`Referenced issue #${issueNum} was not found in ${targetOwner}/${targetRepo}.`);
     }
   }
 
@@ -399,7 +398,26 @@ async function run() {
   console.log('PR quality verification and reviewer assignment complete.');
 }
 
-run().catch(err => {
-  console.error(`::error::Unexpected failure during validation/assignment: ${err.message}`);
-  process.exit(1);
-});
+if (require.main === module) {
+  if (!githubToken) {
+    console.error('::error::GITHUB_TOKEN is missing. GITHUB_TOKEN is required for PR validation and reviewer assignment.');
+    process.exit(1);
+  }
+
+  if (!owner || !repo || isNaN(prNumber)) {
+    console.error(`::error::Missing required params: owner=${owner}, repo=${repo}, prNumber=${prNumber}`);
+    process.exit(1);
+  }
+
+  run().catch(err => {
+    console.error(`::error::Unexpected failure during validation/assignment: ${err.message}`);
+    process.exit(1);
+  });
+}
+
+module.exports = {
+  evaluateRisk,
+  validatePrTemplate,
+  APPROVAL_OPTIONS,
+  MAINTAINER_POOL
+};

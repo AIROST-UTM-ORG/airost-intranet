@@ -1,7 +1,7 @@
 import './Events.css'
 import { useState, useEffect } from 'react'
-import { API_URL } from '../../config/api';
-// import Modal from 'react-bootstrap/Modal';
+import apiClient from '../../shared/api/client';
+import Modal from '../../shared/components/Dialog/Modal';
 // import Spinner from 'react-bootstrap/Spinner';
 const { format, parseISO } = require('date-fns');
 
@@ -33,27 +33,19 @@ const dateTimeForCalander = (dateStr, timeStr) => {
 
 async function fetchEvents() {
     try {
-        const response = await fetch(`${API_URL}/api/calendar/upcoming-events`);
-        const data = await response.json();
-        return data;
+        const response = await apiClient.get('/calendar/upcoming-events');
+        return response.data;
     } catch (error) {
-        console.error('Error fetching events:', error.message);
+        console.error('Error fetching events:', error.normalizedMessage || error.message);
     }
 }
 
 async function addEvent(event) {
     try {
-        const response = await fetch(`${API_URL}/api/calendar/add`, {
-            method: 'POST',
-            body: JSON.stringify(event),
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        });
-        const data = await response.json();
-        return data;
+        const response = await apiClient.post('/calendar/add', event);
+        return response.data;
     } catch (error) {
-        console.error('Error fetching events:', error.message);
+        console.error('Error fetching events:', error.normalizedMessage || error.message);
     }
 }
 
@@ -64,7 +56,7 @@ function Events() {
     const [time, setTime] = useState("");
     const [eventName, setEventName] = useState("");
     const [venue, setVenue] = useState("");
-    const [showModal, setShowModal] = useState(false);
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [loading, setLoading] = useState(false);
 
     const fetchData = async () => {
@@ -83,14 +75,18 @@ function Events() {
         fetchData();
     }, []);
     
-    const handleCloseModal = () => setShowModal(false);
+    const handleCloseModal = () => {
+        setIsCreateModalOpen(false);
+        setDate("");
+        setTime("");
+        setEventName("");
+        setVenue("");
+    };
     const handleShowModal = () => {
-        setShowModal(true);
-    }
+        setIsCreateModalOpen(true);
+    };
 
     const handleSubmit = async (e) => {
-
-        handleCloseModal();
         e.preventDefault();
         let dateTime = dateTimeForCalander(date, time);
 
@@ -105,8 +101,10 @@ function Events() {
             }
         }
 
+        handleCloseModal();
+
         try {
-            const data = await addEvent(event);
+            await addEvent(event);
             fetchData();
         } catch (error) {
             console.error('Error fetching events:', error.message);
@@ -115,14 +113,11 @@ function Events() {
 
     async function deleteEvent(eventId) {
         try {
-            const response = await fetch(`${API_URL}/api/calendar/` + eventId, {
-                method: 'DELETE',
-            });
-            const data = await response.json();
+            const response = await apiClient.delete(`/calendar/${eventId}`);
             fetchData();
-            return data;
+            return response.data;
         } catch (error) {
-            console.error('Error fetching events:', error.message);
+            console.error('Error fetching events:', error.normalizedMessage || error.message);
         }
     }
 
@@ -135,10 +130,10 @@ function Events() {
                         <span className="loading loading-spinner loading-lg"></span>
                     </div>
                     )}
-                    {!loading && <iframe src="https://calendar.google.com/calendar/embed?height=600&wkst=1&ctz=UTC&bgcolor=%23616161&mode=MONTH&src=bHplbWluOEBnbWFpbC5jb20&src=YWRkcmVzc2Jvb2sjY29udGFjdHNAZ3JvdXAudi5jYWxlbmRhci5nb29nbGUuY29t&color=%23039BE5&color=%2333B679" style={{border:"solid 1px #777",width:"800",height:"600",frameborder:"0",scrolling:"no"}}></iframe>}
+                    {!loading && <iframe title="Airost Event Calendar" src="https://calendar.google.com/calendar/embed?height=600&wkst=1&ctz=UTC&bgcolor=%23616161&mode=MONTH&src=bHplbWluOEBnbWFpbC5jb20&src=YWRkcmVzc2Jvb2sjY29udGFjdHNAZ3JvdXAudi5jYWxlbmRhci5nb29nbGUuY29t&color=%23039BE5&color=%2333B679" style={{border:"solid 1px #777",width:"800",height:"600",frameborder:"0",scrolling:"no"}}></iframe>}
                 </div>
                 <div className="interactions">
-                    <button className="btn btn-primary" onClick={()=>document.getElementById('my_modal_2').showModal()}>Add Events</button>
+                    <button className="btn btn-primary" onClick={handleShowModal}>Add Events</button>
                 </div>
                 <h4>Upcoming Events</h4>
                 {loading && (
@@ -218,50 +213,48 @@ function Events() {
                         <button type="submit" form='userForm' className="btn btn-success">Add</button>
                     </Modal.Footer>
                 </Modal> */}
-                <dialog id="my_modal_2" className="modal">
-          <div className="modal-box">
-            <form className="form grid grid-cols-1 gap-2" id='userForm' onSubmit={handleSubmit}>
-            <h3 className="font-bold text-lg">Add Event</h3>
-                                <label className="input input-bordered flex items-center gap-2">
-                                    Date
-                                    <input 
-                                        id="name" className="grow" required
-                                        type="date" value={date}
-                                        onChange={(e) => {setDate(e.target.value)}}/>
-                                </label>
+                <Modal
+                    isOpen={isCreateModalOpen}
+                    onClose={handleCloseModal}
+                    title="Add Event"
+                >
+                    <form className="form grid grid-cols-1 gap-2 mt-2" id='userForm' onSubmit={handleSubmit}>
+                        <label className="input input-bordered flex items-center gap-2">
+                            Date
+                            <input
+                                id="name" className="grow" required
+                                type="date" value={date}
+                                onChange={(e) => {setDate(e.target.value)}}/>
+                        </label>
 
-                                <label className="input input-bordered flex items-center gap-2">
-                                    Time
-                                    <input 
-                                        id="name" className="grow" required
-                                        type="time" value={time}
-                                        onChange={(e) => {setTime(e.target.value)}}/>
-                                </label>
-                                
-                                <label className="input input-bordered flex items-center gap-2">
-                                    Event Name
-                                    <input 
-                                        id="name" className="grow" required
-                                        type="text" value={eventName}
-                                        placeholder='Fun workshop'
-                                        onChange={(e) => {setEventName(e.target.value)}}/>
-                                </label>
-                
-                                <label className="input input-bordered flex items-center gap-2">
-                                    Venue
-                                    <input 
-                                        id="name" className="grow" required
-                                        type="text"value={venue}
-                                        placeholder='Cairo Lab'
-                                        onChange={(e) => {setVenue(e.target.value)}}/>
-                                </label>
-                                <button type="submit" form='userForm' className="btn btn-neutral w-full">Add</button>
-                            </form>
-          </div>
-          <form method="dialog" className="modal-backdrop">
-            <button>close</button>
-          </form>
-      </dialog>
+                        <label className="input input-bordered flex items-center gap-2">
+                            Time
+                            <input
+                                id="name" className="grow" required
+                                type="time" value={time}
+                                onChange={(e) => {setTime(e.target.value)}}/>
+                        </label>
+
+                        <label className="input input-bordered flex items-center gap-2">
+                            Event Name
+                            <input
+                                id="name" className="grow" required
+                                type="text" value={eventName}
+                                placeholder='Fun workshop'
+                                onChange={(e) => {setEventName(e.target.value)}}/>
+                        </label>
+
+                        <label className="input input-bordered flex items-center gap-2">
+                            Venue
+                            <input
+                                id="name" className="grow" required
+                                type="text" value={venue}
+                                placeholder='Cairo Lab'
+                                onChange={(e) => {setVenue(e.target.value)}}/>
+                        </label>
+                        <button type="submit" form='userForm' className="btn btn-neutral w-full">Add</button>
+                    </form>
+                </Modal>
             
         </div>
         
