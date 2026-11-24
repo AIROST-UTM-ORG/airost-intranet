@@ -49,7 +49,8 @@ Instructions for AI coding agents working on the **Airost Intranet**. Read this 
 ```
 airost-intranet/
 ├── AGENTS.md                  # This file
-├── techstack.md               # Tech stack reference
+├── CONTRIBUTING.md            # Contribution guidelines
+├── README.md                  # Repository overview
 ├── client/                    # React SPA (dev port 3000, proxies to :4000)
 │   ├── public/
 │   └── src/
@@ -64,6 +65,10 @@ airost-intranet/
 │       │                      #   Login/, Projects/, ProjectTracking/, Unauthorized/
 │       ├── App.js             # Top-level routing and providers
 │       └── index.js
+├── docs/                      # Documentation and architecture contracts
+│   ├── api/                   # API specifications
+│   ├── architecture/          # Active architecture contracts (database_schema, features, techstack)
+│   └── proposals/             # Architecture and design proposals
 └── server/                    # Express REST API (dev port 4000, production port 8080)
     ├── controller/            # Route handler logic (admin, doc, event, projects, user)
     ├── models/                # Mongoose schemas (legacy; see Migration Status)
@@ -125,7 +130,7 @@ Rules:
 - **Event attendance statuses:** `registered` / `attended` / `cancelled` / `no_show`.
 - **Documents:** link-only architecture (Locked Decision 4): stores titles, external URLs (Google Docs/Drive, HTTPS), and metadata only. No file upload/download, no content storage, no file size metadata, no version history. Soft delete archives; hard delete of document & space deletion are admin only. Space access uses `accessType` and `updateType` (`all` / `project_members` / `selected`), with member lists stored directly on the space (`accessMembers[]`, `updateMembers[]`). 6 workflow areas: `general`, `requirements`, `design`, `development`, `testing`, `deployment`. See `docs/api/documentation.md`.
 - **Task changes** must be recorded in task history (see `server/utils/historyHelper.js`). Do not bypass it.
-- Source-of-truth docs: `features.md` (scope and priorities), `database_schema.md` (data model), `techstack.md` (stack), `dev_rule.md` (team workflow). If code and docs disagree, point it out instead of silently picking one.
+- Source-of-truth docs: [`docs/architecture/features.md`](docs/architecture/features.md) (scope and priorities), [`docs/architecture/database_schema.md`](docs/architecture/database_schema.md) (data model), [`docs/architecture/techstack.md`](docs/architecture/techstack.md) (stack), `dev_rule.md` (team workflow). If code and docs disagree, point it out instead of silently picking one.
 
 ## Git & Workflow Rules
 - **Never push to `main`, force-push, or delete `main`.** All work goes through a branch and Pull Request.

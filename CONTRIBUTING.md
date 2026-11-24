@@ -6,6 +6,12 @@ Guidelines for Git branching, commit messages, secret safety, pull requests, and
 
 Before implementing changes, read [AGENTS.md](AGENTS.md) to understand project rules, coding standards, and architecture expectations. Follow the guidelines defined there rather than introducing conflicting patterns.
 
+Active architecture contracts are maintained under `docs/architecture/`:
+
+- [Database Schema](docs/architecture/database_schema.md)
+- [Technology Stack](docs/architecture/techstack.md)
+- [Feature Specifications](docs/architecture/features.md)
+
 ## Branching protocol
 
 The `main` branch is protected and always deployable.

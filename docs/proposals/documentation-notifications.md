@@ -3,7 +3,7 @@
 **Status:** Proposed  
 **Author:** AI Pair Programmer (Documentation Feature Team)  
 **Target:** Airost Intranet Core Team (Lee, Tony, Ahmad, Zi Ping)  
-**Related Documents:** [`docs/api/documentation.md`](file:///c:/Users/ganru/Documents/airost-intranet/docs/api/documentation.md), [`docs/architecture/documentation-data-layer.md`](file:///c:/Users/ganru/Documents/airost-intranet/docs/architecture/documentation-data-layer.md), [`features.md`](file:///c:/Users/ganru/Documents/airost-intranet/features.md), [`server/utils/docEvents.js`](file:///c:/Users/ganru/Documents/airost-intranet/server/utils/docEvents.js)
+**Related Documents:** [`docs/api/documentation.md`](../api/documentation.md), [`docs/architecture/documentation-data-layer.md`](../architecture/documentation-data-layer.md), [`docs/architecture/features.md`](../architecture/features.md), [`server/utils/docEvents.js`](../../server/utils/docEvents.js)
 
 ---
 
@@ -43,7 +43,7 @@ Inspection of the codebase confirms that **no notification infrastructure exists
 - Current occurrences of the word "notification" in the codebase are limited to ephemeral UI toast alerts (DaisyUI/Ant Design toasts in [`SpaceListScreen.js`](file:///c:/Users/ganru/Documents/airost-intranet/client/src/pages/Documentation/components/SpaceListScreen.js) and task drag feedback in [`BurnBarrel.js`](file:///c:/Users/ganru/Documents/airost-intranet/client/src/pages/ProjectTracking/components/BurnBarrel.js)).
 
 ### 1.3 System Boundary & Responsibility
-Building a generic Notification Center and Delivery Engine is an independent, cross-cutting feature owned by the platform's **Notifications** roadmap work (classified as priority 🟠 **High** in [`features.md`](file:///c:/Users/ganru/Documents/airost-intranet/features.md#L267-L280), Phase 5).
+Building a generic Notification Center and Delivery Engine is an independent, cross-cutting feature owned by the platform's **Notifications** roadmap work (classified as priority 🟠 **High** in [`docs/architecture/features.md`](../architecture/features.md#L267-L280), Phase 5).
 
 > [!IMPORTANT]
 > **Boundary Statement:** Documentation is an event *producer*, not a notification *consumer* or *delivery engine*. Documentation must never establish bespoke notification tables, routes, or bells isolated from the rest of the intranet. Instead, the Documentation feature exposes standardized event triggers (`docEvents.js`), audience resolution criteria, and copy descriptors for consumption by the centralized Notifications service.
