@@ -241,7 +241,7 @@ All core requirements from the assignment Definition of Done are complete. Below
 | :---: | :--- | :--- | :--- | :--- |
 | **1. Polish** | Client Warning | Address React 19 `ReactDOMTestUtils.act` deprecation notices in test logs by migrating test helpers to `React.act`. | `client/src/setupTests.js`, `Documentation.test.js` | New prompt needed: "test: migrate test utils act to React 19" |
 | **2. Polish** | ESLint | Resolve unused variable warnings in legacy project files (`Admin.js`, `Card.js`, `Board.js`) touched during merge. | `client/src/pages/Admin/Admin.js`, `ProjectTracking/` | New prompt needed: "refactor: clean up legacy unused vars" |
-| **3. Feature** | Notifications | Connect `emitDocEvent` listener to a live Slack/Discord webhook or internal inbox notifications. | `server/utils/docEvents.js`, `docs/proposals/documentation-notifications.md` | Existing proposal: `documentation-notifications.md` |
+| **3. Feature** | Notifications | Connect `emitDocEvent` listener to a live Slack/Discord webhook or internal inbox notifications. | `server/utils/docEvents.js`, `docs/archive/proposals/documentation-notifications.md` | Existing proposal: `documentation-notifications.md` |
 
 ---
 

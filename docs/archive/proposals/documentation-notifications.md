@@ -3,16 +3,16 @@
 **Status:** Proposed  
 **Author:** AI Pair Programmer (Documentation Feature Team)  
 **Target:** Airost Intranet Core Team (Lee, Tony, Ahmad, Zi Ping)  
-**Related Documents:** [`docs/api/documentation.md`](../api/documentation.md), [`docs/architecture/documentation-data-layer.md`](../architecture/documentation-data-layer.md), [`features.md`](../../features.md), [`server/utils/docEvents.js`](../../server/utils/docEvents.js)
+**Related Documents:** [`docs/api/documentation.md`](../../api/documentation.md), [`docs/architecture/documentation-data-layer.md`](../../architecture/documentation-data-layer.md), [`features.md`](../../../features.md), [`server/utils/docEvents.js`](../../../server/utils/docEvents.js)
 
 ---
 
 ## 1. Executive Summary & System Boundary
 
 ### 1.1 What Exists Today
-The Documentation feature already incorporates a decoupled, robust internal event hook system implemented in [`server/utils/docEvents.js`](../../server/utils/docEvents.js):
+The Documentation feature already incorporates a decoupled, robust internal event hook system implemented in [`server/utils/docEvents.js`](../../../server/utils/docEvents.js):
 - **EventEmitter Architecture**: Exposes `emitDocEvent(type, payload)` and `onDocEvent(type, listener)` (with `on` alias).
-- **Post-Commit Guarantee**: Events are strictly emitted **after** successful database writes within the isolated service layer [`server/services/docService.js`](../../server/services/docService.js). Failed writes or validation errors never emit events.
+- **Post-Commit Guarantee**: Events are strictly emitted **after** successful database writes within the isolated service layer [`server/services/docService.js`](../../../server/services/docService.js). Failed writes or validation errors never emit events.
 - **Resilient Execution**: Listeners run in isolated `try/catch` wrappers. Throwing or slow listeners cannot crash, revert, or interrupt the caller's HTTP response.
 - **Standardized Payload**: All event types emit lightweight, metadata-safe scalar payloads:
   ```javascript
@@ -40,10 +40,10 @@ Inspection of the codebase confirms that **no notification infrastructure exists
 - No notification models (`Notification.js`, `NotificationRecipient.js`) exist in `server/models/`.
 - No notification routes, controllers, or dispatchers exist in `server/`.
 - No client-side notification bell, unread badge counter, popover drawer, or notification settings context exist in `client/src/`.
-- Current occurrences of the word "notification" in the codebase are limited to ephemeral UI toast alerts (DaisyUI/Ant Design toasts in [`SpaceListScreen.js`](../../client/src/features/documentation/components/SpaceListScreen.js) and task drag feedback in [`BurnBarrel.js`](../../client/src/features/project-tracking/components/BurnBarrel.js)).
+- Current occurrences of the word "notification" in the codebase are limited to ephemeral UI toast alerts (DaisyUI/Ant Design toasts in [`SpaceListScreen.js`](../../../client/src/features/documentation/components/SpaceListScreen.js) and task drag feedback in [`BurnBarrel.js`](../../../client/src/features/project-tracking/components/BurnBarrel.js)).
 
 ### 1.3 System Boundary & Responsibility
-Building a generic Notification Center and Delivery Engine is an independent, cross-cutting feature owned by the platform's **Notifications** roadmap work (classified as priority 🟠 **High** in [`features.md`](../../features.md#L267-L280), Phase 5).
+Building a generic Notification Center and Delivery Engine is an independent, cross-cutting feature owned by the platform's **Notifications** roadmap work (classified as priority 🟠 **High** in [`features.md`](../../../features.md#L267-L280), Phase 5).
 
 > [!IMPORTANT]
 > **Boundary Statement:** Documentation is an event *producer*, not a notification *consumer* or *delivery engine*. Documentation must never establish bespoke notification tables, routes, or bells isolated from the rest of the intranet. Instead, the Documentation feature exposes standardized event triggers (`docEvents.js`), audience resolution criteria, and copy descriptors for consumption by the centralized Notifications service.
@@ -54,7 +54,7 @@ Building a generic Notification Center and Delivery Engine is an independent, cr
 
 ### 2.1 Core Recipient Invariants
 1. **The Stealth / Authorization Parity Rule (Crucial)**:
-   A user who cannot view a documentation space according to the authorization matrix must **never** receive a notification regarding that space or its documents. Leaking titles or mutation events to unauthorized users violates the 404 Stealth Rule (Locked Decision 3: unauthorized users get 404, never 403 or title leakage). Recipient resolution must reuse [`server/utils/docAccess.js:canViewSpace`](../../server/utils/docAccess.js#L26-L50).
+   A user who cannot view a documentation space according to the authorization matrix must **never** receive a notification regarding that space or its documents. Leaking titles or mutation events to unauthorized users violates the 404 Stealth Rule (Locked Decision 3: unauthorized users get 404, never 403 or title leakage). Recipient resolution must reuse [`server/utils/docAccess.js:canViewSpace`](../../../server/utils/docAccess.js#L26-L50).
 2. **The Actor Exclusion Rule**:
    The `actorId` who initiated the mutation is unconditionally excluded from recipient lists (`recipientId !== actorId`). Users must never be notified of their own actions.
 3. **Active Users Only**:
