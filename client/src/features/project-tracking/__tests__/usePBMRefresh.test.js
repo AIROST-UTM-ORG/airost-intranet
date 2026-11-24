@@ -2,7 +2,7 @@ import React from 'react';
 import { renderHook, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import apiClient from '../../../shared/api/client';
-import usePBMRefresh from '../../../pages/ProjectTracking/hooks/usePBMRefresh';
+import usePBMRefresh from '../hooks/usePBMRefresh';
 
 jest.mock('../../../shared/api/client', () => ({
   __esModule: true,

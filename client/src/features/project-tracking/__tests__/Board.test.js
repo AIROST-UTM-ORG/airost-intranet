@@ -3,7 +3,7 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, Link } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import apiClient from '../../../shared/api/client';
-import Board from '../../../pages/ProjectTracking/components/Board';
+import Board from '../components/Board';
 import { AuthContext } from '../../../context/authContext';
 
 jest.mock('../../../shared/api/client', () => ({
@@ -13,11 +13,11 @@ jest.mock('../../../shared/api/client', () => ({
   },
 }));
 jest.mock('../../../hooks/useFetchUsers', () => () => ({ data: [] }));
-jest.mock('../../../pages/Projects/hooks/useGetProjects', () => () => ({
+jest.mock('../../projects/hooks/useGetProjects', () => () => ({
   data: [{ projectId: 42, title: 'AIROST Platform' }],
 }));
 
-jest.mock('../../../pages/ProjectTracking/components/Column', () => {
+jest.mock('../components/Column', () => {
   return function MockColumn({ title, column, cards }) {
     const columnCards = cards.filter((c) => c.column === column);
     return (
@@ -33,7 +33,7 @@ jest.mock('../../../pages/ProjectTracking/components/Column', () => {
   };
 });
 
-jest.mock('../../../pages/ProjectTracking/components/BurnBarrel', () => {
+jest.mock('../components/BurnBarrel', () => {
   return function MockBurnBarrel({ cards }) {
     return <div data-testid="burn-barrel">BurnBarrel: {cards.length} cards</div>;
   };
