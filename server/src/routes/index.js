@@ -4,11 +4,12 @@
 const express = require('express');
 
 const authRoutes = require('../features/auth/auth.routes');
+const eventRoutes = require('../features/events/event.routes');
 const docRoutes = require('../../routes/docRoutes');
 const adminRoutes = require('../../routes/adminRoutes');
 const userRoutes = require('../features/members/member.routes');
 const memberRepository = require('../features/members/member.repository');
-const eventRoutes = require('../../routes/eventRoutes');
+const legacyEventRoutes = require('../../routes/eventRoutes');
 const projectRoutes = require('../../routes/projectsRoutes');
 
 const router = express.Router();
@@ -28,7 +29,7 @@ router.use('/doc', docRoutes);
 router.use('/admin', adminRoutes);
 router.use('/user', userRoutes);
 router.use('/projects', projectRoutes);
-router.use('/calendar', eventRoutes);
+router.use('/calendar', legacyEventRoutes);
 
 // Test-only session bootstrap used by the existing Supertest integration suite.
 if (process.env.NODE_ENV === 'test') {

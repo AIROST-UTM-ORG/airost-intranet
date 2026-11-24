@@ -8,6 +8,7 @@ const { validateEnv } = require('../../../src/config/env');
 
 const ROUTE_MODULES = [
   ['../../../src/features/auth/auth.routes', 'auth'],
+  ['../../../src/features/events/event.routes', 'events'],
   ['../../../routes/docRoutes', 'documents'],
   ['../../../routes/adminRoutes', 'admin'],
   ['../../../src/features/members/member.routes', 'users'],
