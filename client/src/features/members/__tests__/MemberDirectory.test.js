@@ -2,11 +2,11 @@ import React from 'react';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useNavigate } from 'react-router-dom';
-import MemberDirectory from '../../../pages/MemberDirectory/MemberDirectory';
-import useFetchUsers from '../../../hooks/useFetchUsers';
+import MemberDirectory from '../pages/MemberDirectory';
+import useFetchUsers from '../hooks/useFetchUsers';
 import useAuth from '../../../hooks/useAuth';
 
-jest.mock('../../../hooks/useFetchUsers', () => jest.fn());
+jest.mock('../hooks/useFetchUsers', () => jest.fn());
 jest.mock('../../../hooks/useAuth', () => jest.fn());
 jest.mock('react-router-dom', () => ({
   ...jest.requireActual('react-router-dom'),

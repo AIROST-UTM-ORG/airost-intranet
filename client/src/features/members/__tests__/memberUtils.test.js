@@ -1,4 +1,4 @@
-import { getPositions } from '../../../pages/MemberDirectory/utils/memberUtils';
+import { getPositions } from '../utils/memberUtils';
 
 describe('getPositions', () => {
   test('returns a non-empty position string as a one-item array', () => {

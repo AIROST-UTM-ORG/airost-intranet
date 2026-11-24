@@ -1,4 +1,4 @@
-import { toUploadablePhoto } from '../../../pages/Profile/utils/photo';
+import { toUploadablePhoto } from '../utils/photo';
 
 describe('toUploadablePhoto', () => {
   test('reduces image quality until the encoded photo fits the request limit', () => {
