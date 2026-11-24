@@ -13,4 +13,11 @@ const escapeRegex = (value = '') =>
 const normalizeWhitespace = (value = '') =>
   (typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : '');
 
-module.exports = { isValidObjectId, escapeRegex, normalizeWhitespace };
+const SOCIAL_URL_REGEX = Object.freeze({
+  instagram: /^(?:https:\/\/(?:www\.)?instagram\.com\/|@?)[a-zA-Z0-9._-]+\/?$/i,
+  linkedin: /^(?:https:\/\/(?:www\.)?linkedin\.com\/in\/|@?)[a-zA-Z0-9._-]+\/?$/i,
+  github: /^(?:https:\/\/(?:www\.)?github\.com\/|@?)[a-zA-Z0-9._-]+\/?$/i,
+});
+
+module.exports = { isValidObjectId, escapeRegex, normalizeWhitespace, SOCIAL_URL_REGEX };
+                                              

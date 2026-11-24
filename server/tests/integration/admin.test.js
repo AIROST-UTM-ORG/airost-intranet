@@ -79,7 +79,7 @@ describe('GET /api/user/users', () => {
     const res = await request(app).get('/api/user/users');
     expect(res.status).toBe(401);
     expect(res.body.success).toBe(false);
-    expect(res.body.message).toMatch(/unauthorized/i);
+    expect(res.body.error.code).toBe('UNAUTHENTICATED');
   });
 
   test('returns 200 and an empty array when no users exist for an authenticated user', async () => {
@@ -87,8 +87,9 @@ describe('GET /api/user/users', () => {
     const cookie = await authenticatedCookie(loggedInUser._id);
     const res = await request(app).get('/api/user/users').set('Cookie', cookie);
     expect(res.status).toBe(200);
-    expect(Array.isArray(res.body)).toBe(true);
-    expect(res.body.length).toBe(0);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data).toEqual([]);
+    expect(res.body.meta.total).toBe(0);
   });
 
   test('returns logged-in users and User placeholders from one collection', async () => {
@@ -99,12 +100,12 @@ describe('GET /api/user/users', () => {
     const res = await request(app).get('/api/user/users').set('Cookie', cookie);
     expect(res.status).toBe(200);
 
-    const alice = res.body.find((u) => u.email === 'alice@airost.com');
+    const alice = res.body.data.find((u) => u.email === 'alice@airost.com');
     expect(alice).toBeDefined();
     expect(alice.loggedIn).toBe(true);
     expect(alice.verified).toBe(true);
 
-    const charlie = res.body.find((u) => u.email === 'charlie@airost.com');
+    const charlie = res.body.data.find((u) => u.email === 'charlie@airost.com');
     expect(charlie).toBeDefined();
     expect(charlie.loggedIn).toBe(false);
     expect(charlie.verified).toBe(true);
@@ -116,7 +117,7 @@ describe('GET /api/user/users', () => {
     const cookie = await authenticatedCookie(loggedInUser._id);
 
     const res = await request(app).get('/api/user/users').set('Cookie', cookie);
-    const user = res.body.find((u) => u.email === 'unverified@airost.com');
+    const user = res.body.data.find((u) => u.email === 'unverified@airost.com');
     expect(user.verified).toBe(false);
     expect(user.loggedIn).toBe(true);
   });
