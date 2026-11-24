@@ -12,7 +12,7 @@ jest.mock('../../../shared/api/client', () => ({
     get: jest.fn(),
   },
 }));
-jest.mock('../../../hooks/useFetchUsers', () => () => ({ data: [] }));
+jest.mock('../../members/hooks/useFetchUsers', () => () => ({ data: [] }));
 jest.mock('../../projects/hooks/useGetProjects', () => () => ({
   data: [{ projectId: 42, title: 'AIROST Platform' }],
 }));

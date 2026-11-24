@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { setAssignee } from "app/store";
 import consts from "../../../../consts/consts";
-import useFetchUsers from "../../../../hooks/useFetchUsers";
+import useFetchUsers from "../../../members/hooks/useFetchUsers";
 import { BsPersonCircle } from "react-icons/bs";
 
 export default function CardAsignee({value,id}){
