@@ -3,7 +3,7 @@
 **Audit Date:** 2026-10-17 (Post N+1 Query Fix Re-Verification)  
 **Role:** Independent Quality Assurance (QA)  
 **System:** Airost Intranet — Documentation Feature (SPA Client + Node/Express API)  
-**Authoritative Specifications:** [`docs/api/documentation.md`](file:///c:/Users/ganru/Documents/airost-intranet/docs/api/documentation.md), `SCREEN_SPEC.md`, [`AGENTS.md`](file:///c:/Users/ganru/Documents/airost-intranet/AGENTS.md)  
+**Authoritative Specifications:** [`docs/api/documentation.md`](../../api/documentation.md), `SCREEN_SPEC.md`, [`AGENTS.md`](../../../AGENTS.md)  
 **Verification Method:** Automated Test Execution, Database Query Inspection, Static Code Analysis, and Manual Browser Test Protocols.  
 **Rule:** Report defects objectively; do not modify application source code.
 
@@ -294,7 +294,7 @@ Every architectural requirement and known gap from earlier design reviews was au
 | **Link-Only Architecture** | **Intentionally Out of Scope** | Preserved per Locked Decision 1. Zero file upload handlers, no multipart parsers, no file size columns. Google Docs/Drive URLs stored as metadata. |
 | **No File Size Metadata** | **Intentionally Out of Scope** | Verified. Models `DocumentationSpace` and `Document` contain no file size or binary storage properties. |
 | **No Version History** | **Intentionally Out of Scope** | Verified. Google Workspace maintains revision history; intranet retains only current link and soft archive flag. |
-| **Documentation Notifications** | **Intentionally Out of Scope** | Addressed via design proposal [`docs/proposals/documentation-notifications.md`](file:///c:/Users/ganru/Documents/airost-intranet/docs/proposals/documentation-notifications.md). Implementation deferred to cross-feature Notifications team. |
+| **Documentation Notifications** | **Intentionally Out of Scope** | Addressed via design proposal [`docs/proposals/documentation-notifications.md`](../../proposals/documentation-notifications.md). Implementation deferred to cross-feature Notifications team. |
 | **Service Layer Isolation** | **Closed** | `docController.js` contains 0 imports from `../models/`. All data access encapsulated in `docService.js`. Verified by `documentation.test.js:642`. |
 | **Unified Error Envelope** | **Closed** | All 4xx and 5xx responses conform to `{ error: { code, message, details? } }`. Zero raw stack traces leaked. |
 | **Safe Project Lead Resolution** | **Closed** | `getUserProjectRolesMap` and `getUserProjectRole` prioritize ObjectId, then unique email, then unique display name. Duplicate display names are strictly denied with server log. |
@@ -323,4 +323,4 @@ Following the successful resolution and verification of BUG-DOC-01 and BUG-DOC-0
 3. **Priority 3 (Post-Release Milestone): Cross-Feature Documentation Notifications**
    - **Target Area:** Integration with platform notification center.
    - **Rationale:** Documentation space and document mutations emit domain events (`space.created`, `document.archived`, etc.) via `server/utils/docEvents.js`.
-   - **Action:** When the cross-feature notifications team is ready (Phase 5/6), implement listeners adhering to [`docs/proposals/documentation-notifications.md`](file:///c:/Users/ganru/Documents/airost-intranet/docs/proposals/documentation-notifications.md).
+   - **Action:** When the cross-feature notifications team is ready (Phase 5/6), implement listeners adhering to [`docs/proposals/documentation-notifications.md`](../../proposals/documentation-notifications.md).

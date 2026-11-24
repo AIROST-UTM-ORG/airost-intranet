@@ -3,7 +3,7 @@
 **Date of Audit:** October 18, 2026  
 **Auditor:** Antigravity QA & Architectural Review  
 **Repository Branch:** `feature/documentation` (HEAD: `357de55`, 1 uncommitted file: `client/src/pages/Documentation/documentationApi.js`)  
-**Authoritative Contracts:** [`docs/api/documentation.md`](../api/documentation.md), `SCREEN_SPEC.md`, [`AGENTS.md`](../../AGENTS.md)  
+**Authoritative Contracts:** [`docs/api/documentation.md`](../../api/documentation.md), `SCREEN_SPEC.md`, [`AGENTS.md`](../../../AGENTS.md)  
 **Scope of Review:** Frontend Requirements (F1–F4) & Backend Requirements (B1–B4)
 
 ---
@@ -120,7 +120,7 @@ Every screen specified in `SCREEN_SPEC.md` and related contracts is mounted to a
 ### B1: API Endpoints and MongoDB Integration
 
 #### API Endpoint Verification Table
-Every endpoint defined in [`docs/api/documentation.md`](../api/documentation.md) is implemented in [`server/routes/docRoutes.js`](../../server/routes/docRoutes.js) and backed by [`server/services/docService.js`](../../server/services/docService.js).
+Every endpoint defined in [`docs/api/documentation.md`](../../api/documentation.md) is implemented in [`server/routes/docRoutes.js`](../../../server/routes/docRoutes.js) and backed by [`server/services/docService.js`](../../../server/services/docService.js).
 
 | HTTP Method & Endpoint | Controller Handler | Service Method | Covered in Tests | Result |
 | :--- | :--- | :--- | :--- | :---: |
