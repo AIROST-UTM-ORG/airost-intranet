@@ -8,7 +8,6 @@ import {
   computeSpaceCounts,
   deleteMockSpace,
   mockSpaces,
-  mockDocuments,
   SEED_PROJECTS,
   SEED_USERS,
 } from "../../shared/api/mockData";
