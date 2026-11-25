@@ -4,6 +4,7 @@
  *
  * Routes tested:
  *   GET  /api/user/users
+ *   GET  /admin/users
  *   POST /admin/users/verified
  */
 
@@ -14,6 +15,7 @@ const cookieSignature = require('cookie-signature');
 const { connect, clearDatabase, closeDatabase } = require('../setup/mongoSetup');
 const { createApp } = require('../../app');
 const User = require('../../models/User');
+const VerifiedUser = require('../../models/VerifiedUser');
 require('../../models/Project');
 
 let app;
@@ -123,6 +125,46 @@ describe('GET /api/user/users', () => {
   });
 });
 
+// ── GET /admin/users (Legacy) ────────────────────────────────────────────────
+
+describe('GET /admin/users', () => {
+  test('returns 401 when the requester is unauthenticated', async () => {
+    const res = await request(app).get('/admin/users');
+    expect(res.status).toBe(401);
+  });
+
+  test('returns 403 when authenticated caller is not an admin', async () => {
+    const member = await seedUser({ email: 'non-admin@airost.com', positions: ['member'] });
+    const cookie = await authenticatedCookie(member._id);
+
+    const res = await request(app).get('/admin/users').set('Cookie', cookie);
+    expect(res.status).toBe(403);
+  });
+
+  test('returns raw array of merged users for authenticated admin', async () => {
+    const adminCookie = await authenticatedAdminCookie();
+    await seedUser({ email: 'member1@airost.com', positions: ['member'] });
+    await VerifiedUser.create({
+      name: 'Verified Unregistered',
+      email: 'verified.unregistered@airost.com',
+      position: ['member'],
+    });
+
+    const res = await request(app).get('/admin/users').set('Cookie', adminCookie);
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+
+    const registered = res.body.find((u) => u.email === 'member1@airost.com');
+    expect(registered).toBeDefined();
+    expect(registered.loggedIn).toBe(true);
+
+    const unreg = res.body.find((u) => u.email === 'verified.unregistered@airost.com');
+    expect(unreg).toBeDefined();
+    expect(unreg.loggedIn).toBe(false);
+    expect(unreg.verified).toBe(true);
+  });
+});
+
 // ── POST /admin/users/verified ─────────────────────────────────────────────
 
 describe('POST /admin/users/verified', () => {
@@ -147,17 +189,49 @@ describe('POST /admin/users/verified', () => {
     expect(await User.findOne({ email: 'dave@airost.com' })).toBeNull();
   });
 
-  test('creates a placeholder User for a verified member', async () => {
+  test('rejects invalid payload with 400 VALIDATION_ERROR', async () => {
     const cookie = await authenticatedAdminCookie();
-    const payload = { name: 'Dave', email: 'dave@airost.com', position: 'member' };
+
+    // Invalid email
+    const res1 = await request(app)
+      .post('/admin/users/verified')
+      .set('Cookie', cookie)
+      .send({ name: 'Dave', email: 'not-an-email', position: 'member' });
+    expect(res1.status).toBe(400);
+    expect(res1.body.error.code).toBe('VALIDATION_ERROR');
+
+    // Missing position
+    const res2 = await request(app)
+      .post('/admin/users/verified')
+      .set('Cookie', cookie)
+      .send({ name: 'Dave', email: 'dave@airost.com' });
+    expect(res2.status).toBe(400);
+    expect(res2.body.error.code).toBe('VALIDATION_ERROR');
+
+    // Name too long (> 100)
+    const res3 = await request(app)
+      .post('/admin/users/verified')
+      .set('Cookie', cookie)
+      .send({ name: 'n'.repeat(101), email: 'dave@airost.com', position: 'member' });
+    expect(res3.status).toBe(400);
+    expect(res3.body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  test('creates a placeholder User for a verified member with normalized email and trims', async () => {
+    const cookie = await authenticatedAdminCookie();
+    const payload = {
+      name: '  Dave Miller  ',
+      email: '  DAVE.MILLER@AIROST.COM  ',
+      position: '  member  ',
+    };
     const res = await request(app).post('/admin/users/verified').set('Cookie', cookie).send(payload);
 
     expect(res.status).toBe(201);
     expect(res.body.createStatus).toBe('success');
 
-    const saved = await User.findOne({ email: 'dave@airost.com' });
+    const saved = await User.findOne({ email: 'dave.miller@airost.com' });
     expect(saved).not.toBeNull();
-    expect(saved.name).toBe('Dave');
+    expect(saved.name).toBe('Dave Miller');
     expect(saved.googleId).toBeUndefined();
     expect(saved.positions).toEqual(['member']);
   });
