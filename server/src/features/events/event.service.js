@@ -7,7 +7,11 @@ const getUpcomingEvents = async (options) => {
 };
 
 const addEvent = async (eventData) => {
-  return eventRepository.insertEvent(eventData);
+  const result = await eventRepository.insertEvent(eventData);
+  if (!result) {
+    throw new AppError(502, 'UPSTREAM_ERROR', 'Failed to create Google Calendar event');
+  }
+  return result;
 };
 
 const deleteEvent = async (eventId) => {

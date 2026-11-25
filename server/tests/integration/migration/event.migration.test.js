@@ -108,7 +108,43 @@ describe('Google Calendar feature migration (/api/calendar)', () => {
       expect(resInvalidDate.body.success).toBe(false);
       expect(resInvalidDate.body.error.code).toBe('VALIDATION_ERROR');
 
+      const resInvertedDate = await agent
+        .post('/api/calendar/add')
+        .send({
+          summary: 'Inverted Date Event',
+          start: '2026-10-15T12:00:00Z',
+          end: '2026-10-15T10:00:00Z',
+        })
+        .expect(400);
+      expect(resInvertedDate.body.success).toBe(false);
+      expect(resInvertedDate.body.error.code).toBe('VALIDATION_ERROR');
+      expect(resInvertedDate.body.error.message).toMatch(/End date must be greater than or equal to start date/);
+
       expect(googleCalendar.insertEvent).not.toHaveBeenCalled();
+    });
+
+    test('returns 502 UPSTREAM_ERROR when Google Calendar insertion fails', async () => {
+      googleCalendar.insertEvent.mockResolvedValueOnce(0);
+
+      const user = await createUser();
+      const agent = await createAuthenticatedAgent(user);
+
+      const payload = {
+        summary: 'Failing Event',
+        start: '2026-10-15T10:00:00Z',
+        end: '2026-10-15T11:00:00Z',
+      };
+
+      const res = await agent.post('/api/calendar/add').send(payload).expect(502);
+
+      expect(res.body).toEqual({
+        success: false,
+        error: {
+          code: 'UPSTREAM_ERROR',
+          message: 'Failed to create Google Calendar event',
+        },
+      });
+      expect(googleCalendar.insertEvent).toHaveBeenCalledTimes(1);
     });
 
     test('returns 201 when authenticated with valid payload', async () => {
@@ -186,6 +222,40 @@ describe('Google Calendar feature migration (/api/calendar)', () => {
         data: 1,
       });
       expect(googleCalendar.removeEvent).toHaveBeenCalledWith('evt-456');
+    });
+  });
+
+  describe('Legacy /calendar route compatibility', () => {
+    test('GET /calendar/upcoming-events returns unwrapped array directly', async () => {
+      const mockEvents = [
+        { id: 'evt-1', summary: 'Hackathon Kickoff' },
+      ];
+      googleCalendar.getEvents.mockResolvedValueOnce(mockEvents);
+
+      const res = await request(app).get('/calendar/upcoming-events').expect(200);
+
+      expect(res.body).toEqual(mockEvents);
+      expect(Array.isArray(res.body)).toBe(true);
+    });
+
+    test('POST /calendar/add returns unwrapped 201 response', async () => {
+      googleCalendar.insertEvent.mockResolvedValueOnce(1);
+
+      const payload = {
+        summary: 'Legacy Event',
+        start: '2026-10-15T10:00:00Z',
+        end: '2026-10-15T11:00:00Z',
+      };
+
+      const res = await request(app).post('/calendar/add').send(payload).expect(201);
+      expect(res.body).toBe(1);
+    });
+
+    test('DELETE /calendar/:id returns unwrapped 200 response', async () => {
+      googleCalendar.removeEvent.mockResolvedValueOnce(1);
+
+      const res = await request(app).delete('/calendar/evt-legacy').expect(200);
+      expect(res.body).toBe(1);
     });
   });
 });

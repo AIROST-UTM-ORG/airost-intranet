@@ -34,16 +34,23 @@ const dateTimeForCalander = (dateStr, timeStr) => {
 async function fetchEvents() {
     try {
         const response = await apiClient.get('/calendar/upcoming-events');
-        return response.data;
+        if (Array.isArray(response?.data)) {
+            return response.data;
+        }
+        if (Array.isArray(response?.data?.data)) {
+            return response.data.data;
+        }
+        return [];
     } catch (error) {
         console.error('Error fetching events:', error.normalizedMessage || error.message);
+        return [];
     }
 }
 
 async function addEvent(event) {
     try {
         const response = await apiClient.post('/calendar/add', event);
-        return response.data;
+        return response?.data?.data !== undefined ? response.data.data : response?.data;
     } catch (error) {
         console.error('Error fetching events:', error.normalizedMessage || error.message);
     }
@@ -63,7 +70,7 @@ function Events() {
         try {
             setLoading(true);
             const data = await fetchEvents();
-            setEvents(data);
+            setEvents(Array.isArray(data) ? data : []);
         } catch (error) {
             console.error('Error fetching events:', error.message);
         } finally {

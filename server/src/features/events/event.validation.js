@@ -14,6 +14,27 @@ const isValidDateInput = (value) => {
   return false;
 };
 
+const parseDateValue = (value, isEnd = false) => {
+  if (!value) return null;
+  if (value instanceof Date) return value;
+  if (typeof value === 'string') {
+    if (isEnd && /^\d{4}-\d{2}-\d{2}$/.test(value.trim())) {
+      return new Date(`${value.trim()}T23:59:59.999Z`);
+    }
+    return new Date(value);
+  }
+  if (typeof value === 'object' && !Array.isArray(value)) {
+    if (value.dateTime) return new Date(value.dateTime);
+    if (value.date) {
+      if (isEnd && /^\d{4}-\d{2}-\d{2}$/.test(String(value.date).trim())) {
+        return new Date(`${String(value.date).trim()}T23:59:59.999Z`);
+      }
+      return new Date(value.date);
+    }
+  }
+  return null;
+};
+
 const validateAddEvent = (req) => {
   if (!req || typeof req !== 'object') {
     throw new AppError(BAD_REQUEST, 'VALIDATION_ERROR', 'Request body is required');
@@ -35,6 +56,12 @@ const validateAddEvent = (req) => {
 
   if (!isValidDateInput(end)) {
     throw new AppError(BAD_REQUEST, 'VALIDATION_ERROR', 'End date is required and must be a valid date');
+  }
+
+  const startDate = parseDateValue(start, false);
+  const endDate = parseDateValue(end, true);
+  if (startDate && endDate && startDate > endDate) {
+    throw new AppError(BAD_REQUEST, 'VALIDATION_ERROR', 'End date must be greater than or equal to start date');
   }
 
   return {

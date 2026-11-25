@@ -94,6 +94,18 @@ describe('events validation - validateAddEvent', () => {
     );
   });
 
+  test('throws AppError 400 when start date is after end date', () => {
+    expect(() =>
+      validateAddEvent({
+        body: {
+          summary: 'Inverted Event',
+          start: '2026-10-16T12:00:00Z',
+          end: '2026-10-16T10:00:00Z',
+        },
+      })
+    ).toThrow(/End date must be greater than or equal to start date/);
+  });
+
   test('returns sanitizedData with valid string dates', () => {
     const req = {
       body: {
@@ -204,6 +216,16 @@ describe('event.service', () => {
 
     expect(eventRepository.insertEvent).toHaveBeenCalledWith(eventData);
     expect(result).toBe(1);
+  });
+
+  test('addEvent throws AppError 502 when insertEvent returns 0 or falsy', async () => {
+    jest.spyOn(eventRepository, 'insertEvent').mockResolvedValueOnce(0);
+
+    await expect(eventService.addEvent({ summary: 'Failed Event' })).rejects.toMatchObject({
+      statusCode: 502,
+      code: 'UPSTREAM_ERROR',
+      message: 'Failed to create Google Calendar event',
+    });
   });
 
   test('deleteEvent calls eventRepository.removeEvent and returns result when truthy', async () => {
