@@ -1,5 +1,5 @@
-const projectController = require('../src/features/projects/controller/project.controller');
-const taskController = require('../src/features/projects/controller/task.controller');
+const projectController = require('../src/features/projects/project.controller');
+const taskController = require('../src/features/projects/task.controller');
 
 module.exports = {
   ...projectController,
