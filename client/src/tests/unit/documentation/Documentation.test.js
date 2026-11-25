@@ -3,7 +3,7 @@ import "@testing-library/jest-dom";
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import apiClient from "../../../shared/api/client";
-import Documentation from "../../../features/documentation";
+import Documentation, { parseDocPath } from "../../../features/documentation";
 import {
   resetMockData,
   setMockScenario,
@@ -512,6 +512,24 @@ describe("Documentation Feature - All 14 Screens", () => {
     expect(await screen.findByTestId("space-detail-title")).toHaveTextContent(
       "Engineering Handbook"
     );
+  });
+
+  test("Legacy URL Fallback: Single-segment /doc/legacy-id returns null from parseDocPath and renders Spaces List screen", async () => {
+    expect(parseDocPath("/doc/legacy-id")).toBeNull();
+
+    render(
+      <MemoryRouter initialEntries={["/doc/legacy-id"]}>
+        <Documentation />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("spaces-loading")).not.toBeInTheDocument();
+    });
+
+    expect(await screen.findByTestId("spaces-list-screen")).toBeInTheDocument();
+    expect(screen.getByTestId("documentation-title")).toHaveTextContent("Documentation");
+    expect(screen.getByText("Engineering Handbook")).toBeInTheDocument();
   });
 
   test("Cancel Space Edit: Canceling edit started from Spaces List returns to Spaces List", async () => {
