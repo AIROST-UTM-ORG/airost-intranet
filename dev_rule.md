@@ -331,17 +331,17 @@ Every development phase should have a GitHub Project milestone.
 
 For example:
 
-Phase 1 — Supabase Migration
+Phase 1: Supabase Migration
 
-Phase 2 — Authentication & Users
+Phase 2: Authentication & Users
 
-Phase 3 — Projects & Tasks
+Phase 3: Projects & Tasks
 
-Phase 4 — Documents & Events
+Phase 4: Documents & Events
 
-Phase 5 — Administration & Integration
+Phase 5: Administration & Integration
 
-Phase 6 — Testing & Deployment
+Phase 6: Testing & Deployment
 
 Issues should belong to the appropriate milestone.
 

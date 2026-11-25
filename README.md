@@ -4,16 +4,14 @@ Internal operations portal for AIROST club members, managing project boards, doc
 
 ## Architecture
 
-The system consists of three primary components:
-
-- **Client**: React single-page application built with Create React App and Tailwind CSS. Runs on port `3000`.
-- **Server**: Express REST API with session authentication and Google OAuth 2.0. Runs on port `4000`.
-- **Database**: MongoDB instance for member data, projects, and documents. Runs on port `27017`.
+The system consists of three components:
+- React single-page application (client) built with Create React App and Tailwind CSS on port 3000.
+- Express REST API (server) with session authentication and Google OAuth 2.0 on port 4000.
+- MongoDB database for member data, projects, and documents on port 27017.
 
 ## Local development
 
-Follow the step-by-step instructions in the developer guide to configure environment variables, run containers, seed mock data, and inspect logs:
-
+Follow the developer guide to configure environment variables, run containers, seed mock data, and inspect logs:
 - [Developer setup guide](docs/developer-setup.md)
 
 Quick start with Docker Compose:
@@ -25,7 +23,6 @@ docker compose up --build
 ## Contributing and workflow
 
 Refer to the project guidelines before opening pull requests or proposing changes:
-
 - [Contributing guidelines](CONTRIBUTING.md) for branch naming rules, conventional commits, PR formats, and review approval policies.
 - [Project context](AGENTS.md) for coding standards, project rules, and architectural expectations.
 
@@ -39,7 +36,7 @@ cd client
 npm test -- --coverage --watchAll=false --runInBand --collectCoverageFrom="src/pages/{MemberDirectory,Profile}/**/*.{js,jsx}" src/tests/unit/MemberDirectory src/tests/unit/Profile
 ```
 
-### Command Options
+### Command options
 
 | Option | Purpose |
 |---|---|
@@ -49,24 +46,23 @@ npm test -- --coverage --watchAll=false --runInBand --collectCoverageFrom="src/p
 | `--collectCoverageFrom` | Collect coverage for JavaScript and JSX files under `src/pages/MemberDirectory` and `src/pages/Profile`, including files not imported by the executed tests. |
 | `src/tests/unit/MemberDirectory src/tests/unit/Profile` | Run both unit test directories. |
 
-### Review the Results
+### Review the results
 
-After execution, review the coverage summary for:
-
-- **Statements:** Percentage of executable statements covered by tests.
-- **Branches:** Percentage of conditional branches covered.
-- **Functions:** Percentage of functions called during tests.
-- **Lines:** Percentage of executable lines covered.
+After execution, review the coverage summary:
+- Statement coverage: percentage of executable statements covered by tests.
+- Branch coverage: percentage of conditional branches covered.
+- Function coverage: percentage of functions called during tests.
+- Line coverage: percentage of executable lines covered.
 
 Inspect uncovered lines and branches to identify missing test cases.
 
-**Note:** Coverage measures how much code is exercised, not whether the tests adequately verify its behavior. Review assertions and edge cases alongside the coverage percentages.
+Note: Coverage measures how much code runs during tests, not whether assertions verify required behavior. Review test assertions and edge cases alongside coverage figures.
 
-### Recommended Coverage Benchmarks
+### Recommended coverage benchmarks
 
 | Metric | Minimum | Healthy Target | Excellent |
 | :--- | :--- | :--- | :--- |
-| **% Stmts** | 70% | 80–90% | 90–100% |
-| **% Branch** | 60% | 75–85% | 90–100% |
-| **% Funcs** | 70% | 80–90% | 90–100% |
-| **% Lines** | 70% | 80–90% | 90–100% |
+| **% Stmts** | 70% | 80% to 90% | 90% to 100% |
+| **% Branch** | 60% | 75% to 85% | 90% to 100% |
+| **% Funcs** | 70% | 80% to 90% | 90% to 100% |
+| **% Lines** | 70% | 80% to 90% | 90% to 100% |

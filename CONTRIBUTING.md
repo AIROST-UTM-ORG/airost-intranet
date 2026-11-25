@@ -45,31 +45,33 @@ Keep commits small and focused on a single layer. When completing a feature, com
 
 ## Issue and pull request labeling standards
 
-GitHub does not automatically label issues or pull requests. When creating issues or opening pull requests via the GitHub UI or `gh` CLI, authors must assign the appropriate labels and link them to the project board.
+GitHub does not automatically label issues or pull requests. When creating issues or opening pull requests via the GitHub UI or `gh` CLI, assign the appropriate labels and link them to the project board.
 
 ### Label taxonomy
 
-1. **Phase labels (Required, exactly 1)**:
-   - `phase:<phase-name>`: Milestone phase for the item, such as `phase:2-delivery` or `phase:3-architecture`. See Project #6 for current phases.
+Every issue and pull request needs one phase label and at least one module label:
 
-2. **Module labels (Required - at least 1)**:
-   - `module:auth`: Authentication, sessions, login/logout, tokens, and authorization.
-   - `module:members`: Member directory, profiles, search, and filtering.
-   - `module:projects`: Project tracking, Kanban boards, and project management.
-   - `module:docs`: Documentation spaces, external links, and space access rules.
-   - `module:mobile`: Mobile responsive layouts, navigation drawer, and touch UX.
-   - `module:infra`: Docker, CI/CD, Nginx reverse proxy, networking, and deployment tooling.
-   - `module:refactor`: Structural codebase reorganization and feature-oriented architecture.
+- Phase label (required, exactly 1):
+  - `phase:<phase-name>`: milestone phase for the item, such as `phase:2-delivery` or `phase:3-architecture`. See Project #6 for current phases.
 
-3. **Type labels (Optional / as applicable)**:
-   - `bug`: Defects and unexpected runtime behaviors.
-   - `enhancement`: New features and functional capabilities.
-   - `documentation`: Contributor guides, developer environment setup, and architecture documentation.
+- Module labels (required, at least 1):
+  - `module:auth`: authentication, sessions, login, logout, tokens, and authorization.
+  - `module:members`: member directory, profiles, search, and filtering.
+  - `module:projects`: project tracking, Kanban boards, and project management.
+  - `module:docs`: documentation spaces, external links, and space access rules.
+  - `module:mobile`: mobile responsive layouts, navigation drawer, and touch UX.
+  - `module:infra`: Docker, CI/CD, Nginx reverse proxy, networking, and deployment tooling.
+  - `module:refactor`: structural codebase reorganization and feature-oriented architecture.
 
-### GitHub Project affiliation
+- Type labels (optional, as applicable):
+  - `bug`: defects and unexpected runtime behaviors.
+  - `enhancement`: new features and functional capabilities.
+  - `documentation`: contributor guides, developer environment setup, and architecture documentation.
+
+### GitHub project affiliation
 
 Every issue and pull request must be attached to the official delivery board:
-- **Project**: `AIROST Intranet` (Organization Project #6)
+- Project: `AIROST Intranet` (Organization Project #6).
 - Do not link items to personal scratchpads or deprecated projects.
 
 ## Secret management and security guardrails
@@ -98,7 +100,7 @@ Every pull request must follow this template:
 Closes #<issue_number>
 ```
 
-Keep pull requests focused on a single issue. Large, sprawling pull requests take longer to review and risk merge conflicts.
+Keep pull requests focused on a single issue. Large pull requests take longer to review and increase merge conflict risk.
 
 ## Code review approval policy
 

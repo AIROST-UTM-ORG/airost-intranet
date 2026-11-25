@@ -915,12 +915,9 @@ interface DocEventPayload {
 
 ---
 
-## 8. Client Routes & Legacy Coexistence
+## 8. Client Routes
 
-The documentation feature is accessed on the client under the base path `/doc`.
-
-### 8.1 Client Route Definitions
-The following table defines the official client URL routes, corresponding screen representations, and query parameter specifications:
+The documentation feature is accessed on the client under the base path `/doc`. The following table defines client URL routes, corresponding screen representations, and query parameter specifications:
 
 | View / Action | Route Pattern | Query Parameters | Screen Spec Ref | Description |
 | :--- | :--- | :--- | :--- | :--- |
@@ -931,28 +928,6 @@ The following table defines the official client URL routes, corresponding screen
 | **Add Document** | `/doc/spaces/:spaceId/documents/new` | `?area=<area>` (optional) | Screen 12 | Modal/form to add a new document link. Preselects target workflow area if `?area=` is supplied. |
 | **Edit Document** | `/doc/spaces/:spaceId/documents/:documentId/edit` | None | Screen 13 | Modal/form to edit document title, area, or optionally replace the external URL. |
 | **Archived Documents** | `/doc/spaces/:spaceId/archived` | None | Screen 14 | View soft-deleted documents within a space with one-click restore functionality. |
-
-### 8.2 Legacy Route Coexistence (`/doc/:id`, `/doc/create/:id`)
-The codebase currently contains legacy routes in `client/src/App.js`:
-- `/doc/:id` $\rightarrow$ `DocBlog` (legacy article blog viewer)
-- `/doc/create/:id` $\rightarrow$ `CreateDoc` (legacy Google Doc embedded editor)
-
-**Coexistence Strategy**:
-1. **Explicit Segment Isolation**: All new documentation screens use explicit nested sub-routes under `/doc/spaces/...` (e.g., `/doc/spaces/:spaceId`, `/doc/spaces/new`). In React Router v6, static path segments (`/doc/spaces/...`) are evaluated with higher specificity than dynamic parameter routes (`/doc/:id`), completely avoiding URL conflicts.
-2. **Preservation of Legacy Articles**: Existing blog articles remain fully functional under `/doc/:id` during the transition period without interfering with space navigation.
-3. **Legacy Creation Isolation**: The legacy creator route `/doc/create/:id` uses the `create/:id` subpath, which is distinct from `/doc/spaces/new` and `/doc/spaces/:spaceId/documents/new`.
-
-### 8.3 Required Client Link Updates
-When transitioning from the legacy views to the new documentation system, the following existing client links must be updated:
-1. `client/src/pages/Projects/ProjectDetails.js`:
-   - *Current*: Displays a hardcoded static presentation URL in project details (`Project handbook: https://docs.google.com/...`).
-   - *Target*: Update to link to the project's documentation spaces via `/doc/spaces?projectId=${project._id}` or directly to the linked space `/doc/spaces/${space._id}`.
-2. `client/src/pages/Documentation/component/Doc-card.js`:
-   - *Current*: Links directly to `/doc/${doc._id}` for legacy article cards.
-   - *Target*: Retained for legacy blog cards; new documentation space cards in `SpaceListScreen.js` navigate to `/doc/spaces/${space._id}`.
-3. `client/src/components/Sidepanel/Sidepanel.js`:
-   - *Current*: Points to `/doc` (`<Link to="/doc">Documentation</Link>`).
-   - *Target*: No change required; it serves as the entry point to the documentation spaces list.
 
 ---
 
@@ -989,9 +964,7 @@ In adherence to **Locked Decision 4**, the documentation module operates strictl
 
 ---
 
-## 11. Known Risks & Codebase Observations
-
-### 11.1 Known Technical & Architectural Risks
+## 11. Known Technical and Architectural Risks
 
 1. **Project Lead Plain Name String (`server/models/Project.js`)**:
    - *Risk*: `server/models/Project.js` currently stores `lead` as a plain `String` (e.g. `"John Doe"`), rather than an `ObjectId` referencing the `User` collection.
@@ -999,28 +972,11 @@ In adherence to **Locked Decision 4**, the documentation module operates strictl
    - *Mitigation (Implemented in Documentation Service)*: In `server/services/docService.js` (`getUserProjectRole`), project role resolution prioritizes the explicit `ProjectMember` join collection. When falling back to `Project.lead`, it matches against the strongest unique identifier available in strict priority order:
      1. User `ObjectId` (exact 24-character hexadecimal match)
      2. User email (case-insensitive exact match)
-     3. User display name (trimmed, case-insensitive exact match). Crucially, a display-name match counts **only if exactly ONE active user** in the system possesses that name. If the name is ambiguous (two or more users), lead access is denied for all candidates and a server-side warning is logged with the project ID and count (never exposing user details). Partial and substring matching are strictly prohibited.
+     3. User display name (trimmed, case-insensitive exact match). A display-name match counts **only if exactly ONE active user** in the system possesses that name. If the name is ambiguous (two or more users), lead access is denied for all candidates and a server-side warning is logged with the project ID and count (never exposing user details). Partial and substring matching are strictly prohibited.
    - *Recommendation for Projects Owner*: Migrate `Project.lead` to store a direct `ObjectId` reference to the `User` collection (e.g. `lead: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }`), or standardize all project membership, advisory, and lead assignments exclusively through the `ProjectMember` join collection (`{ projectId, userId, role: 'lead' | 'advisor' | 'member' }`).
 
 2. **Direct Mongoose Model Invocation in Controller**:
    - *Risk*: Historical controllers executed database operations directly in `server/controller/docController.js` using Mongoose model methods.
    - *Impact*: Tightly couples HTTP request handling to MongoDB, increasing regression risks and complicating the upcoming migration to Supabase/PostgreSQL (Phase 1 & Phase 4).
    - *Mitigation (Implemented)*: Addressed by the Documentation service layer (`server/services/docService.js`), which encapsulates all database queries and aggregations behind clean repository interfaces and pure authorization guards (`server/utils/docAccess.js`). The controller imports zero models.
-
-### 11.2 Codebase Observations & Transition Items
-
-1. **Legacy `/airost/doc` Routes & `docModel.js`**:
-   - `server/server.js` currently mounts routes at `app.use("/airost/doc", DocRoutes)` and `app.use("/doc", docRoutes)`.
-   - Legacy article blog records (`docModel.js`) and editor (`CreateDoc.js`) coexist with the new link-only documentation space system.
-   - Legacy blog endpoints and new documentation space endpoints are completely isolated under separate router paths (`/airost/doc` vs `/doc`).
-
-2. **Platform Admin Role Consistency**:
-   - In `User` and `VerifiedUser` schemas, `position` can appear as an Array or String.
-   - Centralized server helper `isAdmin(user)` inspects both representations case-insensitively (`(Array.isArray(user.position) ? user.position : [user.position]).some(p => typeof p === 'string' && p.toLowerCase().includes('admin'))`), ensuring uniform authorization logic across all route guards.
-
-3. **Workflow Area Alignment**:
-   - The 6 delivery workflow areas defined in `SCREEN_SPEC.md` (`general`, `requirements`, `design`, `development`, `testing`, `deployment`) remain locked across all document operations.
-
-4. **Upcoming Supabase & PostgreSQL Migration (Phase 1 / Phase 4)**:
-   - All schema designs, foreign keys, and permission boundaries in this contract are structured to map cleanly to PostgreSQL tables (`documentation_spaces`, `documents`, `space_access_members`, `space_update_members`) and Supabase Row Level Security (RLS) policies.
 

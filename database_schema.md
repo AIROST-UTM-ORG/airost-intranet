@@ -1,36 +1,35 @@
-# Database Schema Documentation
+# Database schema documentation
 
-This document describes the MongoDB (NoSQL) schema of the system: the collections, every attribute, the enum values, and the relationships between collections.
+This document describes the MongoDB schema of the system: collections, attributes, enum values, and relationships.
 
-**Design notes**
-
-1. MongoDB is used, so relationships are handled with `ObjectId` references instead of strict foreign keys. "FK" below means a reference to another collection's `_id`.
-2. Project members (lead / advisor / member) are managed through `PROJECT_MEMBER`.
+Design notes:
+1. Relationships use `ObjectId` references instead of foreign keys. The label "FK" below indicates a reference to another collection's `_id`.
+2. Project members (lead, advisor, member) are managed through `PROJECT_MEMBER`.
 3. Events store multiple images in `imageUrl` (`String[]`) instead of a separate media entity.
-4. Event attendance only tracks registration and status (no check-in time).
-5. Activity logs have been removed as requested.
+4. Event attendance tracks registration and status only.
+5. Activity logs have been removed.
 
 ---
 
-## 1. Entity Overview
+## 1. Entity overview
 
 | Collection | Purpose |
 |---|---|
-| `USER` | A member of the community (member directory profile) |
-| `PROJECT` | A project run by members |
+| `USER` | Community member profile in the member directory |
+| `PROJECT` | Project run by members |
 | `PROJECT_MEMBER` | Join collection linking users to projects with a role |
-| `EVENT` | A meeting, workshop or competition |
+| `EVENT` | Meeting, workshop, or competition |
 | `EVENT_ATTENDANCE` | Join collection linking users to events they registered for |
-| `DOCUMENTATION_SPACE` | A container of document links, optionally tied to a project |
-| `DOCUMENT` | Metadata and external URL of a single document |
+| `DOCUMENTATION_SPACE` | Container of document links, optionally tied to a project |
+| `DOCUMENT` | Metadata and external URL for a single document |
 
 ---
 
-## 2. Collections and Attributes
+## 2. Collections and attributes
 
 ### 2.1 USER
 
-Updated to fit the features of the **Member Directory**.
+Member Directory profile schema:
 
 | Attribute | Type | Key / Constraint | Description |
 |---|---|---|---|
@@ -41,15 +40,15 @@ Updated to fit the features of the **Member Directory**.
 | `photoUrl` | String | | Profile photo URL |
 | `positions` | String[] | | Positions held by the user |
 | `year` | String | | Year of study |
-| `course` | String | | Course / programme |
-| `origin` | Object | | Where the user is from |
+| `course` | String | | Course or programme |
+| `origin` | Object | | Geographic origin |
 | `origin.state` | String | | State |
 | `origin.country` | String | | Country |
 | `description` | String | | Short bio |
 | `linkedinUrl` | String | | LinkedIn profile URL |
 | `githubUrl` | String | | GitHub profile URL |
 | `instagramUrl` | String | | Instagram profile URL |
-| `featuredProjectId` | ObjectId | FK → `PROJECT._id` (optional) | Project the user chooses to feature on their profile |
+| `featuredProjectId` | ObjectId | FK -> `PROJECT._id` (optional) | Featured project displayed on profile |
 | `createdAt` | Date | | Creation timestamp |
 | `updatedAt` | Date | | Last update timestamp |
 | `isActive` | Boolean | | Whether the user account is active |
@@ -63,29 +62,29 @@ Updated to fit the features of the **Member Directory**.
 | `description` | String | | Project description |
 | `category` | String | | Project category |
 | `technologies` | String[] | | Technologies used |
-| `status` | String | Enum | Project status (see [Enum Values](#4-enum-values)) |
+| `status` | String | Enum | Project status (see [Enum values](#4-enum-values)) |
 | `createdAt` | Date | | Project creation date |
-| `updatedAt` | Date | | Project setting update date |
+| `updatedAt` | Date | | Project update date |
 
-Project people are not stored on this collection. They are stored in `PROJECT_MEMBER`:
+Project memberships are stored in `PROJECT_MEMBER`, not on the `PROJECT` record directly:
 
 | Role | Description |
 |---|---|
-| `lead` | Project leader. Granted more control over project board configuration |
-| `advisor` | Advisor of the project |
+| `lead` | Project leader with board configuration permissions |
+| `advisor` | Advisor to the project |
 | `member` | Project member |
 
 ### 2.3 PROJECT_MEMBER
 
-Defines the relationship between `USER` and `PROJECT`. A user can be the lead of a project, an advisor of a project, or a member of a project.
+Links a `USER` to a `PROJECT` with an assigned role.
 
 | Attribute | Type | Key / Constraint | Description |
 |---|---|---|---|
 | `_id` | ObjectId | PK | Unique identifier |
-| `projectId` | ObjectId | FK → `PROJECT._id` | The project |
-| `userId` | ObjectId | FK → `USER._id` | The user |
-| `role` | String | Enum | `lead` / `advisor` / `member` |
-| `joinedAt` | Date | | When the user joined the project |
+| `projectId` | ObjectId | FK -> `PROJECT._id` | The project |
+| `userId` | ObjectId | FK -> `USER._id` | The user |
+| `role` | String | Enum | `lead`, `advisor`, or `member` |
+| `joinedAt` | Date | | Date joined |
 
 ### 2.4 EVENT
 
@@ -94,63 +93,63 @@ Defines the relationship between `USER` and `PROJECT`. A user can be the lead of
 | `_id` | ObjectId | PK | Unique identifier of the event |
 | `title` | String | | Event title |
 | `description` | String | | Event description |
-| `category` | Enum | | `meeting` / `workshop` / `competition` |
-| `highlight` | Boolean | | Whether the event is highlighted/featured |
+| `category` | Enum | | `meeting`, `workshop`, or `competition` |
+| `highlight` | Boolean | | Whether the event is featured |
 | `startAt` | Date | | Start date and time |
 | `endAt` | Date | | End date and time |
 | `venue` | String | | Location of the event |
-| `imageUrl` | String[] | | Multiple image URLs for the event |
-| `capacity` | Number | Optional | Maximum number of attendees |
-| `status` | String | Enum | `draft` / `published` / `cancelled` / `completed` |
-| `createdBy` | ObjectId | FK → `USER._id` | User who created the event |
-| `updatedBy` | ObjectId | FK → `USER._id` | User who last updated the event |
+| `imageUrl` | String[] | | Image URLs for the event |
+| `capacity` | Number | Optional | Maximum attendees |
+| `status` | String | Enum | `draft`, `published`, `cancelled`, or `completed` |
+| `createdBy` | ObjectId | FK -> `USER._id` | User who created the event |
+| `updatedBy` | ObjectId | FK -> `USER._id` | User who last updated the event |
 | `createdAt` | Date | | Creation timestamp |
 | `updatedAt` | Date | | Last update timestamp |
 
 ### 2.5 EVENT_ATTENDANCE
 
-Tracks registration and status only (no check-in time).
+Tracks registration and attendance status.
 
 | Attribute | Type | Key / Constraint | Description |
 |---|---|---|---|
 | `_id` | ObjectId | PK | Unique identifier |
-| `eventId` | ObjectId | FK → `EVENT._id` | The event |
-| `userId` | ObjectId | FK → `USER._id` | The attending user |
-| `status` | String | Enum | `registered` / `attended` / `cancelled` / `no_show` |
-| `registeredAt` | Date | | When the user registered |
+| `eventId` | ObjectId | FK -> `EVENT._id` | The event |
+| `userId` | ObjectId | FK -> `USER._id` | The attending user |
+| `status` | String | Enum | `registered`, `attended`, `cancelled`, or `no_show` |
+| `registeredAt` | Date | | Registration timestamp |
 
 ### 2.6 DOCUMENTATION_SPACE
 
-A documentation space contains one or more `DOCUMENT` entries.
+A documentation space contains document link records.
 
 | Attribute | Type | Key / Constraint | Description |
 |---|---|---|---|
 | `_id` | ObjectId | PK | Unique identifier |
-| `title` | String | | Title of the documentation space, which is the project name (e.g. *Airost Intranet*) |
-| `description` | String | | Description of the project |
-| `projectId` | ObjectId | FK → `PROJECT._id` (optional) | Project this space is linked to |
-| `createdBy` | ObjectId | FK → `USER._id` | User who created the space |
-| `accessType` | String | Enum | Who is allowed to access: `public` / `members` / `selected` |
-| `updateType` | String | Enum | Who is allowed to add, edit, or archive documents: `admins_only` / `project_members` / `selected` |
-| `createdAt` | Date | | Date and time the space was created |
-| `updatedAt` | Date | | Date and time the space was last modified |
+| `title` | String | | Title of the documentation space |
+| `description` | String | | Space description |
+| `projectId` | ObjectId | FK -> `PROJECT._id` (optional) | Project linked to this space |
+| `createdBy` | ObjectId | FK -> `USER._id` | User who created the space |
+| `accessType` | String | Enum | Who can access: `public`, `members`, or `selected` |
+| `updateType` | String | Enum | Who can manage documents: `admins_only`, `project_members`, or `selected` |
+| `createdAt` | Date | | Creation timestamp |
+| `updatedAt` | Date | | Last modified timestamp |
 
 ### 2.7 DOCUMENT
 
-`DOCUMENT` does **not** store the actual document content. It only stores the metadata and external URL needed to organize and access the document.
+`DOCUMENT` stores metadata and external URLs to organize and access documents. It does not store document content.
 
 | Attribute | Type | Key / Constraint | Description |
 |---|---|---|---|
 | `_id` | ObjectId | PK | Unique identifier |
-| `spaceId` | ObjectId | FK → `DOCUMENTATION_SPACE._id` | The documentation space containing this document |
-| `title` | String | | Title of the document link (e.g. *Database Schema*) |
-| `url` | String | | External URL, such as a Google Docs or Google Drive link |
-| `provider` | String | Enum | Platform where the document is hosted: `google_drive` / `google_doc` / `external_url` / `other` |
-| `area` | String | Enum | Category of the document: `general` / `meeting` / `technical` / `resource` / `other` |
-| `createdBy` | ObjectId | FK → `USER._id` | User who added the document |
-| `archived` | Boolean | Default `false` | Whether the document link has been archived |
-| `createdAt` | Date | | When the document link was added |
-| `updatedAt` | Date | | When the document information was last modified |
+| `spaceId` | ObjectId | FK -> `DOCUMENTATION_SPACE._id` | Documentation space containing this document |
+| `title` | String | | Title of the document link |
+| `url` | String | | External URL (Google Docs, Google Drive, or HTTPS link) |
+| `provider` | String | Enum | Platform: `google_drive`, `google_doc`, `external_url`, or `other` |
+| `area` | String | Enum | Category: `general`, `meeting`, `technical`, `resource`, or `other` |
+| `createdBy` | ObjectId | FK -> `USER._id` | User who added the document |
+| `archived` | Boolean | Default `false` | Whether the document link is archived |
+| `createdAt` | Date | | Creation timestamp |
+| `updatedAt` | Date | | Last modified timestamp |
 
 ---
 
@@ -158,18 +157,18 @@ A documentation space contains one or more `DOCUMENT` entries.
 
 | # | From | To | Cardinality | Reference field | Description |
 |---|---|---|---|---|---|
-| 1 | `USER` | `PROJECT` | Many-to-many (0..* : 0..*) | via `PROJECT_MEMBER` | A user leads / advises / is a member of many projects; a project has many users |
+| 1 | `USER` | `PROJECT` | Many-to-many (0..* : 0..*) | via `PROJECT_MEMBER` | A user leads, advises, or joins many projects; a project has many users |
 | 2 | `USER` | `PROJECT_MEMBER` | One-to-many | `PROJECT_MEMBER.userId` | One user has many project memberships |
 | 3 | `PROJECT` | `PROJECT_MEMBER` | One-to-many | `PROJECT_MEMBER.projectId` | One project has many members |
 | 4 | `USER` | `PROJECT` | Many-to-one (optional) | `USER.featuredProjectId` | A user may feature one project on their profile |
-| 5 | `USER` | `EVENT` | One-to-many (1 : 0..*) | `EVENT.createdBy`, `EVENT.updatedBy` | A user creates (and updates) many events |
-| 6 | `EVENT` | `EVENT_ATTENDANCE` | One-to-many (1 : 0..*) | `EVENT_ATTENDANCE.eventId` | An event has many attendance records ("has attendees") |
-| 7 | `USER` | `EVENT_ATTENDANCE` | One-to-many (1 : 0..*) | `EVENT_ATTENDANCE.userId` | A user "attends" many events through attendance records |
-| 8 | `USER` | `EVENT` | Many-to-many | via `EVENT_ATTENDANCE` | Users register for events; events have many users |
-| 9 | `USER` | `DOCUMENTATION_SPACE` | One-to-many (1 : 0..*) | `DOCUMENTATION_SPACE.createdBy` | A user creates many documentation spaces |
-| 10 | `PROJECT` | `DOCUMENTATION_SPACE` | One-to-many (optional) | `DOCUMENTATION_SPACE.projectId` | A space can be linked to a project; a space may have no project |
+| 5 | `USER` | `EVENT` | One-to-many (1 : 0..*) | `EVENT.createdBy`, `EVENT.updatedBy` | A user creates and updates events |
+| 6 | `EVENT` | `EVENT_ATTENDANCE` | One-to-many (1 : 0..*) | `EVENT_ATTENDANCE.eventId` | An event has many attendance records |
+| 7 | `USER` | `EVENT_ATTENDANCE` | One-to-many (1 : 0..*) | `EVENT_ATTENDANCE.userId` | A user attends events through attendance records |
+| 8 | `USER` | `EVENT` | Many-to-many | via `EVENT_ATTENDANCE` | Users register for events; events have many registered users |
+| 9 | `USER` | `DOCUMENTATION_SPACE` | One-to-many (1 : 0..*) | `DOCUMENTATION_SPACE.createdBy` | A user creates documentation spaces |
+| 10 | `PROJECT` | `DOCUMENTATION_SPACE` | One-to-many (optional) | `DOCUMENTATION_SPACE.projectId` | A space can link to a project or remain standalone |
 | 11 | `DOCUMENTATION_SPACE` | `DOCUMENT` | One-to-many (1 : 0..*) | `DOCUMENT.spaceId` | A space contains many documents |
-| 12 | `USER` | `DOCUMENT` | One-to-many | `DOCUMENT.createdBy` | A user adds many documents |
+| 12 | `USER` | `DOCUMENT` | One-to-many | `DOCUMENT.createdBy` | A user adds documents |
 
 ### Relationship diagram
 
@@ -189,7 +188,7 @@ erDiagram
 
 ---
 
-## 4. Enum Values
+## 4. Enum values
 
 | Field | Allowed values |
 |---|---|
@@ -205,9 +204,9 @@ erDiagram
 
 ---
 
-## 5. Discrepancies Between the Diagram and the Text Descriptions
+## 5. Discrepancies between the diagram and text descriptions
 
-The ER diagram and the written tables in the source file do not fully agree. This document follows the **ER diagram** as the primary source. Please confirm which is current:
+The ER diagram and written tables in the source file do not fully agree. This document treats the ER diagram as the primary source:
 
 | Topic | ER diagram | Written description |
 |---|---|---|
@@ -220,4 +219,4 @@ The ER diagram and the written tables in the source file do not fully agree. Thi
 | `PROJECT` fields | `title`, `description`, `category`, `technologies`, `status`, timestamps; people via `PROJECT_MEMBER` | Table lists `lead`, `members`, `createdAt`, `updatedAt` as if stored on the project |
 | `DOCUMENT.createdBy` | Marked as FK | Described as User ID from `USER` |
 
-If the `selected` option is meant to be used for access or update permissions, the schema needs a place to store those user IDs (for example, `accessMembers` / `updateMembers` arrays on `DOCUMENTATION_SPACE`, or a separate join collection).
+When using the `selected` option for access or update permissions, the schema stores selected user IDs in `accessMembers` and `updateMembers` arrays on `DOCUMENTATION_SPACE`.

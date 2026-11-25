@@ -1,12 +1,12 @@
-# AIROST Intranet Tech Stack & Package Management
+# AIROST intranet tech stack and package management
 
-This document provides a comprehensive overview of the technical stack, packages, libraries, architecture, and deployment configurations used in the **AIROST Intranet** project.
+Technical stack, packages, libraries, architecture, and deployment configurations used in the AIROST Intranet project.
 
 ---
 
-## 1. High-Level Architecture
+## 1. High-level architecture
 
-The repository is organized as a decoupled monorepo containing a React Single Page Application (SPA) frontend and a Node.js / Express REST API backend.
+The repository is organized as a decoupled two-tier application containing a React Single Page Application (SPA) frontend and a Node.js / Express REST API backend.
 
 ```mermaid
 graph TD
@@ -43,33 +43,33 @@ graph TD
 
 ---
 
-## 2. Frontend Tech Stack (`client/`)
+## 2. Frontend tech stack (client/)
 
-* **Directory:** [`client/`](file:///c:/Users/ganru/Documents/airost-intranet/client)
-* **Configuration:** [`client/package.json`](file:///c:/Users/ganru/Documents/airost-intranet/client/package.json)
-* **Port (Dev):** `3000` (proxied to `http://localhost:4000/`)
+- Directory: `client/`
+- Configuration: `client/package.json`
+- Dev port: 3000 (proxies to `http://localhost:4000/`)
 
-### Core & Framework
+### Core and framework
 | Package | Version | Description |
 | :--- | :--- | :--- |
 | **React** | `^19.1.0` | Core UI library for component-based architecture. |
 | **React DOM** | `^19.1.0` | React rendering engine for the web DOM. |
 | **react-scripts** | `^5.0.1` | Create React App build pipeline, Webpack bundler, and Babel configuration. |
 
-### Routing & Navigation
+### Routing and navigation
 | Package | Version | Description |
 | :--- | :--- | :--- |
 | **react-router-dom** | `^6.10.0` | Declarative routing, route protection (`RequireAuth`), and navigation. |
 
-### State Management & Data Fetching
+### State management and data fetching
 | Package | Version | Description |
 | :--- | :--- | :--- |
-| **@reduxjs/toolkit** | `^2.6.1` | Modern Redux store for global complex state (e.g., Project Tracking boards). |
+| **@reduxjs/toolkit** | `^2.6.1` | Modern Redux store for global complex state (such as Project Tracking boards). |
 | **react-redux** | `^9.2.0` | React bindings for Redux. |
 | **@tanstack/react-query** | `^5.32.0` | Server-state synchronization, caching, and mutation management. |
 | **React Context API** | Native | Application-wide authentication state provider (`AuthProvider`). |
 
-### UI, Styling & Design Systems
+### UI, styling, and design systems
 | Package | Version | Description |
 | :--- | :--- | :--- |
 | **tailwindcss** | `^3.4.3` | Utility-first CSS framework. |
@@ -79,44 +79,44 @@ graph TD
 | **framer-motion** | `^11.1.7` | Production-ready motion and gesture library for animations. |
 | **react-icons** | `^4.12.0` | Unified icon library (Bootstrap Icons, FontAwesome, etc.). |
 
-### Forms, Rich Text & Utilities
+### Forms, rich text, and utilities
 | Package | Version | Description |
 | :--- | :--- | :--- |
 | **axios** | `^1.5.1` | Promise-based HTTP client for REST API communication. |
-| **react-hook-form** | `^7.51.4` | Performant form state management and validation. |
+| **react-hook-form** | `^7.51.4` | Form state management and validation. |
 | **react-select** | `^5.7.7` | Flexible select and autocomplete input controls. |
 | **react-quill** | `^2.0.0` | Rich text WYSIWYG editor for documentation creation. |
 | **react-tailwindcss-datepicker** | `^1.6.6` | Date range picker designed for Tailwind CSS. |
-| **date-fns** | `^3.1.0` | Lightweight modern JavaScript date utility library. |
+| **date-fns** | `^3.1.0` | Modern JavaScript date utility library. |
 | **moment** | `^2.30.1` | Legacy JavaScript date/time parser and formatter. |
 | **lodash** | `^4.17.21` | Utility functions for array/object manipulation and debouncing. |
 | **uuid** | `^11.1.0` | RFC-compliant UUID generator for unique IDs. |
 
 ---
 
-## 3. Backend Tech Stack (`server/`)
+## 3. Backend tech stack (server/)
 
-* **Directory:** [`server/`](file:///c:/Users/ganru/Documents/airost-intranet/server)
-* **Configuration:** [`server/package.json`](file:///c:/Users/ganru/Documents/airost-intranet/server/package.json)
-* **Port (Dev):** `4000` (configured via `.env` or defaulting to `4000`)
+- Directory: `server/`
+- Configuration: `server/package.json`
+- Dev port: 4000 (configured via `.env` or defaulting to `4000`)
 
-### Runtime, Server & Routing
+### Runtime, server, and routing
 | Package | Version | Description |
 | :--- | :--- | :--- |
-| **Node.js** | `>=18.0.0` | JavaScript runtime (Docker uses Node 18; local env runs Node 24). |
-| **express** | `^4.18.2` | Fast, unopinionated minimalist web framework for REST API endpoints. |
+| **Node.js** | `>=18.0.0` | JavaScript runtime (Docker uses Node 18; local env runs Node 20/24). |
+| **express** | `^4.18.2` | Minimal web framework for REST API endpoints. |
 | **cors** | `^2.8.5` | Cross-Origin Resource Sharing middleware for client-server communication. |
 | **dotenv** | `^16.3.1` | Environment variable loader from `.env` file. |
-| **nodemon** | `^3.0.1` | Development utility to automatically monitor file changes and restart the process. |
+| **nodemon** | `^3.0.1` | Development utility to monitor file changes and restart the process. |
 
-### Database & ODM
+### Database and ODM
 | Package | Version | Description |
 | :--- | :--- | :--- |
 | **MongoDB Atlas** | Cloud | Managed cloud NoSQL database cluster. |
 | **mongoose** | `^6.10.0` | Object Data Modeling (ODM) library for MongoDB validation, models, and queries. |
 | **mongodb** | `^5.7.0` | Official MongoDB native driver for Node.js. |
 
-### Authentication & Sessions
+### Authentication and sessions
 | Package | Version | Description |
 | :--- | :--- | :--- |
 | **passport** | `^0.5.3` | Authentication middleware for Node.js. |
@@ -125,51 +125,49 @@ graph TD
 | **connect-mongo** | `^5.0.0` | MongoDB-backed session storage for Express sessions. |
 | **cookie-session** | `^2.1.0` | Cookie-based session handling utility. |
 
-### Cloud Integrations & External Services
+### Cloud integrations and external services
 | Package | Version | Description |
 | :--- | :--- | :--- |
 | **googleapis** | `^130.0.0` | Official Google APIs client library (used for Google Calendar synchronization). |
 
 ---
 
-## 4. Package Management & Deployment
+## 4. Package management and deployment
 
-### Monorepo Setup
-The project functions as an **independent two-tier repository** without monorepo tooling (no npm workspaces, Lerna, or Turborepo).
-* Each package (`client/` and `server/`) maintains its own `package.json` and `package-lock.json`.
-* Both directories require separate `npm install` runs before starting development.
+### Monorepo setup
+The project functions as an independent two-tier repository without monorepo tooling (no npm workspaces, Lerna, or Turborepo).
+- Each package (`client/` and `server/`) maintains its own `package.json` and `package-lock.json`.
+- Both directories require separate `npm install` runs before starting development.
 
-### Development Scripts
+### Development scripts
 
-#### Backend (`server/`)
-* **`npm run dev`**: Starts the server using `nodemon` with `NODE_ENV=development`.
-* **`npm start`**: Runs `node server.js` directly.
+#### Backend (server/)
+- `npm run dev`: starts the server using `nodemon` with `NODE_ENV=development`.
+- `npm start`: runs `node server.js` directly.
 
-#### Frontend (`client/`)
-* **`npm start`**: Starts React development server on port 3000 (`set PORT=3000 && react-scripts start`).
-* **`npm run build`**: Compiles production static assets via Webpack.
-* **`npm test`**: Runs unit and integration test suites using Jest and React Testing Library.
+#### Frontend (client/)
+- `npm start`: starts React development server on port 3000 (`set PORT=3000 && react-scripts start`).
+- `npm run build`: compiles production static assets via Webpack.
+- `npm test`: runs unit and integration test suites using Jest and React Testing Library.
 
-### Containerization & Deployment
-* **Dockerfile:** Located at [`server/Dockerfile`](file:///c:/Users/ganru/Documents/airost-intranet/server/Dockerfile).
-* **Target Environment:** Google Cloud Run.
-* **Base Image:** `node:18`.
-* **Production Port:** `8080`.
+### Containerization and deployment
+- Dockerfile: `server/Dockerfile`
+- Target environment: Google Cloud Run
+- Base image: `node:18`
+- Production port: `8080`
 
 ---
 
-## 5. Technical Review & Recommendations
+## 5. Technical review and recommendations
 
-1. **Misplaced Server Dependencies:**
-   * `@tanstack/react-query` is listed in [`server/package.json`](file:///c:/Users/ganru/Documents/airost-intranet/server/package.json#L14). This is a frontend library and should be removed from the server dependencies.
-   * `git-filter-repo` is listed in [`server/package.json`](file:///c:/Users/ganru/Documents/airost-intranet/server/package.json#L21) and is not needed as a runtime dependency.
+1. Misplaced server dependencies:
+   `@tanstack/react-query` and `git-filter-repo` are listed in `server/package.json`. These are frontend or maintenance tools and are not backend runtime dependencies.
 
-2. **Frontend UI Library Duplication:**
-   * The client combines **three** distinct UI frameworks: **Tailwind CSS + DaisyUI**, **Ant Design**, and **MDB React UI Kit**.
-   * *Recommendation:* Standardizing on Tailwind CSS + DaisyUI (or Ant Design alone) will significantly reduce the JavaScript bundle size and prevent style collisions.
+2. Frontend UI library duplication:
+   The client includes three UI frameworks: Tailwind CSS with DaisyUI, Ant Design, and MDB React UI Kit. Standardizing on Tailwind CSS and DaisyUI reduces bundle size and avoids style collisions.
 
-3. **Date Library Redundancy:**
-   * Both `date-fns` and `moment` are installed. `moment` is deprecated/in maintenance mode; migrating all moment calls to `date-fns` will reduce bundle overhead.
+3. Date library redundancy:
+   Both `date-fns` and `moment` are installed. Migrating existing `moment` calls to `date-fns` removes the deprecated dependency.
 
-4. **Node.js Version Alignment:**
-   * Local development uses Node.js v24, whereas the production container targets Node.js 18. Aligning local engines or upgrading the Dockerfile to an updated LTS (such as Node 20 LTS or Node 22 LTS) ensures consistency across environments.
+4. Node.js version alignment:
+   Local development environments run Node 20 or 24, while the production container targets Node 18. Aligning local engines or updating the Dockerfile to an updated LTS image ensures consistent runtime behavior.

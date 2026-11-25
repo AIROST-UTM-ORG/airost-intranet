@@ -1,4 +1,4 @@
-## Run Unit Tests — Member Profile
+## Run unit tests for member profiles
 
 Run the following commands from the project root to execute the `MemberDirectory` profile unit tests.
 
@@ -8,13 +8,13 @@ cd client
 npm test -- --watchAll=false --runInBand src/tests/unit/Profile/Profile.test.js
 ```
 
-### Command Options
+### Command options
 
-- `--watchAll=false` — Run tests once without entering watch mode.
-- `--runInBand` — Execute tests sequentially in a single process.
-- `src/tests/unit/Profile/Profile.test.js` — Specify the test file to execute.
+- `--watchAll=false`: run tests once without entering watch mode.
+- `--runInBand`: execute tests sequentially in a single process.
+- `src/tests/unit/Profile/Profile.test.js`: specify the test file to execute.
 
-### Verify the Results
+### Verify results
 
 - Confirm that all tests pass.
 - Review any failed assertions or runtime errors.
