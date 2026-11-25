@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useMemo } from "react";
-import SpaceListScreen from "../components/SpaceListScreen";
-import SpaceFormScreen from "../components/SpaceFormScreen";
-import SpaceDetailScreen from "../components/SpaceDetailScreen";
-import DocumentFormScreen from "../components/DocumentFormScreen";
-import ArchivedDocumentsScreen from "../components/ArchivedDocumentsScreen";
-import { useDocumentationRouter, ViewModes, parseDocPath } from "../hooks/useDocumentationRouter";
-import { useSpaceList } from "../hooks/useSpaceList";
-import { useSpaceDetail } from "../hooks/useSpaceDetail";
-import { useSpaceActions } from "../hooks/useSpaceActions";
-import "../styles/Documentation.css";
+import SpaceListScreen from "../spaces/components/SpaceListScreen";
+import SpaceFormScreen from "../spaces/components/SpaceFormScreen";
+import SpaceDetailScreen from "../spaces/components/SpaceDetailScreen";
+import DocumentFormScreen from "../documents/components/DocumentFormScreen";
+import ArchivedDocumentsScreen from "../documents/components/ArchivedDocumentsScreen";
+import { useDocumentationRouter, ViewModes, parseDocPath } from "../shared/hooks/useDocumentationRouter";
+import { useSpaceList } from "../spaces/hooks/useSpaceList";
+import { useSpaceDetail } from "../spaces/hooks/useSpaceDetail";
+import { useSpaceActions } from "../spaces/hooks/useSpaceActions";
+import "../shared/styles/Documentation.css";
 
 export { ViewModes, parseDocPath };
 

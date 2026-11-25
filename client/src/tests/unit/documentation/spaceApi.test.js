@@ -1,5 +1,5 @@
 import apiClient from '../../../shared/api/client';
-import { setUseMock } from '../../../features/documentation/services/mockData';
+import { setUseMock } from '../../../features/documentation/shared/api/mockData';
 import {
   listSpaces,
   getSpace,
@@ -8,9 +8,9 @@ import {
   deleteSpace,
   listProjects,
   listMembers,
-} from '../../../features/documentation/services/spaceApi';
+} from '../../../features/documentation/spaces/api/spaceApi';
 
-describe('services/documentation/spaceApi routing via apiClient', () => {
+describe('spaces/api/spaceApi routing via apiClient', () => {
   const originalAdapter = apiClient.defaults.adapter;
   let capturedRequests;
 

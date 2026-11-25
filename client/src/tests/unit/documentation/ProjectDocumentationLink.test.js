@@ -5,7 +5,8 @@ import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { ProjectDocumentationLink, DocumentationPage as Documentation } from "../../../features/documentation";
 import ProjectDetails from "../../../features/projects/pages/ProjectDetails";
 import { AuthContext } from "../../../context/authContext";
-import * as docApi from "../../../features/documentation/services";
+import * as spaceApi from "../../../features/documentation/spaces/api/spaceApi";
+import { resetMockData } from "../../../features/documentation/shared/api/mockData";
 
 jest.mock("../../../shared/api/client", () => {
   const mockClient = {
@@ -33,11 +34,11 @@ const renderWithAuth = (ui, user = null, initialEntries = ["/"]) => {
 describe("ProjectDocumentationLink Component States", () => {
   afterEach(() => {
     jest.restoreAllMocks();
-    docApi.resetMockData();
+    resetMockData();
   });
 
   test("1. Loading state: renders small skeleton with proper footprint", async () => {
-    jest.spyOn(docApi, "listSpaces").mockImplementation(
+    const listSpy = jest.spyOn(spaceApi, "listSpaces").mockImplementation(
       () => new Promise(() => {}) // pending promise
     );
 
@@ -48,10 +49,11 @@ describe("ProjectDocumentationLink Component States", () => {
     const skeleton = screen.getByTestId("project-doc-loading");
     expect(skeleton).toBeInTheDocument();
     expect(skeleton).toHaveAttribute("aria-busy", "true");
+    expect(listSpy).toHaveBeenCalledWith({ projectId: "65f29d20c571c48201a11111" });
   });
 
   test("2. One space: renders button/link with Documentation and document count", async () => {
-    jest.spyOn(docApi, "listSpaces").mockResolvedValue([
+    const listSpy = jest.spyOn(spaceApi, "listSpaces").mockResolvedValue([
       {
         _id: "space-alpha",
         title: "Alpha Handbook",
@@ -72,10 +74,11 @@ describe("ProjectDocumentationLink Component States", () => {
     const badge = screen.getByTestId("doc-count-badge");
     expect(badge).toBeInTheDocument();
     expect(badge).toHaveTextContent("7");
+    expect(listSpy).toHaveBeenCalledWith({ projectId: "65f29d20c571c48201a11111" });
   });
 
   test("3. Several spaces: renders dropdown button with count and shows spaces on click", async () => {
-    jest.spyOn(docApi, "listSpaces").mockResolvedValue([
+    const listSpy = jest.spyOn(spaceApi, "listSpaces").mockResolvedValue([
       {
         _id: "space-1",
         title: "Design System",
@@ -116,10 +119,11 @@ describe("ProjectDocumentationLink Component States", () => {
     // Escape closes the menu
     fireEvent.keyDown(document, { key: "Escape" });
     expect(screen.queryByTestId("project-doc-menu")).not.toBeInTheDocument();
+    expect(listSpy).toHaveBeenCalledWith({ projectId: "65f29d20c571c48201a11111" });
   });
 
   test("4. None + can create: renders link to create route with ?projectId=", async () => {
-    jest.spyOn(docApi, "listSpaces").mockResolvedValue([]);
+    const listSpy = jest.spyOn(spaceApi, "listSpaces").mockResolvedValue([]);
 
     const adminUser = {
       _id: "u-admin",
@@ -139,10 +143,11 @@ describe("ProjectDocumentationLink Component States", () => {
       "href",
       "/doc/spaces/new?projectId=65f29d20c571c48201a11111"
     );
+    expect(listSpy).toHaveBeenCalledWith({ projectId: "65f29d20c571c48201a11111" });
   });
 
   test("4b. None + project lead can create: recognizes lead by name/project", async () => {
-    jest.spyOn(docApi, "listSpaces").mockResolvedValue([]);
+    const listSpy = jest.spyOn(spaceApi, "listSpaces").mockResolvedValue([]);
 
     const leadUser = {
       _id: "u-lead",
@@ -161,10 +166,11 @@ describe("ProjectDocumentationLink Component States", () => {
     const createLink = await screen.findByTestId("create-project-doc-link");
     expect(createLink).toBeInTheDocument();
     expect(createLink).toHaveTextContent("Create documentation space");
+    expect(listSpy).toHaveBeenCalledWith({ projectId: "65f29d20c571c48201a11111" });
   });
 
   test("4c. None + admin with mixed-case/Platform Admin position can create", async () => {
-    jest.spyOn(docApi, "listSpaces").mockResolvedValue([]);
+    const listSpy = jest.spyOn(spaceApi, "listSpaces").mockResolvedValue([]);
 
     const platformAdminUser = {
       _id: "u-admin-2",
@@ -180,10 +186,11 @@ describe("ProjectDocumentationLink Component States", () => {
     const createLink = await screen.findByTestId("create-project-doc-link");
     expect(createLink).toBeInTheDocument();
     expect(createLink).toHaveTextContent("Create documentation space");
+    expect(listSpy).toHaveBeenCalledWith({ projectId: "65f29d20c571c48201a11111" });
   });
 
   test("5. None + cannot create: renders quieter muted 'No documentation yet'", async () => {
-    jest.spyOn(docApi, "listSpaces").mockResolvedValue([]);
+    const listSpy = jest.spyOn(spaceApi, "listSpaces").mockResolvedValue([]);
 
     const memberUser = {
       _id: "u-member",
@@ -203,11 +210,12 @@ describe("ProjectDocumentationLink Component States", () => {
     expect(mutedLine).toBeInTheDocument();
     expect(mutedLine).toHaveTextContent("No documentation yet");
     expect(screen.queryByTestId("create-project-doc-link")).not.toBeInTheDocument();
+    expect(listSpy).toHaveBeenCalledWith({ projectId: "65f29d20c571c48201a11111" });
   });
 
   test("6. Error state: renders inline error message with Retry button and recovers", async () => {
     const listSpy = jest
-      .spyOn(docApi, "listSpaces")
+      .spyOn(spaceApi, "listSpaces")
       .mockRejectedValueOnce(new Error("Network timeout"))
       .mockResolvedValueOnce([
         {
@@ -243,7 +251,7 @@ describe("ProjectDocumentationLink Component States", () => {
 describe("Create Space Form Project Preselection (?projectId=)", () => {
   afterEach(() => {
     jest.restoreAllMocks();
-    docApi.resetMockData();
+    resetMockData();
   });
 
   test("preselects allowed project from ?projectId= in linkable list", async () => {
@@ -296,7 +304,7 @@ describe("Create Space Form Project Preselection (?projectId=)", () => {
 describe("ProjectDetails Integration", () => {
   afterEach(() => {
     jest.restoreAllMocks();
-    docApi.resetMockData();
+    resetMockData();
   });
 
   test("renders ProjectDocumentationLink and no longer contains hardcoded Google Slides URL", async () => {

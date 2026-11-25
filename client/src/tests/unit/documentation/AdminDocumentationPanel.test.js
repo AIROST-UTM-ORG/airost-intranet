@@ -6,7 +6,8 @@ import apiClient from "../../../shared/api/client";
 import Admin from "../../../pages/Admin/Admin";
 import AdminDocumentationPanel from "../../../features/documentation/admin";
 import { AuthContext } from "../../../context/authContext";
-import * as docApi from "../../../features/documentation/services";
+import * as adminApi from "../../../features/documentation/admin/api/adminApi";
+import { resetMockData } from "../../../features/documentation/shared/api/mockData";
 
 jest.mock("../../../shared/api/client", () => {
   const mockClient = {
@@ -45,7 +46,7 @@ describe("Admin Console - Documentation Oversight Panel", () => {
   };
 
   beforeEach(() => {
-    docApi.resetMockData();
+    resetMockData();
     jest.restoreAllMocks();
     apiClient.get.mockResolvedValue({ data: [] });
   });
@@ -107,7 +108,7 @@ describe("Admin Console - Documentation Oversight Panel", () => {
   // 3. Pagination
   // ---------------------------------------------------------------------------
   test("pagination: navigates previous and next pages with server-side page count", async () => {
-    const listSpy = jest.spyOn(docApi, "getAdminSpaces").mockImplementation(async ({ page }) => {
+    const listSpy = jest.spyOn(adminApi, "getAdminSpaces").mockImplementation(async ({ page }) => {
       return {
         spaces: [
           {
@@ -162,7 +163,7 @@ describe("Admin Console - Documentation Oversight Panel", () => {
   // 4. Search
   // ---------------------------------------------------------------------------
   test("search: debounces input, queries server with q, and clear button restores list", async () => {
-    const listSpy = jest.spyOn(docApi, "getAdminSpaces");
+    const listSpy = jest.spyOn(adminApi, "getAdminSpaces");
 
     renderWithAuth(<AdminDocumentationPanel />, adminUser);
     expect(await screen.findByTestId("admin-spaces-table")).toBeInTheDocument();
@@ -192,10 +193,10 @@ describe("Admin Console - Documentation Oversight Panel", () => {
   // 5. Reassign Space Owner
   // ---------------------------------------------------------------------------
   test("reassign owner: renders members with names and emails, confirms reassign, updates UI and toast", async () => {
-    const reassignSpy = jest.spyOn(docApi, "reassignSpaceOwner").mockResolvedValue({
+    const reassignSpy = jest.spyOn(adminApi, "reassignSpaceOwner").mockResolvedValue({
       space: { _id: "65f29d20c571c48201a00001", createdBy: "65f29d20c571c48201a33331" },
     });
-    jest.spyOn(docApi, "getAdminSpaces");
+    const listSpy = jest.spyOn(adminApi, "getAdminSpaces");
 
     renderWithAuth(<AdminDocumentationPanel />, adminUser);
     expect(await screen.findByTestId("admin-space-row-65f29d20c571c48201a00001")).toBeInTheDocument();
@@ -227,6 +228,7 @@ describe("Admin Console - Documentation Oversight Panel", () => {
       "Space owner reassigned successfully"
     );
     expect(screen.queryByTestId("reassign-owner-modal")).not.toBeInTheDocument();
+    expect(listSpy).toHaveBeenCalled();
   });
 
   test("reassign owner: handles 400, 404, and 500 error responses inline", async () => {
@@ -244,32 +246,35 @@ describe("Admin Console - Documentation Oversight Panel", () => {
     // 1. 400 Validation Error
     const err400 = new Error("User is inactive");
     err400.response = { data: { error: { code: "VALIDATION_ERROR", message: "Selected user is inactive" } } };
-    jest.spyOn(docApi, "reassignSpaceOwner").mockRejectedValueOnce(err400);
+    const err400Spy = jest.spyOn(adminApi, "reassignSpaceOwner").mockRejectedValueOnce(err400);
 
     fireEvent.click(screen.getByTestId("reassign-confirm-btn"));
     expect(await screen.findByTestId("reassign-error-message")).toHaveTextContent(
       "Selected user is inactive"
     );
+    expect(err400Spy).toHaveBeenCalled();
 
     // 2. 404 Not Found Error
     const err404 = new Error("Space not found");
     err404.response = { data: { error: { code: "NOT_FOUND", message: "Documentation space not found" } } };
-    jest.spyOn(docApi, "reassignSpaceOwner").mockRejectedValueOnce(err404);
+    const err404Spy = jest.spyOn(adminApi, "reassignSpaceOwner").mockRejectedValueOnce(err404);
 
     fireEvent.click(screen.getByTestId("reassign-confirm-btn"));
     expect(await screen.findByTestId("reassign-error-message")).toHaveTextContent(
       "Documentation space not found"
     );
+    expect(err404Spy).toHaveBeenCalled();
 
     // 3. 500 Internal Error
     const err500 = new Error("Server error");
     err500.response = { data: { error: { code: "INTERNAL_ERROR", message: "Internal server error" } } };
-    jest.spyOn(docApi, "reassignSpaceOwner").mockRejectedValueOnce(err500);
+    const err500Spy = jest.spyOn(adminApi, "reassignSpaceOwner").mockRejectedValueOnce(err500);
 
     fireEvent.click(screen.getByTestId("reassign-confirm-btn"));
     expect(await screen.findByTestId("reassign-error-message")).toHaveTextContent(
       "Internal server error"
     );
+    expect(err500Spy).toHaveBeenCalled();
 
     // Cancel closes modal
     fireEvent.click(screen.getByTestId("reassign-cancel-btn"));
@@ -282,7 +287,7 @@ describe("Admin Console - Documentation Oversight Panel", () => {
   // 6. Delete Space with Typed Confirmation
   // ---------------------------------------------------------------------------
   test("delete space: requires exact typed title to confirm and calls deleteSpace API", async () => {
-    const deleteSpy = jest.spyOn(docApi, "deleteSpace").mockResolvedValue({
+    const deleteSpy = jest.spyOn(adminApi, "deleteSpace").mockResolvedValue({
       deletedSpaceId: "65f29d20c571c48201a00001",
     });
 
@@ -326,7 +331,7 @@ describe("Admin Console - Documentation Oversight Panel", () => {
   // ---------------------------------------------------------------------------
   test("empty states: renders 'No documentation spaces yet' or 'No spaces match your search'", async () => {
     // 1. No spaces total
-    jest.spyOn(docApi, "getAdminSpaces").mockResolvedValueOnce({
+    const emptySpy1 = jest.spyOn(adminApi, "getAdminSpaces").mockResolvedValueOnce({
       spaces: [],
       page: 1,
       limit: 25,
@@ -337,10 +342,11 @@ describe("Admin Console - Documentation Oversight Panel", () => {
     expect(await screen.findByTestId("empty-spaces-state")).toHaveTextContent(
       "No documentation spaces yet"
     );
+    expect(emptySpy1).toHaveBeenCalled();
     unmount();
 
     // 2. Search returns 0 matches
-    jest.spyOn(docApi, "getAdminSpaces").mockResolvedValueOnce({
+    const emptySpy2 = jest.spyOn(adminApi, "getAdminSpaces").mockResolvedValueOnce({
       spaces: [],
       page: 1,
       limit: 25,
@@ -355,11 +361,12 @@ describe("Admin Console - Documentation Oversight Panel", () => {
       "No spaces match your search"
     );
     expect(screen.getByTestId("admin-clear-search-btn")).toBeInTheDocument();
+    expect(emptySpy2).toHaveBeenCalled();
   });
 
   test("error state with retry: displays error alert and recovers upon retry", async () => {
     let failOnce = true;
-    jest.spyOn(docApi, "getAdminSpaces").mockImplementation(async () => {
+    const retrySpy = jest.spyOn(adminApi, "getAdminSpaces").mockImplementation(async () => {
       if (failOnce) {
         failOnce = false;
         throw new Error("Network error connecting to documentation admin service");
@@ -395,5 +402,6 @@ describe("Admin Console - Documentation Oversight Panel", () => {
     // Recovers
     expect(await screen.findByText("Recovered Space")).toBeInTheDocument();
     expect(screen.queryByTestId("spaces-fetch-error")).not.toBeInTheDocument();
+    expect(retrySpy).toHaveBeenCalledTimes(2);
   });
 });

@@ -44,6 +44,7 @@ Instructions for AI coding agents working on the **Airost Intranet**. Read this 
   - New code for a migrated module should access data through a dedicated data-access layer (e.g. `client/src/services/` or `server/services/`), not scattered inline queries, so the data source can be swapped cleanly.
   - AI-generated schema, SQL and RLS policies are **security-sensitive**. Always flag them for review by Tony or another experienced developer.
 - Phases: 1 Supabase Migration → 2 Auth & Users → 3 Projects & Tasks → 4 Documents & Events → 5 Admin & Integration → 6 Testing & Deployment.
+- Completed architecture cleanups: Issue #77 (legacy documentation blog decommission) and Issue #133 (documentation subdomain structure & `api/` layer standardization).
 
 ## Repository Structure
 ```
@@ -53,15 +54,28 @@ airost-intranet/
 ├── client/                    # React SPA (dev port 3000, proxies to :4000)
 │   ├── public/
 │   └── src/
+│       ├── app/               # App shell (layout/, router/)
 │       ├── assets/            # Static images / SVGs
-│       ├── components/        # Shared reusable UI (Layout/, Sidepanel/, ProjectList.js, RequireAuth.js)
-│       ├── config/            # Client config and API endpoints
+│       ├── components/        # Legacy shared UI (gradually migrating to shared/)
 │       ├── consts/            # Constants
 │       ├── context/           # authContext.js (global auth/session)
 │       ├── data/              # Mock/static data (never use as real data source)
+│       ├── features/          # Feature-sliced frontend modules
+│       │   ├── documentation/ # Nested multi-subdomain feature slice
+│       │   │   ├── index.js   # Public barrel
+│       │   │   ├── pages/     # DocumentationPage.js (14-screen orchestrator)
+│       │   │   ├── spaces/    # api/spaceApi.js, components/, hooks/
+│       │   │   ├── documents/ # api/documentApi.js, components/
+│       │   │   ├── admin/     # api/adminApi.js, components/, hooks/, utils/, index.js
+│       │   │   └── shared/    # api/ (client.js, mockData.js, mockSeeds.js), constants.js,
+│       │   │                  #   components/, hooks/, styles/, utils/
+│       │   ├── projects/      # Single-level slice (components/, hooks/, pages/, styles/)
+│       │   └── project-tracking/ # Single-level slice (components/, hooks/, pages/, styles/)
 │       ├── hooks/             # Custom hooks (useAuth.js, useFetchUsers.js)
-│       ├── pages/             # Route views: Admin/, Dashboard/, Documentation/, Events/,
-│       │                      #   Login/, Projects/, ProjectTracking/, Unauthorized/
+│       ├── pages/             # Route views: Admin/, Dashboard/, Events/, Login/,
+│       │                      #   MemberDirectory/, Profile/, Unauthorized/
+│       ├── shared/            # Global shared layer (api/client.js, components/Dialog/)
+│       ├── tests/unit/        # Centralized unit tests (e.g. tests/unit/documentation/)
 │       ├── App.js             # Top-level routing and providers
 │       └── index.js
 └── server/                    # Express REST API (dev port 4000, production port 8080)
@@ -75,8 +89,16 @@ airost-intranet/
     └── Dockerfile
 ```
 
+### Frontend Architecture Conventions (`api/` vs `services/` & Subdomain Nesting)
+- **`api/` vs `services/`:**
+  - `api/` modules handle HTTP transport, request/response normalization, `AbortSignal` forwarding, and mock/seed adapters (e.g. `spaces/api/spaceApi.js`, `documents/api/documentApi.js`, `admin/api/adminApi.js`).
+  - `services/` modules are reserved exclusively for multi-endpoint frontend business orchestration.
+  - `features/documentation/shared/api/client.js` is the slice-level HTTP wrapper (adding `createError`, `sleep`, and `extractError`) built on top of the global `src/shared/api/client.js`.
+- **Subdomain Nesting Rule:** Decompose a feature slice into nested subdomains **ONLY** when it contains two or more domain entities (or independent role workspaces) that each possess their own dedicated `api/` module and UI screens; otherwise keep a single-level slice. Component sub-folders (such as `project-tracking/components/cardDetails/`) are UI groupings, not subdomains.
+- **Unidirectional Subdomain Dependencies (inside nested slices):** `spaces/` → may import from `spaces/`, `documents/`, `shared/`; `documents/` → `documents/`, `shared/` only; `admin/` → `admin/`, `shared/` only; `shared/` → `shared/` (slice-level or global `src/shared/`) only.
+
 ### Where new code goes
-- **One feature, one folder.** Put page-level code in `client/src/pages/<Feature>/` and keep feature-specific components, hooks and helpers inside that folder. Only move code to `components/` or `hooks/` when at least two features use it.
+- **One feature, one folder.** Place new feature slices under `client/src/features/<Feature>/` (or page-level views in `client/src/pages/<Feature>/` for non-migrated pages). Place backend HTTP endpoint wrappers in `<slice>/api/` (or `<slice>/<subdomain>/api/` inside a nested slice) rather than `services/`. Inside nested slices, place code in the owning subdomain (`spaces/`, `documents/`, `admin/`) and promote to `<slice>/shared/` only when shared across subdomains, or to `client/src/shared/` when shared across features.
 - **Server:** each domain has a matching trio: `routes/<domain>Routes.js` → `controller/<domain>Controller.js` → model/service. Keep routes thin (wiring only), controllers free of raw DB details where practical.
 - **Do not create new top-level folders** or reorganize directories without team agreement.
 
@@ -156,6 +178,8 @@ Only address these when an issue explicitly asks:
 - `@tanstack/react-query` and `git-filter-repo` are wrongly listed in `server/package.json`.
 - Three UI libraries coexist (DaisyUI, Ant Design, MDB); `moment` and `date-fns` both installed.
 - Node version mismatch between local development and the Docker image (Node 18).
+- Test co-location inconsistency (`client/src/features/projects/__tests__/` and `client/src/features/project-tracking/__tests__/` vs centralized `client/src/tests/unit/documentation/`).
+- Remaining zero-reference `client/src/pages/Admin/` re-export shims (`AdminDocumentationPanel.js`, `utils/formatters.js`) tracked as a follow-up cleanup.
 
 ## Agent Guardrails & Constraints
 - **Do not touch:** `.env` files, production credentials, deployment config (`server/Dockerfile`, Cloud Run settings), CI settings, or lockfiles by hand, without explicit user approval.
