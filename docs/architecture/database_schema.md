@@ -1,4 +1,4 @@
-# Database Schema Documentation
+# Database schema documentation
 
 This document describes the MongoDB (NoSQL) schema of the system: the collections, every attribute, the enum values, and the relationships between collections.
 
@@ -12,7 +12,7 @@ This document describes the MongoDB (NoSQL) schema of the system: the collection
 
 ---
 
-## 1. Entity Overview
+## 1. Entity overview
 
 | Collection | Purpose |
 |---|---|
@@ -26,7 +26,7 @@ This document describes the MongoDB (NoSQL) schema of the system: the collection
 
 ---
 
-## 2. Collections and Attributes
+## 2. Collections and attributes
 
 ### 2.1 USER
 
@@ -49,7 +49,7 @@ Updated to fit the features of the **Member Directory**.
 | `linkedinUrl` | String | | LinkedIn profile URL |
 | `githubUrl` | String | | GitHub profile URL |
 | `instagramUrl` | String | | Instagram profile URL |
-| `featuredProjectId` | ObjectId | FK → `PROJECT._id` (optional) | Project the user chooses to feature on their profile |
+| `featuredProjectId` | ObjectId | FK -> `PROJECT._id` (optional) | Project the user chooses to feature on their profile |
 | `createdAt` | Date | | Creation timestamp |
 | `updatedAt` | Date | | Last update timestamp |
 | `isActive` | Boolean | | Whether the user account is active |
@@ -63,7 +63,7 @@ Updated to fit the features of the **Member Directory**.
 | `description` | String | | Project description |
 | `category` | String | | Project category |
 | `technologies` | String[] | | Technologies used |
-| `status` | String | Enum | Project status (see [Enum Values](#4-enum-values)) |
+| `status` | String | Enum | Project status (see [Enum values](#4-enum-values)) |
 | `createdAt` | Date | | Project creation date |
 | `updatedAt` | Date | | Project setting update date |
 
@@ -82,8 +82,8 @@ Defines the relationship between `USER` and `PROJECT`. A user can be the lead of
 | Attribute | Type | Key / Constraint | Description |
 |---|---|---|---|
 | `_id` | ObjectId | PK | Unique identifier |
-| `projectId` | ObjectId | FK → `PROJECT._id` | The project |
-| `userId` | ObjectId | FK → `USER._id` | The user |
+| `projectId` | ObjectId | FK -> `PROJECT._id` | The project |
+| `userId` | ObjectId | FK -> `USER._id` | The user |
 | `role` | String | Enum | `lead` / `advisor` / `member` |
 | `joinedAt` | Date | | When the user joined the project |
 
@@ -102,8 +102,8 @@ Defines the relationship between `USER` and `PROJECT`. A user can be the lead of
 | `imageUrl` | String[] | | Multiple image URLs for the event |
 | `capacity` | Number | Optional | Maximum number of attendees |
 | `status` | String | Enum | `draft` / `published` / `cancelled` / `completed` |
-| `createdBy` | ObjectId | FK → `USER._id` | User who created the event |
-| `updatedBy` | ObjectId | FK → `USER._id` | User who last updated the event |
+| `createdBy` | ObjectId | FK -> `USER._id` | User who created the event |
+| `updatedBy` | ObjectId | FK -> `USER._id` | User who last updated the event |
 | `createdAt` | Date | | Creation timestamp |
 | `updatedAt` | Date | | Last update timestamp |
 
@@ -114,8 +114,8 @@ Tracks registration and status only (no check-in time).
 | Attribute | Type | Key / Constraint | Description |
 |---|---|---|---|
 | `_id` | ObjectId | PK | Unique identifier |
-| `eventId` | ObjectId | FK → `EVENT._id` | The event |
-| `userId` | ObjectId | FK → `USER._id` | The attending user |
+| `eventId` | ObjectId | FK -> `EVENT._id` | The event |
+| `userId` | ObjectId | FK -> `USER._id` | The attending user |
 | `status` | String | Enum | `registered` / `attended` / `cancelled` / `no_show` |
 | `registeredAt` | Date | | When the user registered |
 
@@ -128,8 +128,8 @@ A documentation space contains one or more `DOCUMENT` entries.
 | `_id` | ObjectId | PK | Unique identifier |
 | `title` | String | | Title of the documentation space, which is the project name (e.g. *Airost Intranet*) |
 | `description` | String | | Description of the project |
-| `projectId` | ObjectId | FK → `PROJECT._id` (optional) | Project this space is linked to |
-| `createdBy` | ObjectId | FK → `USER._id` | User who created the space |
+| `projectId` | ObjectId | FK -> `PROJECT._id` (optional) | Project this space is linked to |
+| `createdBy` | ObjectId | FK -> `USER._id` | User who created the space |
 | `accessType` | String | Enum | Who is allowed to access: `public` / `members` / `selected` |
 | `updateType` | String | Enum | Who is allowed to add, edit, or archive documents: `admins_only` / `project_members` / `selected` |
 | `createdAt` | Date | | Date and time the space was created |
@@ -142,12 +142,12 @@ A documentation space contains one or more `DOCUMENT` entries.
 | Attribute | Type | Key / Constraint | Description |
 |---|---|---|---|
 | `_id` | ObjectId | PK | Unique identifier |
-| `spaceId` | ObjectId | FK → `DOCUMENTATION_SPACE._id` | The documentation space containing this document |
+| `spaceId` | ObjectId | FK -> `DOCUMENTATION_SPACE._id` | The documentation space containing this document |
 | `title` | String | | Title of the document link (e.g. *Database Schema*) |
 | `url` | String | | External URL, such as a Google Docs or Google Drive link |
 | `provider` | String | Enum | Platform where the document is hosted: `google_drive` / `google_doc` / `external_url` / `other` |
 | `area` | String | Enum | Category of the document: `general` / `meeting` / `technical` / `resource` / `other` |
-| `createdBy` | ObjectId | FK → `USER._id` | User who added the document |
+| `createdBy` | ObjectId | FK -> `USER._id` | User who added the document |
 | `archived` | Boolean | Default `false` | Whether the document link has been archived |
 | `createdAt` | Date | | When the document link was added |
 | `updatedAt` | Date | | When the document information was last modified |
@@ -189,7 +189,7 @@ erDiagram
 
 ---
 
-## 4. Enum Values
+## 4. Enum values
 
 | Field | Allowed values |
 |---|---|
@@ -205,7 +205,7 @@ erDiagram
 
 ---
 
-## 5. Discrepancies Between the Diagram and the Text Descriptions
+## 5. Discrepancies between the diagram and the text descriptions
 
 The ER diagram and the written tables in the source file do not fully agree. This document follows the **ER diagram** as the primary source. Please confirm which is current:
 

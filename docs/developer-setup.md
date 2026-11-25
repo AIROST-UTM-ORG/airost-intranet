@@ -6,12 +6,12 @@ Instructions to run, configure, seed, and troubleshoot the local AIROST intranet
 
 Install the following dependencies before starting:
 
-- **Docker and Docker Compose**: Docker Engine 24+ with Docker Compose v2.
-- **Node.js and npm**: Node.js 20 LTS and npm 10+ if running tests or development scripts outside Docker.
+- **Docker and Docker Compose:** Docker Engine 24+ with Docker Compose v2.
+- **Node.js and npm:** Node.js 20 LTS and npm 10+ if running tests or development scripts outside Docker.
 
 ## Environment configuration
 
-The project provides `.env.example` templates in the `server/` and `client/` directories to configure ports, database connections, and authentication.
+The project provides `.env.example` templates in `server/` and `client/` to configure ports, database connections, and authentication.
 
 ### 1. Server configuration
 
@@ -23,7 +23,7 @@ cp server/.env.example server/.env
 
 Server variables:
 
-| Variable | Default (Dev) | Description |
+| Variable | Default (dev) | Description |
 | :--- | :--- | :--- |
 | `PORT` | `4000` | Port for the Express backend server. |
 | `NODE_ENV` | `development` | Runtime environment mode. Set to `development` locally. |
@@ -46,7 +46,7 @@ cp client/.env.example client/.env
 
 Client variables:
 
-| Variable | Default (Dev) | Description |
+| Variable | Default (dev) | Description |
 | :--- | :--- | :--- |
 | `PORT` | `3000` | Port for the React development server. |
 | `REACT_APP_API_URL` | `http://localhost:4000` | Backend API base URL consumed by axios calls. |
@@ -57,7 +57,7 @@ Never commit `.env` files or real credentials to Git.
 
 ## Starting the environment
 
-Spin up the complete development environment with Docker Compose:
+Start the complete development environment with Docker Compose:
 
 ```bash
 docker compose up --build
@@ -65,9 +65,9 @@ docker compose up --build
 
 Compose launches three services:
 
-1. **MongoDB**: Database engine listening on port `27017`.
-2. **Server**: Node.js backend listening on port `4000`.
-3. **Client**: React frontend with hot reload listening on port `3000`.
+1. **MongoDB:** Database engine listening on port `27017`.
+2. **Server:** Node.js backend listening on port `4000`.
+3. **Client:** React frontend with hot reload listening on port `3000`.
 
 ### Verifying running services
 
@@ -146,7 +146,7 @@ docker compose exec mongodb mongosh airost_intranet --eval 'db.dropDatabase()'
 
 If a service fails to start because a port is occupied:
 
-1. **Port 3000 occupied**:
+1. **Port 3000 occupied:**
    Identify the process:
    ```bash
    lsof -i :3000
@@ -156,14 +156,14 @@ If a service fails to start because a port is occupied:
    kill -9 <PID>
    ```
 
-2. **Port 4000 occupied**:
+2. **Port 4000 occupied:**
    Identify and stop the conflicting backend process:
    ```bash
    lsof -i :4000
    kill -9 <PID>
    ```
 
-3. **Port 27017 occupied**:
+3. **Port 27017 occupied:**
    A local MongoDB instance may already be running on your system. Stop it with:
    ```bash
    sudo systemctl stop mongod
