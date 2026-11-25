@@ -45,8 +45,8 @@ graph TD
 
 ## 2. Frontend Tech Stack (`client/`)
 
-* **Directory:** [`client/`](client/)
-* **Configuration:** [`client/package.json`](client/package.json)
+* **Directory:** [`client/`](../../client)
+* **Configuration:** [`client/package.json`](../../client/package.json)
 * **Port (Dev):** `3000` (proxied to `http://localhost:4000/`)
 
 ### Core & Framework
@@ -96,8 +96,8 @@ graph TD
 
 ## 3. Backend Tech Stack (`server/`)
 
-* **Directory:** [`server/`](server/)
-* **Configuration:** [`server/package.json`](server/package.json)
+* **Directory:** [`server/`](../../server)
+* **Configuration:** [`server/package.json`](../../server/package.json)
 * **Port (Dev):** `4000` (configured via `.env` or defaulting to `4000`)
 
 ### Runtime, Server & Routing
@@ -151,7 +151,7 @@ The project functions as an **independent two-tier repository** without monorepo
 * **`npm test`**: Runs unit and integration test suites using Jest and React Testing Library.
 
 ### Containerization & Deployment
-* **Dockerfile:** Located at [`server/Dockerfile`](server/Dockerfile).
+* **Dockerfile:** Located at [`server/Dockerfile`](../../server/Dockerfile).
 * **Target Environment:** Google Cloud Run.
 * **Base Image:** `node:18`.
 * **Production Port:** `8080`.
@@ -161,8 +161,8 @@ The project functions as an **independent two-tier repository** without monorepo
 ## 5. Technical Review & Recommendations
 
 1. **Misplaced Server Dependencies:**
-   * `@tanstack/react-query` is listed in [`server/package.json`](server/package.json#L14). This is a frontend library and should be removed from the server dependencies.
-   * `git-filter-repo` is listed in [`server/package.json`](server/package.json#L21) and is not needed as a runtime dependency.
+   * `@tanstack/react-query` is listed in [`server/package.json`](../../server/package.json#L14). This is a frontend library and should be removed from the server dependencies.
+   * `git-filter-repo` is listed in [`server/package.json`](../../server/package.json#L21) and is not needed as a runtime dependency.
 
 2. **Frontend UI Library Duplication:**
    * The client combines **three** distinct UI frameworks: **Tailwind CSS + DaisyUI**, **Ant Design**, and **MDB React UI Kit**.
