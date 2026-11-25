@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
-import InfoBanner from "./InfoBanner";
+import InfoBanner from "../../shared/components/InfoBanner";
 import DocumentLinkPreview from "./DocumentLinkPreview";
-import AreaSelectDropdown from "./AreaSelectDropdown";
-import { AREA_LABELS } from "../shared/constants";
+import AreaSelectDropdown from "../../shared/components/AreaSelectDropdown";
+import { AREA_LABELS } from "../../shared/constants";
 
 /**
  * DocumentFormScreen - Covers Screen 12 (Add Document) and Screen 13 (Edit Document)

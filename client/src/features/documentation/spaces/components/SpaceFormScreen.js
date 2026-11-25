@@ -1,6 +1,6 @@
 import React from "react";
 import { FiChevronDown } from "react-icons/fi";
-import InfoBanner from "./InfoBanner";
+import InfoBanner from "../../shared/components/InfoBanner";
 import SpaceFormHeader from "./SpaceFormHeader";
 import SpaceAccessSection from "./SpaceAccessSection";
 import { useSpaceForm } from "../hooks/useSpaceForm";

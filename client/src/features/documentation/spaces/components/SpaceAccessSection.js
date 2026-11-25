@@ -1,5 +1,5 @@
 import React from "react";
-import MemberPicker from "./MemberPicker";
+import MemberPicker from "../../shared/components/MemberPicker";
 
 /**
  * SpaceAccessSection component for SpaceFormScreen.

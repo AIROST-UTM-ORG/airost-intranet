@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from "react";
 import { FiExternalLink } from "react-icons/fi";
-import InfoBanner from "./InfoBanner";
+import InfoBanner from "../../shared/components/InfoBanner";
 import SpaceHeader from "./SpaceHeader";
-import AreaTabs from "./AreaTabs";
-import DocumentCard from "./DocumentCard";
+import AreaTabs from "../../shared/components/AreaTabs";
+import DocumentCard from "../../documents/components/DocumentCard";
 import EmptyAreaCard from "./EmptyAreaCard";
 
 /**

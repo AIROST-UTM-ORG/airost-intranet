@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { validateSpaceForm } from "../utils/validation";
+import { validateSpaceForm } from "../../shared/utils/validation";
 
 /**
  * Custom hook managing space form fields, validation, and submission state.

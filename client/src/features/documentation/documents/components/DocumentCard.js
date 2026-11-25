@@ -6,7 +6,7 @@ import {
   FiEdit2,
   FiArchive,
 } from "react-icons/fi";
-import { getProviderDisplayName } from "../shared/constants";
+import { getProviderDisplayName } from "../../shared/constants";
 
 /**
  * DocumentCard component for SpaceDetailScreen.

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { FiRefreshCw } from "react-icons/fi";
-import Modal from "../../../shared/components/Dialog/Modal";
+import Modal from "../../../../shared/components/Dialog/Modal";
 
 /**
  * Accessible Confirmation Modal for Destructive Actions

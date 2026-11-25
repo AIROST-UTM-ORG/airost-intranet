@@ -1,14 +1,14 @@
 import { useState } from "react";
-import { ViewModes } from "./useDocumentationRouter";
+import { ViewModes } from "../../shared/hooks/useDocumentationRouter";
 import {
   getSpace,
   createSpace,
   updateSpace,
-} from "../spaces/api/spaceApi";
+} from "../api/spaceApi";
 import {
   createDocument,
   updateDocument,
-} from "../documents/api/documentApi";
+} from "../../documents/api/documentApi";
 
 /**
  * Custom hook to encapsulate actions for creating, editing, and viewing documentation spaces and documents.

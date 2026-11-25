@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from "react";
 import { FiChevronDown, FiCheck } from "react-icons/fi";
-import { VALID_AREAS, AREA_LABELS } from "../shared/constants";
+import { VALID_AREAS, AREA_LABELS } from "../constants";
 
 /**
  * AreaSelectDropdown component for DocumentFormScreen.

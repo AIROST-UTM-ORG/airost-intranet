@@ -4,7 +4,7 @@ import useAdminSpaces, { isUserAdmin } from "../hooks/useAdminSpaces";
 import AdminDocumentationStats from "./AdminDocumentationStats";
 import AdminDocumentationTable from "./AdminDocumentationTable";
 import AdminTransferModal from "./AdminTransferModal";
-import DeleteConfirmModal from "../../components/DeleteConfirmModal";
+import DeleteConfirmModal from "../../shared/components/DeleteConfirmModal";
 
 export { isUserAdmin };
 

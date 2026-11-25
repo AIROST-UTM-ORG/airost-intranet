@@ -1,6 +1,6 @@
 import React from "react";
 import { FiArchive } from "react-icons/fi";
-import { VALID_AREAS, AREA_LABELS } from "../shared/constants";
+import { VALID_AREAS, AREA_LABELS } from "../constants";
 
 /**
  * AreaTabs component for SpaceDetailScreen.

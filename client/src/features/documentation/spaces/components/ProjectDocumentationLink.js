@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { FiPlus, FiFileText, FiChevronDown } from "react-icons/fi";
-import useAuth from "../../../hooks/useAuth";
-import { listSpaces } from "../spaces/api/spaceApi";
-import { extractError } from "../shared/api/client";
-import { resolveProjectId } from "../utils/projectUtils";
+import useAuth from "../../../../hooks/useAuth";
+import { listSpaces } from "../api/spaceApi";
+import { extractError } from "../../shared/api/client";
+import { resolveProjectId } from "../../shared/utils/projectUtils";
 
 /**
  * ProjectDocumentationLink

@@ -3,12 +3,12 @@ import {
   listSpaces,
   listProjects,
   listMembers,
-} from "../spaces/api/spaceApi";
+} from "../api/spaceApi";
 import {
   SEED_PROJECTS,
   SEED_USERS,
   isMockMode,
-} from "../shared/api/mockData";
+} from "../../shared/api/mockData";
 
 /**
  * Custom hook to manage spaces overview, projects, members, and initial data loading.

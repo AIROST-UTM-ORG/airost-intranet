@@ -1,4 +1,4 @@
-import { SEED_PROJECTS } from "../shared/api/mockData";
+import { SEED_PROJECTS } from "../api/mockData";
 
 /**
  * Resolves a raw projectId or project object to an effective project ID.
