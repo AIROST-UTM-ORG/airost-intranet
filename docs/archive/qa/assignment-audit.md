@@ -3,7 +3,7 @@
 **Date of Audit:** October 18, 2026  
 **Auditor:** Antigravity QA & Architectural Review  
 **Repository Branch:** `feature/documentation` (HEAD: `357de55`, 1 uncommitted file: `client/src/pages/Documentation/documentationApi.js`)  
-**Authoritative Contracts:** [`docs/api/documentation.md`](../api/documentation.md), `SCREEN_SPEC.md`, [`AGENTS.md`](../../AGENTS.md)  
+**Authoritative Contracts:** [`docs/api/documentation.md`](../../api/documentation.md), `SCREEN_SPEC.md`, [`AGENTS.md`](../../../AGENTS.md)  
 **Scope of Review:** Frontend Requirements (F1–F4) & Backend Requirements (B1–B4)
 
 ---
@@ -120,7 +120,7 @@ Every screen specified in `SCREEN_SPEC.md` and related contracts is mounted to a
 ### B1: API Endpoints and MongoDB Integration
 
 #### API Endpoint Verification Table
-Every endpoint defined in [`docs/api/documentation.md`](../api/documentation.md) is implemented in [`server/routes/docRoutes.js`](../../server/routes/docRoutes.js) and backed by [`server/services/docService.js`](../../server/services/docService.js).
+Every endpoint defined in [`docs/api/documentation.md`](../../api/documentation.md) is implemented in [`server/routes/docRoutes.js`](../../../server/routes/docRoutes.js) and backed by [`server/services/docService.js`](../../../server/services/docService.js).
 
 | HTTP Method & Endpoint | Controller Handler | Service Method | Covered in Tests | Result |
 | :--- | :--- | :--- | :--- | :---: |
@@ -241,7 +241,7 @@ All core requirements from the assignment Definition of Done are complete. Below
 | :---: | :--- | :--- | :--- | :--- |
 | **1. Polish** | Client Warning | Address React 19 `ReactDOMTestUtils.act` deprecation notices in test logs by migrating test helpers to `React.act`. | `client/src/setupTests.js`, `Documentation.test.js` | New prompt needed: "test: migrate test utils act to React 19" |
 | **2. Polish** | ESLint | Resolve unused variable warnings in legacy project files (`Admin.js`, `Card.js`, `Board.js`) touched during merge. | `client/src/pages/Admin/Admin.js`, `ProjectTracking/` | New prompt needed: "refactor: clean up legacy unused vars" |
-| **3. Feature** | Notifications | Connect `emitDocEvent` listener to a live Slack/Discord webhook or internal inbox notifications. | `server/utils/docEvents.js`, `docs/proposals/documentation-notifications.md` | Existing proposal: `documentation-notifications.md` |
+| **3. Feature** | Notifications | Connect `emitDocEvent` listener to a live Slack/Discord webhook or internal inbox notifications. | `server/utils/docEvents.js`, `docs/archive/proposals/documentation-notifications.md` | Existing proposal: `documentation-notifications.md` |
 
 ---
 

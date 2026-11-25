@@ -4,10 +4,10 @@
 
 To support the club platform's upcoming migration to **Supabase (PostgreSQL + Auth + Storage + RLS)** (Phase 1 & Phase 4) and prevent coupling of business and HTTP logic to MongoDB Mongoose models, all data access for the Documentation feature is isolated inside a dedicated service layer:
 
-- **Service Layer**: [`server/services/docService.js`](file:///c:/Users/ganru/Documents/airost-intranet/server/services/docService.js)
-- **Controller**: [`server/controller/docController.js`](file:///c:/Users/ganru/Documents/airost-intranet/server/controller/docController.js) (thin HTTP adapter: parses input, validates schemas, invokes access guards, calls services, formats errors)
-- **Access Guard**: [`server/utils/docAccess.js`](file:///c:/Users/ganru/Documents/airost-intranet/server/utils/docAccess.js) (pure authorization logic, zero database model imports)
-- **Validation**: [`server/utils/docValidation.js`](file:///c:/Users/ganru/Documents/airost-intranet/server/utils/docValidation.js) (pure schema validation)
+- **Service Layer**: [`server/services/docService.js`](../../server/services/docService.js)
+- **Controller**: [`server/controller/docController.js`](../../server/controller/docController.js) (thin HTTP adapter: parses input, validates schemas, invokes access guards, calls services, formats errors)
+- **Access Guard**: [`server/utils/docAccess.js`](../../server/utils/docAccess.js) (pure authorization logic, zero database model imports)
+- **Validation**: [`server/utils/docValidation.js`](../../server/utils/docValidation.js) (pure schema validation)
 
 Controllers and utility modules **must never import** Mongoose models from `server/models/`.
 

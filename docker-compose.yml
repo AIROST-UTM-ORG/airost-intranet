@@ -28,8 +28,8 @@ services:
       - MONGO_URI=mongodb://mongodb:27017/airost_intranet
       - REACT_APP_URL=http://localhost:3000
       - PASSPORT_SECRET=local_dev_passport_secret
-      - CLIENT_ID=${CLIENT_ID:-}
-      - CLIENT_SECRET=${CLIENT_SECRET:-}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
     volumes:
       - ./server:/app
       - /app/node_modules
