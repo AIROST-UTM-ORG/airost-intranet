@@ -1,16 +1,17 @@
-import { realApiClient, createError, sleep } from "./client";
-import { MockScenarios } from "./constants";
+import { realApiClient, createError, sleep, fetchActiveMembers } from "../../shared/api/client";
+import { MockScenarios } from "../../shared/constants";
 import {
   USE_MOCK,
   getArtificialDelay,
   getMockScenario,
   checkScenario,
   computeSpaceCounts,
+  deleteMockSpace,
   mockSpaces,
   mockDocuments,
   SEED_PROJECTS,
   SEED_USERS,
-} from "./mockData";
+} from "../../shared/api/mockData";
 
 /**
  * List all spaces the user can view.
@@ -311,25 +312,7 @@ export const deleteSpace = async (spaceId) => {
     if (delay > 0) await sleep(delay);
     checkScenario();
 
-    const spaceIndex = mockSpaces.findIndex((s) => s._id === spaceId);
-    if (spaceIndex === -1) {
-      throw createError(404, "NOT_FOUND", "Space not found");
-    }
-
-    mockSpaces.splice(spaceIndex, 1);
-    const beforeCount = mockDocuments.length;
-    for (let i = mockDocuments.length - 1; i >= 0; i--) {
-      if (mockDocuments[i].spaceId === spaceId) {
-        mockDocuments.splice(i, 1);
-      }
-    }
-    const deletedDocs = beforeCount - mockDocuments.length;
-
-    return {
-      message: "Space and associated documents deleted successfully",
-      deletedSpaceId: spaceId,
-      deletedDocumentsCount: deletedDocs,
-    };
+    return deleteMockSpace(spaceId);
   }
 
   const response = await realApiClient.delete(`/airost/doc/spaces/${spaceId}`);
@@ -370,17 +353,7 @@ export const listMembers = async () => {
   }
 
   try {
-    const res = await realApiClient.get("/user/users");
-    if (!Array.isArray(res.data)) {
-      throw createError(500, "INTERNAL_ERROR", "Failed to fetch members: invalid response format");
-    }
-    return res.data
-      .map((u) => ({
-        _id: u._id || u.id,
-        name: u.name || u.email || "Member",
-        email: u.email,
-      }))
-      .filter((u) => u._id && /^[0-9a-fA-F]{24}$/.test(String(u._id)));
+    return await fetchActiveMembers();
   } catch (err) {
     throw err;
   }

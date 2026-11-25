@@ -1,4 +1,4 @@
-import { MockScenarios } from "./constants";
+import { MockScenarios } from "../constants";
 import { createError } from "./client";
 import {
   SEED_USERS,
@@ -95,5 +95,27 @@ export const computeSpaceCounts = (spaceId) => {
     activeDocumentCount: activeDocs.length,
     archivedDocumentCount: archivedDocs.length,
     areaCounts,
+  };
+};
+
+export const deleteMockSpace = (spaceId) => {
+  const spaceIndex = mockSpaces.findIndex((s) => s._id === spaceId);
+  if (spaceIndex === -1) {
+    throw createError(404, "NOT_FOUND", "Space not found");
+  }
+
+  mockSpaces.splice(spaceIndex, 1);
+  const beforeCount = mockDocuments.length;
+  for (let i = mockDocuments.length - 1; i >= 0; i--) {
+    if (mockDocuments[i].spaceId === spaceId) {
+      mockDocuments.splice(i, 1);
+    }
+  }
+  const deletedDocs = beforeCount - mockDocuments.length;
+
+  return {
+    message: "Space and associated documents deleted successfully",
+    deletedSpaceId: spaceId,
+    deletedDocumentsCount: deletedDocs,
   };
 };

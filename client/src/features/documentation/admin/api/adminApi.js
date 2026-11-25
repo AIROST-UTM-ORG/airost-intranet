@@ -1,14 +1,15 @@
-import { realApiClient, createError, sleep } from "./client";
-import { MockScenarios } from "./constants";
+import { realApiClient, createError, sleep, fetchActiveMembers } from "../../shared/api/client";
+import { MockScenarios } from "../../shared/constants";
 import {
   USE_MOCK,
   getArtificialDelay,
   getMockScenario,
   checkScenario,
+  deleteMockSpace,
   mockSpaces,
   mockDocuments,
   SEED_USERS,
-} from "./mockData";
+} from "../../shared/api/mockData";
 
 /**
  * Admin: List all spaces across the intranet with metrics, pagination, and search.
@@ -146,4 +147,33 @@ export const reassignSpaceOwner = async (spaceId, userId) => {
     userId,
   });
   return response.data;
+};
+
+/**
+ * Admin: Permanently delete a space.
+ */
+export const deleteSpace = async (spaceId) => {
+  if (USE_MOCK) {
+    const delay = getArtificialDelay();
+    if (delay > 0) await sleep(delay);
+    checkScenario();
+    return deleteMockSpace(spaceId);
+  }
+
+  const response = await realApiClient.delete(`/airost/doc/spaces/${spaceId}`);
+  return response.data;
+};
+
+/**
+ * Admin: List active members for ownership reassignment.
+ */
+export const listMembers = async () => {
+  if (USE_MOCK) {
+    const delay = getArtificialDelay();
+    if (delay > 0) await sleep(delay);
+    checkScenario();
+    return [...SEED_USERS];
+  }
+
+  return fetchActiveMembers();
 };

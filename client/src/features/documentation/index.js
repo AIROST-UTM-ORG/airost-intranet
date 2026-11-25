@@ -5,7 +5,9 @@ import DocumentationPage, { ViewModes, parseDocPath } from "./pages/Documentatio
 import ProjectDocumentationLink from "./components/ProjectDocumentationLink";
 import { useSpaceList } from "./hooks/useSpaceList";
 import { useSpaceDetail } from "./hooks/useSpaceDetail";
-import docServices from "./services";
+import * as spaceApi from "./spaces/api/spaceApi";
+import * as documentApi from "./documents/api/documentApi";
+import * as adminApi from "./admin/api/adminApi";
 
 export {
   DocumentationPage,
@@ -13,7 +15,9 @@ export {
   ProjectDocumentationLink,
   useSpaceList,
   useSpaceDetail,
-  docServices as services,
+  spaceApi,
+  documentApi,
+  adminApi,
   ViewModes,
   parseDocPath,
 };

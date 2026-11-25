@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { FiPlus, FiFileText, FiChevronDown } from "react-icons/fi";
 import useAuth from "../../../hooks/useAuth";
-import { listSpaces, extractError } from "../services";
+import { listSpaces } from "../spaces/api/spaceApi";
+import { extractError } from "../shared/api/client";
 import { resolveProjectId } from "../utils/projectUtils";
 
 /**

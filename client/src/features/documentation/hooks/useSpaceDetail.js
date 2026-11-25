@@ -1,10 +1,10 @@
 import { useState, useCallback } from "react";
+import { getSpace } from "../spaces/api/spaceApi";
 import {
-  getSpace,
   listDocuments,
   archiveDocument,
   restoreDocument,
-} from "../services";
+} from "../documents/api/documentApi";
 
 /**
  * Custom hook to manage active space detail, documents, archived documents,

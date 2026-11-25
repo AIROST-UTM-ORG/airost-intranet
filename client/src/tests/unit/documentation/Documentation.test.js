@@ -8,10 +8,12 @@ import {
   resetMockData,
   setMockScenario,
   setUseMock,
-  MockScenarios,
+} from "../../../features/documentation/shared/api/mockData";
+import { MockScenarios } from "../../../features/documentation/shared/constants";
+import {
   listProjects,
   listMembers,
-} from "../../../features/documentation/services";
+} from "../../../features/documentation/spaces/api/spaceApi";
 
 jest.mock("../../../shared/api/client", () => {
   const mockClient = {

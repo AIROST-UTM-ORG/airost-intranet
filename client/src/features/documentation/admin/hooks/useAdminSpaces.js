@@ -5,8 +5,8 @@ import {
   reassignSpaceOwner,
   deleteSpace,
   listMembers,
-  extractError,
-} from "../../services";
+} from "../api/adminApi";
+import { extractError } from "../../shared/api/client";
 
 export const isUserAdmin = (user) => {
   if (!user || !user.positions) return false;

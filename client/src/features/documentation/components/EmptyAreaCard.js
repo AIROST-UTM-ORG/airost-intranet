@@ -1,6 +1,6 @@
 import React from "react";
 import { FiFolder } from "react-icons/fi";
-import { AREA_LABELS } from "../services";
+import { AREA_LABELS } from "../shared/constants";
 
 /**
  * Screen 10 / Screen 11: Empty Area Card (< 150 lines)

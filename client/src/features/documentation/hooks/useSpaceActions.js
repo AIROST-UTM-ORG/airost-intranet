@@ -4,9 +4,11 @@ import {
   getSpace,
   createSpace,
   updateSpace,
+} from "../spaces/api/spaceApi";
+import {
   createDocument,
   updateDocument,
-} from "../services";
+} from "../documents/api/documentApi";
 
 /**
  * Custom hook to encapsulate actions for creating, editing, and viewing documentation spaces and documents.

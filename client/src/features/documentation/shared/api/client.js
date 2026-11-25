@@ -1,4 +1,4 @@
-import apiClient from "../../../shared/api/client";
+import apiClient from "../../../../shared/api/client";
 
 const DOC_TIMEOUT_MS = 10000;
 
@@ -95,4 +95,18 @@ export const extractError = (err, defaultMsg = "Operation failed") => {
     code: errData?.code,
     details: errData?.details || [],
   };
+};
+
+export const fetchActiveMembers = async () => {
+  const res = await realApiClient.get("/user/users");
+  if (!Array.isArray(res.data)) {
+    throw createError(500, "INTERNAL_ERROR", "Failed to fetch members: invalid response format");
+  }
+  return res.data
+    .map((u) => ({
+      _id: u._id || u.id,
+      name: u.name || u.email || "Member",
+      email: u.email,
+    }))
+    .filter((u) => u._id && /^[0-9a-fA-F]{24}$/.test(String(u._id)));
 };

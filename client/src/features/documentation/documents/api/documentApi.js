@@ -1,5 +1,5 @@
-import { realApiClient, createError, sleep } from "./client";
-import { MockScenarios, VALID_AREAS, deriveProviderFromUrl } from "./constants";
+import { realApiClient, createError, sleep } from "../../shared/api/client";
+import { MockScenarios, VALID_AREAS, deriveProviderFromUrl } from "../../shared/constants";
 import {
   USE_MOCK,
   getArtificialDelay,
@@ -7,7 +7,7 @@ import {
   checkScenario,
   mockSpaces,
   mockDocuments,
-} from "./mockData";
+} from "../../shared/api/mockData";
 
 /**
  * List documents in a space with optional filters.
