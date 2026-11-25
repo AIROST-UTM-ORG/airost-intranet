@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Instructions for AI coding agents working on the **Airost Intranet**. Read this file fully before editing code. Human contributors should follow the same rules (see `dev_rule.md`).
+Instructions for AI coding agents working on the **Airost Intranet**. Read this file fully before editing code. Human contributors should follow the same rules (see `CONTRIBUTING.md`).
 
 ## Project Overview
 - **Description:** A club-internal platform where team members collaborate: member directory and profiles, project management with Kanban task tracking, documentation sharing, and an event calendar, with role-based and project-level access control.
@@ -125,7 +125,7 @@ Rules:
 - **Event attendance statuses:** `registered` / `attended` / `cancelled` / `no_show`.
 - **Documents:** link-only architecture (Locked Decision 4): stores titles, external URLs (Google Docs/Drive, HTTPS), and metadata only. No file upload/download, no content storage, no file size metadata, no version history. Soft delete archives; hard delete of document & space deletion are admin only. Space access uses `accessType` and `updateType` (`all` / `project_members` / `selected`), with member lists stored directly on the space (`accessMembers[]`, `updateMembers[]`). 6 workflow areas: `general`, `requirements`, `design`, `development`, `testing`, `deployment`. See `docs/api/documentation.md`.
 - **Task changes** must be recorded in task history (see `server/utils/historyHelper.js`). Do not bypass it.
-- Source-of-truth docs: `features.md` (scope and priorities), `database_schema.md` (data model), `techstack.md` (stack), `dev_rule.md` (team workflow). If code and docs disagree, point it out instead of silently picking one.
+- Source-of-truth docs: `features.md` (scope and priorities), `database_schema.md` (data model), `techstack.md` (stack), `CONTRIBUTING.md` (team workflow). If code and docs disagree, point it out instead of silently picking one.
 
 ## Git & Workflow Rules
 - **Never push to `main`, force-push, or delete `main`.** All work goes through a branch and Pull Request.
