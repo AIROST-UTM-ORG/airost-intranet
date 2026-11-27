@@ -20,12 +20,19 @@ jest.mock('../../../src/features/projects/services/history.service', () => ({
   },
 }));
 
+const mongoose = require('mongoose');
 const repository = require('../../../src/features/projects/project.repository');
 const history = require('../../../src/features/projects/services/history.service');
 const taskService = require('../../../src/features/projects/services/task.service');
 
 describe('projects task service authorization and history', () => {
-  beforeEach(() => jest.resetAllMocks());
+  beforeEach(() => {
+    jest.resetAllMocks();
+    jest.spyOn(mongoose, 'startSession').mockResolvedValue({
+      withTransaction: jest.fn((callback) => callback()),
+      endSession: jest.fn(),
+    });
+  });
 
   test('rejects duplicate replacement IDs before persisting board changes', async () => {
     const board = { tasks: [] };
@@ -50,8 +57,8 @@ describe('projects task service authorization and history', () => {
     expect(repository.updateBoardTasks).not.toHaveBeenCalled();
 
     await taskService.refreshProjectBoard({ projectId: 3, tasks: [] }, { email: 'owner@example.com' });
-    expect(repository.updateBoardTasks).toHaveBeenCalledWith(3, []);
-    expect(history.trackTaskDeletion).toHaveBeenCalledWith(protectedTask, 3, 'owner@example.com');
+    expect(repository.updateBoardTasks).toHaveBeenCalledWith(3, [], expect.any(Object));
+    expect(history.trackTaskDeletion).toHaveBeenCalledWith(protectedTask, 3, 'owner@example.com', expect.any(Object));
   });
 
   test('assigns new task ownership from the session user instead of request data', async () => {
@@ -72,6 +79,7 @@ describe('projects task service authorization and history', () => {
       expect.objectContaining({ createdBy: 'authenticated@example.com' }),
       4,
       'authenticated@example.com',
+      expect.any(Object),
     );
   });
 
@@ -106,12 +114,13 @@ describe('projects task service authorization and history', () => {
       title: 'Updated',
       createdBy: 'owner@example.com',
       _id: 'subdoc-id',
-    });
+    }, expect.any(Object));
     expect(history.trackTaskChanges).toHaveBeenCalledWith(
       oldTask,
       expect.objectContaining({ title: 'Updated', createdBy: 'owner@example.com' }),
       5,
       'owner@example.com',
+      expect.any(Object),
     );
   });
 });

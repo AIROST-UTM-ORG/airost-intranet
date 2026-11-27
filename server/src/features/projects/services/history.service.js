@@ -49,6 +49,7 @@ const createHistoryEntry = (
   oldValue,
   newValue,
   changedBy,
+  session,
 ) =>
   repository.createHistory({
     taskId,
@@ -59,9 +60,9 @@ const createHistoryEntry = (
     newValue,
     changedBy,
     changeDescription: describeChange(field, oldValue, newValue, changeType),
-  });
+  }, session);
 
-const trackTaskChanges = async (oldTask, newTask, projectId, changedBy) => {
+const trackTaskChanges = async (oldTask, newTask, projectId, changedBy, session) => {
   const entries = [];
   for (const field of [
     "title",
@@ -83,13 +84,14 @@ const trackTaskChanges = async (oldTask, newTask, projectId, changedBy) => {
           oldValue,
           newValue,
           changedBy,
+          session,
         ),
       );
   }
   return entries;
 };
 
-const trackTaskCreation = (task, projectId, createdBy) =>
+const trackTaskCreation = (task, projectId, createdBy, session) =>
   createHistoryEntry(
     task.task_id,
     projectId,
@@ -98,9 +100,10 @@ const trackTaskCreation = (task, projectId, createdBy) =>
     null,
     null,
     createdBy,
+    session,
   );
 
-const trackTaskDeletion = (task, projectId, deletedBy) =>
+const trackTaskDeletion = (task, projectId, deletedBy, session) =>
   createHistoryEntry(
     task.task_id,
     projectId,
@@ -109,6 +112,7 @@ const trackTaskDeletion = (task, projectId, deletedBy) =>
     null,
     null,
     deletedBy,
+    session,
   );
 const getTaskHistory = (taskId) => repository.findTaskHistory(taskId);
 

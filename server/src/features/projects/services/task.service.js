@@ -1,5 +1,6 @@
 const repository = require('../project.repository');
 const history = require('./history.service');
+const mongoose = require('mongoose');
 const AppError = require('../../../shared/errors/AppError');
 const {
   BAD_REQUEST,
@@ -99,57 +100,83 @@ const prepareBoardChanges = (oldTasks, submittedTasks, user) => {
   return { nextTasks, changes };
 };
 
-const recordTaskChanges = async (changes, projectId, user) => {
+const recordTaskChanges = async (changes, projectId, user, session) => {
   const changedBy = taskOwner(user);
   for (const task of changes.created) {
-    await history.trackTaskCreation(task, projectId, changedBy);
+    await history.trackTaskCreation(task, projectId, changedBy, session);
   }
   for (const { oldTask, newTask } of changes.updated) {
-    await history.trackTaskChanges(oldTask, newTask, projectId, changedBy);
+    await history.trackTaskChanges(oldTask, newTask, projectId, changedBy, session);
   }
   for (const task of changes.deleted) {
-    await history.trackTaskDeletion(task, projectId, changedBy);
+    await history.trackTaskDeletion(task, projectId, changedBy, session);
   }
 };
 
 const createOrUpdateProjectBoard = async ({ projectId, tasks }, user) => {
-  const board = await repository.findBoard({ projectId });
-  const oldTasks = board?.tasks || [];
-  const { nextTasks, changes } = prepareBoardChanges(oldTasks, tasks, user);
+  const session = await mongoose.startSession();
+  let result;
+  try {
+    await session.withTransaction(async () => {
+      const board = await repository.findBoard({ projectId }, session);
+      const oldTasks = board?.tasks || [];
+      const { nextTasks, changes } = prepareBoardChanges(oldTasks, tasks, user);
 
-  if (!board) {
-    const createdBoard = await repository.createBoard({ projectId, tasks: nextTasks });
-    await recordTaskChanges(changes, projectId, user);
-    return { board: createdBoard, status: 201 };
+      if (!board) {
+        const createdBoard = await repository.createBoard({ projectId, tasks: nextTasks }, session);
+        await recordTaskChanges(changes, projectId, user, session);
+        result = { board: createdBoard, status: 201 };
+        return;
+      }
+
+      board.tasks = nextTasks;
+      await repository.saveBoard(board, session);
+      await recordTaskChanges(changes, projectId, user, session);
+      result = { board, status: 200 };
+    });
+  } finally {
+    await session.endSession();
   }
-
-  board.tasks = nextTasks;
-  await repository.saveBoard(board);
-  await recordTaskChanges(changes, projectId, user);
-  return { board, status: 200 };
+  return result;
 };
 
 const refreshProjectBoard = async ({ projectId, tasks }, user) => {
-  const board = await repository.findBoard({ projectId });
-  if (!board) throw new AppError(NOT_FOUND, 'NOT_FOUND', 'Project board not found');
+  const session = await mongoose.startSession();
+  let updatedBoard;
+  try {
+    await session.withTransaction(async () => {
+      const board = await repository.findBoard({ projectId }, session);
+      if (!board) throw new AppError(NOT_FOUND, 'NOT_FOUND', 'Project board not found');
 
-  const { nextTasks, changes } = prepareBoardChanges(board.tasks || [], tasks, user);
-  const updatedBoard = await repository.updateBoardTasks(projectId, nextTasks);
-  await recordTaskChanges(changes, projectId, user);
+      const { nextTasks, changes } = prepareBoardChanges(board.tasks || [], tasks, user);
+      updatedBoard = await repository.updateBoardTasks(projectId, nextTasks, session);
+      await recordTaskChanges(changes, projectId, user, session);
+    });
+  } finally {
+    await session.endSession();
+  }
   return updatedBoard;
 };
 
 const updateTask = async ({ projectId, tasks }, user) => {
   assertUniqueTaskIds([tasks], 'Submitted');
-  const board = await repository.findBoard({ projectId, 'tasks.task_id': tasks.task_id });
-  if (!board) throw new AppError(NOT_FOUND, 'NOT_FOUND', 'Task not found');
-  assertUniqueTaskIds(board.tasks || [], 'Persisted');
-  const oldTask = board.tasks.find((task) => task.task_id === tasks.task_id);
-  assertCanChangeTask(oldTask, user);
+  const session = await mongoose.startSession();
+  let updatedBoard;
+  try {
+    await session.withTransaction(async () => {
+      const board = await repository.findBoard({ projectId, 'tasks.task_id': tasks.task_id }, session);
+      if (!board) throw new AppError(NOT_FOUND, 'NOT_FOUND', 'Task not found');
+      assertUniqueTaskIds(board.tasks || [], 'Persisted');
+      const oldTask = board.tasks.find((task) => task.task_id === tasks.task_id);
+      assertCanChangeTask(oldTask, user);
 
-  const updatedTask = toStoredTask(tasks, oldTask, user);
-  const updatedBoard = await repository.updateTask(projectId, oldTask.task_id, updatedTask);
-  await history.trackTaskChanges(oldTask, updatedTask, projectId, taskOwner(user));
+      const updatedTask = toStoredTask(tasks, oldTask, user);
+      updatedBoard = await repository.updateTask(projectId, oldTask.task_id, updatedTask, session);
+      await history.trackTaskChanges(oldTask, updatedTask, projectId, taskOwner(user), session);
+    });
+  } finally {
+    await session.endSession();
+  }
   return updatedBoard;
 };
 
