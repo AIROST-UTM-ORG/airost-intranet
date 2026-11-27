@@ -35,7 +35,11 @@ const invoke = async (handler, request) => {
       return this;
     },
   };
-  await handler({ baseUrl: request.baseUrl, params: request.params || {} }, response, jest.fn());
+  await handler({
+    baseUrl: request.baseUrl,
+    params: request.params || {},
+    sanitizedData: request.sanitizedData,
+  }, response, jest.fn());
   return response;
 };
 
@@ -63,6 +67,7 @@ describe('projects feature migration frontend contract', () => {
     const response = await invoke(taskController.getProjectBoard, {
       baseUrl: frontendMountFor(url),
       params: { uid: '42' },
+      sanitizedData: { projectId: 42 },
     });
 
     expect(frontendMountFor(url)).toBe('/api/projects');

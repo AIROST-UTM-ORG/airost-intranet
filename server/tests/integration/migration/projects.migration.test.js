@@ -69,6 +69,7 @@ describe('projects feature migration integration', () => {
 
     test('deletes a project and its board and reports missing projects', async () => {
       await createProject();
+      await ProjectBoard.create({ projectId: 1, tasks: [] });
       await ProjectBoard.create({ projectId: 2, tasks: [] });
 
       const deleted = await request(app).delete('/api/projects/1').expect(200);
@@ -82,6 +83,9 @@ describe('projects feature migration integration', () => {
 
       const missing = await request(app).delete('/api/projects/999').expect(404);
       expect(missing.body.error.code).toBe('NOT_FOUND');
+
+      const invalid = await request(app).delete('/api/projects/1.5').expect(400);
+      expect(invalid.body.error.code).toBe('VALIDATION_ERROR');
     });
 
     test('rejects project creation without a non-empty title', async () => {
@@ -111,6 +115,9 @@ describe('projects feature migration integration', () => {
       expect(history.body).toEqual({ success: true, data: [] });
       expect(projectHistory.body).toEqual({ success: true, data: [] });
       expect((await request(app).get('/projects/tracking/1').expect(200)).body).toEqual(board.body.data);
+
+      const invalidHistoryId = await request(app).get('/api/projects/1abc/history').expect(400);
+      expect(invalidHistoryId.body.error.code).toBe('VALIDATION_ERROR');
     });
   });
 
@@ -134,10 +141,71 @@ describe('projects feature migration integration', () => {
       expect(updateResponse.body.error.code).toBe('UNAUTHENTICATED');
     });
 
+    test('validates both board replacement routes and rejects duplicate task IDs', async () => {
+      const owner = await createUser('Board Owner');
+      const agent = await createAuthenticatedAgent(owner);
+      const malformed = { projectId: 'invalid', tasks: 'not-an-array' };
+
+      for (const method of ['post', 'put']) {
+        const response = await agent[method]('/api/projects/tracking').send(malformed).expect(400);
+        expect(response.body.error.code).toBe('VALIDATION_ERROR');
+      }
+
+      const duplicateTasks = [
+        { task_id: 'duplicate-id', title: 'First' },
+        { task_id: 'duplicate-id', title: 'Second' },
+      ];
+      await ProjectBoard.create({
+        projectId: 7,
+        tasks: [{ task_id: 'existing-task', title: 'Persisted value', createdBy: owner.email }],
+      });
+      const duplicateResponse = await agent
+        .post('/api/projects/tracking')
+        .send({ projectId: 7, tasks: duplicateTasks })
+        .expect(400);
+      expect(duplicateResponse.body.error.code).toBe('VALIDATION_ERROR');
+      const duplicateRefreshResponse = await agent
+        .put('/api/projects/tracking')
+        .send({ projectId: 7, tasks: duplicateTasks })
+        .expect(400);
+      expect(duplicateRefreshResponse.body.error.code).toBe('VALIDATION_ERROR');
+      expect((await ProjectBoard.findOne({ projectId: 7 })).tasks[0].title).toBe('Persisted value');
+    });
+
+    test('assigns task ownership from the authenticated user and records deletion history', async () => {
+      const owner = await createUser('Task Creator');
+      const agent = await createAuthenticatedAgent(owner);
+
+      await agent
+        .post('/api/projects/tracking')
+        .send({
+          projectId: 8,
+          tasks: [{ task_id: 'owned-task', title: 'Owned task', createdBy: 'spoofed@example.com' }],
+        })
+        .expect(201);
+
+      let board = await ProjectBoard.findOne({ projectId: 8 });
+      expect(board.tasks[0].createdBy).toBe(owner.email);
+
+      await agent
+        .put('/api/projects/tracking')
+        .send({ projectId: 8, tasks: [] })
+        .expect(200);
+
+      board = await ProjectBoard.findOne({ projectId: 8 });
+      expect(board.tasks).toHaveLength(0);
+      const deletionHistory = await TaskHistory.findOne({ taskId: 'owned-task', changeType: 'deleted' }).lean();
+      expect(deletionHistory).toEqual(expect.objectContaining({
+        field: 'task_deleted',
+        changedBy: owner.email,
+      }));
+    });
+
     test('creates a task, records its creation and update, and returns history to the frontend', async () => {
       const owner = await createUser('Project Owner');
       const agent = await createAuthenticatedAgent(owner);
       await createProject();
+      await ProjectBoard.create({ projectId: 1, tasks: [] });
 
       const task = {
         task_id: 'history-task',
@@ -148,25 +216,26 @@ describe('projects feature migration integration', () => {
       const created = await agent
         .post('/api/projects/tracking')
         .send({ projectId: 1, tasks: [task] })
-        .expect(201);
+        .expect(200);
 
       expect(created.body.data.tasks).toEqual(expect.arrayContaining([
         expect.objectContaining({ task_id: 'history-task', title: 'Initial title' }),
       ]));
       await expect(TaskHistory.find({ taskId: 'history-task' }).lean()).resolves.toEqual(expect.arrayContaining([
-        expect.objectContaining({ changeType: 'created', changedBy: owner.name }),
+        expect.objectContaining({ changeType: 'created', changedBy: owner.email }),
       ]));
 
       await agent
         .put('/api/projects/update')
-        .send({ projectId: 1, tasks: { ...task, title: 'Updated title' }, changedBy: 'forged actor' })
+        .send({ projectId: 1, tasks: { ...task, title: 'Updated title', createdBy: 'spoofed@example.com' }, changedBy: 'forged actor' })
         .expect(200);
 
       const persistedBoard = await ProjectBoard.findOne({ projectId: 1 });
       expect(persistedBoard.tasks[0].title).toBe('Updated title');
+      expect(persistedBoard.tasks[0].createdBy).toBe(owner.email);
       const history = await agent.get('/api/projects/tasks/history-task/history').expect(200);
       expect(history.body.data).toEqual(expect.arrayContaining([
-        expect.objectContaining({ changeType: 'updated', field: 'title', changedBy: owner.name }),
+        expect.objectContaining({ changeType: 'updated', field: 'title', changedBy: owner.email }),
         expect.objectContaining({ changeType: 'created', field: 'task_created' }),
       ]));
     });
@@ -180,12 +249,12 @@ describe('projects feature migration integration', () => {
       await createProject();
       await ProjectBoard.create({
         projectId: 1,
-        tasks: [{ task_id: 'protected-task', title: 'Protected title', createdBy: owner.name }],
+        tasks: [{ task_id: 'protected-task', title: 'Protected title', createdBy: owner.email }],
       });
 
       const updateDenied = await memberAgent
         .put('/api/projects/update')
-        .send({ projectId: 1, tasks: { task_id: 'protected-task', title: 'Unauthorized title', createdBy: owner.name } })
+        .send({ projectId: 1, tasks: { task_id: 'protected-task', title: 'Unauthorized title', createdBy: owner.email } })
         .expect(403);
       const deleteDenied = await memberAgent
         .put('/api/projects/tracking')

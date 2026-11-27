@@ -17,7 +17,7 @@ const createProject = asyncHandler(async (req, res) => {
 });
 
 const deleteProject = asyncHandler(async (req, res) => {
-  const result = await projectService.deleteProject(Number(req.params.id));
+  const result = await projectService.deleteProject(req.sanitizedData.projectId);
   if (isLegacyProjectRequest(req)) return res.status(200).json(result);
   return sendSuccess(res, result);
 });
