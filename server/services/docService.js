@@ -239,9 +239,7 @@ const getUserProjectRolesMap = async (user) => {
           leadConditions.push({ lead: { $regex: nameRegex } });
         } else if (count > 1) {
           // Ambiguous display name: log warning without user details
-          const ambiguousProjects = await projectRepository.findProjects({
-            lead: { $regex: nameRegex },
-          }).select('_id').lean();
+          const ambiguousProjects = await projectRepository.findProjectsMatchingLead(nameRegex);
 
           for (const p of ambiguousProjects) {
             console.warn(
@@ -253,9 +251,7 @@ const getUserProjectRolesMap = async (user) => {
     }
 
     if (leadConditions.length > 0) {
-      const leadProjects = await projectRepository.findProjects({
-        $or: leadConditions,
-      }).select('_id lead').lean();
+      const leadProjects = await projectRepository.findProjectsForLeadConditions(leadConditions);
 
       for (const p of leadProjects) {
         const pIdStr = String(p._id);
@@ -625,9 +621,7 @@ const adminListSpaces = async ({ page = 1, limit = 25, q = '' } = {}) => {
     const escaped = escapeRegex(trimmedQ);
     const regex = new RegExp(escaped, 'i');
 
-    const matchingProjects = await projectRepository.findProjects({
-      $or: [{ title: { $regex: regex } }, { name: { $regex: regex } }],
-    }).select('_id');
+    const matchingProjects = await projectRepository.findProjectsMatchingSearch(regex);
     const projectIds = matchingProjects.map((p) => p._id);
 
     const matchingUsers = await User.find({

@@ -3,8 +3,12 @@ const ProjectBoard = require("./models/projectBoard.model");
 const TaskHistory = require("./models/taskHistory.model");
 
 const findAllProjects = () => Project.find();
-const findProjects = (filter) => Project.find(filter);
 const findProjectById = (id) => Project.findById(id);
+const findProjectsMatchingLead = (regex) => Project.find({ lead: { $regex: regex } }).select('_id').lean();
+const findProjectsForLeadConditions = (conditions) => Project.find({ $or: conditions }).select('_id lead').lean();
+const findProjectsMatchingSearch = (regex) => Project.find({
+  $or: [{ title: { $regex: regex } }, { name: { $regex: regex } }],
+}).select('_id');
 const findLatestProject = () =>
   Project.findOne({}, {}, { sort: { createdAt: -1 } });
 const createProject = (project) => Project.create(project);
@@ -39,8 +43,10 @@ const createHistory = (entry) => TaskHistory.create(entry);
 
 module.exports = {
   findAllProjects,
-  findProjects,
   findProjectById,
+  findProjectsMatchingLead,
+  findProjectsForLeadConditions,
+  findProjectsMatchingSearch,
   findLatestProject,
   createProject,
   deleteProjectByProjectId,
