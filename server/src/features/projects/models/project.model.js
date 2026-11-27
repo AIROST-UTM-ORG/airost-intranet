@@ -4,6 +4,7 @@ const projectSchema = new mongoose.Schema({
   projectId: {
     type: Number,
     required: true,
+    unique: true,
   },
   title: String,
   description: String,

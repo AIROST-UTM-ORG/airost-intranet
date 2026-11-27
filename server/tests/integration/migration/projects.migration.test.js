@@ -6,6 +6,8 @@ const User = require('../../../models/User');
 const Project = require('../../../models/Project');
 const ProjectBoard = require('../../../models/ProjectBoard');
 const TaskHistory = require('../../../models/TaskHistory');
+const projectRepository = require('../../../src/features/projects/project.repository');
+const historyService = require('../../../src/features/projects/services/history.service');
 
 let app;
 let sessionStore;
@@ -32,6 +34,7 @@ const createProject = async (overrides = {}) => Project.create({
 
 beforeAll(async () => {
   await connect();
+  await Promise.all([Project.init(), ProjectBoard.init(), TaskHistory.init()]);
   sessionStore = new session.MemoryStore();
   app = createApp({ sessionStore });
 });
@@ -65,6 +68,32 @@ describe('projects feature migration integration', () => {
 
       expect(canonical.body).toMatchObject({ success: true, data: [{ projectId: 1, title: 'New Migration Project' }] });
       expect(legacy.body).toEqual(canonical.body.data);
+    });
+
+    test('rolls project creation back when board creation fails', async () => {
+      const createBoard = jest.spyOn(projectRepository, 'createBoard').mockRejectedValueOnce(new Error('board write failed'));
+      try {
+        await request(app).post('/api/projects').send({ title: 'Rollback Project' }).expect(500);
+        expect(await Project.countDocuments()).toBe(0);
+        expect(await ProjectBoard.countDocuments()).toBe(0);
+        const nextProject = await request(app).post('/api/projects').send({ title: 'After Rollback' }).expect(201);
+        expect(nextProject.body.data.projectId).toBe(1);
+      } finally {
+        createBoard.mockRestore();
+      }
+    });
+
+    test('rolls project and board deletion back together when board deletion fails', async () => {
+      await createProject();
+      await ProjectBoard.create({ projectId: 1, tasks: [] });
+      const deleteBoard = jest.spyOn(projectRepository, 'deleteBoard').mockRejectedValueOnce(new Error('board delete failed'));
+      try {
+        await request(app).delete('/api/projects/1').expect(500);
+        expect(await Project.findOne({ projectId: 1 })).not.toBeNull();
+        expect(await ProjectBoard.findOne({ projectId: 1 })).not.toBeNull();
+      } finally {
+        deleteBoard.mockRestore();
+      }
     });
 
     test('deletes a project and its board and reports missing projects', async () => {
@@ -199,6 +228,26 @@ describe('projects feature migration integration', () => {
         field: 'task_deleted',
         changedBy: owner.email,
       }));
+    });
+
+    test('rolls board replacement back when task history persistence fails', async () => {
+      const owner = await createUser('Rollback Task Owner');
+      const agent = await createAuthenticatedAgent(owner);
+      await ProjectBoard.create({
+        projectId: 18,
+        tasks: [{ task_id: 'atomic-task', title: 'Keep until history succeeds', createdBy: owner.email }],
+      });
+      const trackTaskDeletion = jest.spyOn(historyService, 'trackTaskDeletion').mockRejectedValueOnce(new Error('history write failed'));
+      try {
+        await agent.put('/api/projects/tracking').send({ projectId: 18, tasks: [] }).expect(500);
+        const board = await ProjectBoard.findOne({ projectId: 18 });
+        expect(board.tasks).toEqual(expect.arrayContaining([
+          expect.objectContaining({ task_id: 'atomic-task', title: 'Keep until history succeeds' }),
+        ]));
+        expect(await TaskHistory.countDocuments({ taskId: 'atomic-task', changeType: 'deleted' })).toBe(0);
+      } finally {
+        trackTaskDeletion.mockRestore();
+      }
     });
 
     test('creates a task, records its creation and update, and returns history to the frontend', async () => {

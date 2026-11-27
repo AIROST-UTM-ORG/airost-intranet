@@ -19,6 +19,7 @@ const { createApp } = require('../../app');
 const Project = require('../../models/Project');
 const ProjectBoard = require('../../models/ProjectBoard');
 const User = require('../../models/User');
+const projectRepository = require('../../src/features/projects/project.repository');
 
 let app;
 
@@ -140,8 +141,21 @@ describe('POST /projects', () => {
     expect(res.body.projectId).toBe(6);
   });
 
-  test('rolls back project creation and returns 500 when ProjectBoard.create throws an error', async () => {
-    const createBoardSpy = jest.spyOn(ProjectBoard, 'create').mockRejectedValueOnce(new Error('Board creation failed'));
+  test('allocates unique sequential project IDs for concurrent creations', async () => {
+    await seedProject({ projectId: 20, title: 'Existing Project' });
+
+    const responses = await Promise.all([
+      request(app).post('/projects').send({ title: 'Concurrent Project A' }),
+      request(app).post('/projects').send({ title: 'Concurrent Project B' }),
+    ]);
+
+    expect(responses.map((response) => response.status)).toEqual([201, 201]);
+    expect(responses.map((response) => response.body.projectId).sort((a, b) => a - b)).toEqual([21, 22]);
+    expect(await ProjectBoard.countDocuments({ projectId: { $in: [21, 22] } })).toBe(2);
+  });
+
+  test('rolls back project creation and returns 500 when board creation fails', async () => {
+    const createBoardSpy = jest.spyOn(projectRepository, 'createBoard').mockRejectedValueOnce(new Error('Board creation failed'));
 
     const payload = {
       title: 'Rollback Project',
@@ -149,18 +163,20 @@ describe('POST /projects', () => {
       lead: 'Lead Dev',
     };
 
-    const res = await request(app).post('/projects').send(payload);
-    expect(res.status).toBe(500);
-    expect(res.body).toEqual({
-      success: false,
-      error: { code: 'INTERNAL_SERVER_ERROR', message: 'Board creation failed' },
-    });
+    try {
+      const res = await request(app).post('/projects').send(payload);
+      expect(res.status).toBe(500);
+      expect(res.body).toEqual({
+        success: false,
+        error: { code: 'INTERNAL_SERVER_ERROR', message: 'Board creation failed' },
+      });
 
-    // Confirm project was rolled back and not found in database
-    const project = await Project.findOne({ title: 'Rollback Project' });
-    expect(project).toBeNull();
-
-    createBoardSpy.mockRestore();
+      // Confirm project was rolled back and not found in database
+      const project = await Project.findOne({ title: 'Rollback Project' });
+      expect(project).toBeNull();
+    } finally {
+      createBoardSpy.mockRestore();
+    }
   });
 });
 
@@ -206,7 +222,7 @@ describe('GET /projects/tracking/:uid', () => {
   test('returns 400 for non-numeric uid', async () => {
     const res = await request(app).get('/projects/tracking/not-a-number');
     expect(res.status).toBe(400);
-    expect(res.body.error.message).toContain('not a number');
+    expect(res.body.error.message).toContain('positive integer');
   });
 });
 

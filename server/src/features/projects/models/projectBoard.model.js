@@ -15,6 +15,7 @@ const projectBoardSchema = new mongoose.Schema({
   projectId: {
     type: Number,
     required: true,
+    unique: true,
   },
   tasks: [taskSchema],
 });

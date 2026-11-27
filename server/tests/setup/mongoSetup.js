@@ -2,7 +2,7 @@
  * MongoDB Memory Server setup for isolated tests.
  * Never connects to the production database.
  */
-const { MongoMemoryServer } = require('mongodb-memory-server');
+const { MongoMemoryReplSet } = require('mongodb-memory-server');
 const mongoose = require('mongoose');
 const fs = require('fs');
 const path = require('path');
@@ -21,11 +21,12 @@ const connect = async () => {
   testDbPath = path.resolve(__dirname, '../../node_modules/.cache/mongodb-memory-server/test-data');
   fs.rmSync(testDbPath, { recursive: true, force: true });
   fs.mkdirSync(testDbPath, { recursive: true });
-  mongoServer = await MongoMemoryServer.create({
+  mongoServer = await MongoMemoryReplSet.create({
     binary: {
       version: process.env.MONGOMS_VERSION,
     },
-    instance: { dbPath: testDbPath },
+    replSet: { count: 1 },
+    instanceOpts: [{ dbPath: testDbPath }],
   });
   const uri = mongoServer.getUri();
   await mongoose.connect(uri);
