@@ -4,11 +4,11 @@ Internal operations portal for AIROST club members, managing project boards, doc
 
 ## Architecture
 
-The system consists of three primary components:
+The system consists of three components:
 
-- **Client**: React single-page application built with Create React App and Tailwind CSS. Runs on port `3000`.
-- **Server**: Express REST API with session authentication and Google OAuth 2.0. Runs on port `4000`.
-- **Database**: MongoDB instance for member data, projects, and documents. Runs on port `27017`.
+- **Client:** React single-page application built with Create React App and Tailwind CSS. Runs on port `3000`.
+- **Server:** Express REST API with session authentication and Google OAuth 2.0. Runs on port `4000`.
+- **Database:** MongoDB instance for member data, projects, and documents. Runs on port `27017`.
 
 Architecture contracts and specifications are located in `docs/architecture/`:
 

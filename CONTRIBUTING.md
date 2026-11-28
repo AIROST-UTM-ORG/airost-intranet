@@ -8,9 +8,9 @@ Before implementing changes, read [AGENTS.md](AGENTS.md) to understand project r
 
 Active architecture contracts are maintained under `docs/architecture/`:
 
-- [Database Schema](docs/architecture/database_schema.md)
-- [Technology Stack](docs/architecture/techstack.md)
-- [Feature Specifications](docs/architecture/features.md)
+- [Database schema](docs/architecture/database_schema.md)
+- [Technology stack](docs/architecture/techstack.md)
+- [Feature specifications](docs/architecture/features.md)
 
 ## Branching protocol
 
@@ -51,31 +51,30 @@ Keep commits small and focused on a single layer. When completing a feature, com
 
 ## Issue and pull request labeling standards
 
-GitHub does not automatically label issues or pull requests. When creating issues or opening pull requests via the GitHub UI or `gh` CLI, authors must assign the appropriate labels and link them to the project board.
+GitHub does not automatically label issues or pull requests. When creating issues or opening pull requests via the GitHub UI or `gh` CLI, assign the appropriate labels and link them to the project board.
 
 ### Label taxonomy
 
-1. **Phase labels (Required, exactly 1)**:
-   - `phase:<phase-name>`: Milestone phase for the item, such as `phase:2-delivery` or `phase:3-architecture`. See Project #6 for current phases.
+Every issue and pull request requires exactly one phase label indicating the milestone, such as `phase:2-delivery` or `phase:3-architecture`. See Project #6 for current phases.
 
-2. **Module labels (Required - at least 1)**:
-   - `module:auth`: Authentication, sessions, login/logout, tokens, and authorization.
-   - `module:members`: Member directory, profiles, search, and filtering.
-   - `module:projects`: Project tracking, Kanban boards, and project management.
-   - `module:docs`: Documentation spaces, external links, and space access rules.
-   - `module:mobile`: Mobile responsive layouts, navigation drawer, and touch UX.
-   - `module:infra`: Docker, CI/CD, Nginx reverse proxy, networking, and deployment tooling.
-   - `module:refactor`: Structural codebase reorganization and feature-oriented architecture.
+Every item also requires at least one module label representing the affected subsystem:
+- `module:auth` for authentication, sessions, login, logout, tokens, and authorization.
+- `module:members` for member directory, profiles, search, and filtering.
+- `module:projects` for project tracking, Kanban boards, and project management.
+- `module:docs` for documentation spaces, external links, and space access rules.
+- `module:mobile` for responsive layouts, navigation drawers, and touch UX.
+- `module:infra` for Docker, CI/CD, Nginx reverse proxy, networking, and deployment tooling.
+- `module:refactor` for codebase reorganization and feature-oriented architecture.
 
-3. **Type labels (Optional / as applicable)**:
-   - `bug`: Defects and unexpected runtime behaviors.
-   - `enhancement`: New features and functional capabilities.
-   - `documentation`: Contributor guides, developer environment setup, and architecture documentation.
+Apply optional type labels as applicable:
+- `bug` for defects and unexpected runtime behaviors.
+- `enhancement` for new features and functional capabilities.
+- `documentation` for contributor guides, developer setup, and architecture documentation.
 
-### GitHub Project affiliation
+### GitHub project affiliation
 
-Every issue and pull request must be attached to the official delivery board:
-- **Project**: `AIROST Intranet` (Organization Project #6)
+Attach every issue and pull request to the official delivery board:
+- **Project:** `AIROST Intranet` (Organization Project #6)
 - Do not link items to personal scratchpads or deprecated projects.
 
 ## Secret management and security guardrails
@@ -104,7 +103,7 @@ Every pull request must follow this template:
 Closes #<issue_number>
 ```
 
-Keep pull requests focused on a single issue. Large, sprawling pull requests take longer to review and risk merge conflicts.
+Keep pull requests focused on a single issue. Large pull requests take longer to review and risk merge conflicts.
 
 ## Code review approval policy
 

@@ -1,29 +1,29 @@
-# Documentation Data Layer Architecture
+# Documentation data layer architecture
 
-## 1. Overview & Service Boundary
+## 1. Overview and service boundary
 
-To support the club platform's upcoming migration to **Supabase (PostgreSQL + Auth + Storage + RLS)** (Phase 1 & Phase 4) and prevent coupling of business and HTTP logic to MongoDB Mongoose models, all data access for the Documentation feature is isolated inside a dedicated service layer:
+To support the club platform's upcoming migration to Supabase (PostgreSQL + Auth + Storage + RLS) (Phase 1 and Phase 4) and prevent coupling of business and HTTP logic to MongoDB Mongoose models, all data access for the Documentation feature is isolated inside a dedicated service layer:
 
-- **Service Layer**: [`server/services/docService.js`](../../server/services/docService.js)
-- **Controller**: [`server/controller/docController.js`](../../server/controller/docController.js) (thin HTTP adapter: parses input, validates schemas, invokes access guards, calls services, formats errors)
-- **Access Guard**: [`server/utils/docAccess.js`](../../server/utils/docAccess.js) (pure authorization logic, zero database model imports)
-- **Validation**: [`server/utils/docValidation.js`](../../server/utils/docValidation.js) (pure schema validation)
+- **Service layer:** [`server/services/docService.js`](../../server/services/docService.js)
+- **Controller:** [`server/controller/docController.js`](../../server/controller/docController.js) (thin HTTP adapter: parses input, validates schemas, invokes access guards, calls services, formats errors)
+- **Access guard:** [`server/utils/docAccess.js`](../../server/utils/docAccess.js) (pure authorization logic, zero database model imports)
+- **Validation:** [`server/utils/docValidation.js`](../../server/utils/docValidation.js) (pure schema validation)
 
-Controllers and utility modules **must never import** Mongoose models from `server/models/`.
+Controllers and utility modules must never import Mongoose models from `server/models/`.
 
 ---
 
-## 2. Repository Interface (Service Functions)
+## 2. Repository interface (service functions)
 
 The service layer provides plain JavaScript function contracts taking scalar arguments, session context, or validated DTOs, and returning plain objects. Operations throw typed `DocError(status, code, message, details)` instances to communicate error states.
 
-### 2.1 Project Membership Lookup
+### 2.1 Project membership lookup
 | Service Function | Parameters | Return Type | Description |
 | :--- | :--- | :--- | :--- |
 | `getUserProjectRole` | `(userId, projectId)` | `Promise<string \| null>` | Resolves user's project role (`'lead'`, `'advisor'`, `'member'`, or `null`). Checks `PROJECT_MEMBER` first, then falls back to `Project.lead`. Isolated behind service for clean Supabase replacement. |
 | `findProjectById` | `(projectId)` | `Promise<object \| null>` | Retrieves basic project record by ID to verify existence. |
 
-### 2.2 Space Operations
+### 2.2 Space operations
 | Service Function | Parameters | Return Type | Description |
 | :--- | :--- | :--- | :--- |
 | `getViewableSpaces` | `(user, filter = {})` | `Promise<object[]>` | Core visibility resolver returning spaces the user is permitted to view. Shared by `listSpaces` and `searchDocuments` to guarantee zero rule drift. |
@@ -34,7 +34,7 @@ The service layer provides plain JavaScript function contracts taking scalar arg
 | `updateSpace` | `(spaceId, updateData)` | `Promise<object>` | Applies updates to space metadata, project linkage, or permission rules. Throws 404 if not found. |
 | `deleteSpaceCascade` | `(spaceId)` | `Promise<{ deletedSpaceId, deletedDocumentsCount }>` | Permanently hard deletes a space and cascades deletion to all child documents. |
 
-### 2.3 Document Operations
+### 2.3 Document operations
 | Service Function | Parameters | Return Type | Description |
 | :--- | :--- | :--- | :--- |
 | `listDocuments` | `(spaceId, options = {})` | `Promise<object[]>` | Retrieves documents belonging to `spaceId`. Supports filtering by `area` and `includeArchived`. Sorted newest first. |
@@ -47,9 +47,9 @@ The service layer provides plain JavaScript function contracts taking scalar arg
 
 ---
 
-## 3. PostgreSQL Schema Mapping (Supabase Target)
+## 3. PostgreSQL schema mapping (Supabase target)
 
-In the planned Supabase migration (Phase 1 & Phase 4), Mongoose models map to normalized PostgreSQL relational tables with foreign keys and cascading constraints:
+In the planned Supabase migration (Phase 1 and Phase 4), Mongoose models map to normalized PostgreSQL relational tables with foreign keys and cascading constraints:
 
 ```sql
 -- 1. Documentation Spaces
@@ -101,11 +101,11 @@ CREATE INDEX idx_documentation_spaces_project ON documentation_spaces(project_id
 
 ---
 
-## 4. Row Level Security (RLS) Policy Mapping
+## 4. Row Level Security (RLS) policy mapping
 
 When migrated to Supabase, the Documentation permission matrix maps to PostgreSQL Row Level Security policies:
 
-### 4.1 Helper Functions
+### 4.1 Helper functions
 ```sql
 -- Check if current user is platform admin
 CREATE OR REPLACE FUNCTION is_admin() RETURNS BOOLEAN AS $$
@@ -124,8 +124,8 @@ CREATE OR REPLACE FUNCTION get_user_project_role(p_project_id UUID) RETURNS VARC
 $$ LANGUAGE sql SECURITY DEFINER;
 ```
 
-### 4.2 Space Policies (`documentation_spaces`)
-- **`SELECT` (View Stealth Rule)**:
+### 4.2 Space policies (`documentation_spaces`)
+- **`SELECT` (View Stealth Rule):**
   Returns rows only if the user is an Admin, Space Creator, or meets `accessType` / `updateType` criteria. Unauthorized queries return 0 rows (triggering 404 in client UX, never leaking space existence).
   ```sql
   CREATE POLICY space_view_policy ON documentation_spaces
@@ -145,7 +145,7 @@ $$ LANGUAGE sql SECURITY DEFINER;
       ))
   );
   ```
-- **`INSERT` (Create Space)**:
+- **`INSERT` (Create Space):**
   ```sql
   CREATE POLICY space_create_policy ON documentation_spaces
   FOR INSERT TO authenticated
@@ -154,23 +154,23 @@ $$ LANGUAGE sql SECURITY DEFINER;
       OR (project_id IS NOT NULL AND get_user_project_role(project_id) = 'lead')
   );
   ```
-- **`UPDATE` (Manager Access)**:
+- **`UPDATE` (Manager Access):**
   ```sql
   CREATE POLICY space_update_policy ON documentation_spaces
   FOR UPDATE TO authenticated
   USING (is_admin() OR created_by = auth.uid());
   ```
-- **`DELETE` (Hard Cascade Delete)**:
+- **`DELETE` (Hard Cascade Delete):**
   ```sql
   CREATE POLICY space_delete_policy ON documentation_spaces
   FOR DELETE TO authenticated
   USING (is_admin());
   ```
 
-### 4.3 Document Policies (`documents`)
-- **`SELECT`**:
+### 4.3 Document policies (`documents`)
+- **`SELECT`:**
   Users who can view the parent space can view active documents. Viewing archived documents requires update permission on the space.
-- **`INSERT` & `UPDATE`**:
+- **`INSERT` & `UPDATE`:**
   Requires update permissions on the parent space (`is_admin()`, creator, in `space_update_members`, or project member if `update_type = 'project_members'`).
-- **`DELETE`**:
+- **`DELETE`:**
   Hard deletion allowed only for platform admins (`is_admin()`). Soft deletion is handled via `UPDATE documents SET archived = true`.

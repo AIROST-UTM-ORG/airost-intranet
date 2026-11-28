@@ -1,15 +1,15 @@
-# Intranet Features Summary
+# Intranet features summary
 
 This file summarizes two source documents:
 
-- **`overall_feature.md`**: *Club Intranet – Feature Roadmap* (modules, access levels per role, priorities, development order)
-- **`feature.md`**: *Airost Intranet – Feature Roadmap & Tech Stack Analysis* (features, priorities, and the database decision)
+- **`overall_feature.md`:** *Club Intranet - Feature Roadmap* (modules, access levels per role, priorities, development order)
+- **`feature.md`:** *Airost Intranet - Feature Roadmap and Tech Stack Analysis* (features, priorities, and the database decision)
 
 ---
 
-# Part A: Club Intranet Feature Roadmap
+# Part A: Club intranet feature roadmap
 
-## A1. Roles and Priority Legend
+## A1. Roles and priority legend
 
 **Roles:** Member, Committee, Admin
 
@@ -20,9 +20,9 @@ This file summarizes two source documents:
 | 🟡 Medium | Useful enhancement |
 | 🟢 Later | Advanced / optional |
 
-## A2. Features by Module
+## A2. Features by module
 
-Access symbols: ✅ allowed, ❌ not allowed, "Own" / "Event" / "All" = scope of access, "Manage" = can configure, "Limited" = reduced view, "—" = not role-based (system feature).
+Access symbols: ✅ allowed, ❌ not allowed, "Own" / "Event" / "All" = scope of access, "Manage" = can configure, "Limited" = reduced view, "-" = not role-based (system feature).
 
 ### Authentication
 
@@ -44,7 +44,7 @@ Access symbols: ✅ allowed, ❌ not allowed, "Own" / "Event" / "All" = scope of
 | Invite Members | ❌ / ❌ / ✅ | 🟠 High |
 | Suspend / Deactivate Member | ❌ / ❌ / ✅ | 🟠 High |
 
-### Roles & Permissions
+### Roles and permissions
 
 | Feature | Access | Priority |
 |---|---|---|
@@ -55,7 +55,7 @@ Access symbols: ✅ allowed, ❌ not allowed, "Own" / "Event" / "All" = scope of
 
 | Feature | Member / Committee / Admin | Priority |
 |---|---|---|
-| Member Dashboard | ✅ / ✅ / — | 🔴 Must |
+| Member Dashboard | ✅ / ✅ / - | 🔴 Must |
 | Admin Dashboard | ❌ / ❌ / ✅ | 🔴 Must |
 | Statistics / KPIs | Limited / Limited / ✅ | 🟠 High |
 | Recent Activities | ✅ / ✅ / ✅ | 🟡 Medium |
@@ -69,9 +69,9 @@ Access symbols: ✅ allowed, ❌ not allowed, "Own" / "Event" / "All" = scope of
 | Edit Event | ❌ / ✅ / ✅ | 🔴 Must |
 | Event Registration | ✅ / ✅ / ✅ | 🔴 Must |
 | Delete Event | ❌ / ❌ / ✅ | 🟠 High |
-| Registration Capacity | — / Manage / Manage | 🟠 High |
-| Registration Deadline | — / Manage / Manage | 🟠 High |
-| Event Organizer | — / Manage / Manage | 🟡 Medium |
+| Registration Capacity | - / Manage / Manage | 🟠 High |
+| Registration Deadline | - / Manage / Manage | 🟠 High |
+| Event Organizer | - / Manage / Manage | 🟡 Medium |
 
 ### Attendance
 
@@ -90,7 +90,7 @@ Access symbols: ✅ allowed, ❌ not allowed, "Own" / "Event" / "All" = scope of
 | Create Announcement | ❌ / ✅ / ✅ | 🔴 Must |
 | Edit / Delete Announcement | ❌ / Own / All | 🟠 High |
 | Announcement Categories | ✅ / ✅ / ✅ | 🟡 Medium |
-| Priority Announcements | — / Manage / Manage | 🟡 Medium |
+| Priority Announcements | - / Manage / Manage | 🟡 Medium |
 
 ### Documents
 
@@ -99,8 +99,8 @@ Access symbols: ✅ allowed, ❌ not allowed, "Own" / "Event" / "All" = scope of
 | View / Download Documents | ✅ / ✅ / ✅ | 🟠 High |
 | Upload Documents | ❌ / ✅ / ✅ | 🟠 High |
 | Delete Documents | ❌ / Own / All | 🟠 High |
-| Document Categories | — / Manage / Manage | 🟡 Medium |
-| Access Restrictions | — / — / ✅ | 🟡 Medium |
+| Document Categories | - / Manage / Manage | 🟡 Medium |
+| Access Restrictions | - / - / ✅ | 🟡 Medium |
 
 ### Calendar
 
@@ -142,7 +142,7 @@ Discussion Board, Comments, Reactions, Mentions.
 
 QR Event Check-in, Advanced Search, Analytics (Limited for Member/Committee, full for Admin), File Versioning (Committee/Admin manage), Real-time Notifications, PWA / Mobile Experience.
 
-## A3. MVP Scope (🔴 Must)
+## A3. MVP scope (🔴 Must)
 
 - **Authentication:** login, logout, registration, access and refresh tokens
 - **Membership:** member approval, status, profile, directory
@@ -153,7 +153,7 @@ QR Event Check-in, Advanced Search, Analytics (Limited for Member/Committee, ful
 - **Administration:** user management
 - **Security:** protected routes and API endpoints, password hashing, token validation
 
-## A4. Recommended Development Order
+## A4. Recommended development order
 
 1. Authentication
 2. Membership + Roles
@@ -171,15 +171,15 @@ QR Event Check-in, Advanced Search, Analytics (Limited for Member/Committee, ful
 
 ---
 
-# Part B: Airost Intranet Feature Roadmap and Tech Stack
+# Part B: Airost intranet feature roadmap and tech stack
 
 ## B1. Team
 
 Ling Lee Hom, Tony Hoe Zhi Wan, Ahmad, Zi Ping
 
-## B2. Features by Module
+## B2. Features by module
 
-### Authentication and Access
+### Authentication and access
 
 | Feature | Description | Priority |
 |---|---|---|
@@ -198,7 +198,7 @@ Ling Lee Hom, Tony Hoe Zhi Wan, Ahmad, Zi Ping
 | Project Lead | Manage project, members, tasks |
 | Member | View projects, manage assigned tasks, upload documents |
 
-### Members and Profiles
+### Members and profiles
 
 | Feature | Description | Priority |
 |---|---|---|
@@ -221,7 +221,7 @@ Ling Lee Hom, Tony Hoe Zhi Wan, Ahmad, Zi Ping
 | Project Dashboard | Show project progress | High |
 | GitHub-style Project Page | Structured project workspace | Medium |
 
-### Task Management
+### Task management
 
 | Feature | Description | Priority |
 |---|---|---|
@@ -236,7 +236,7 @@ Ling Lee Hom, Tony Hoe Zhi Wan, Ahmad, Zi Ping
 | Sprint | Group tasks into development cycles | High |
 | Backlog | Store upcoming work | High |
 
-### Documents and Knowledge
+### Documents and knowledge
 
 | Feature | Description | Priority |
 |---|---|---|
@@ -251,7 +251,7 @@ Ling Lee Hom, Tony Hoe Zhi Wan, Ahmad, Zi Ping
 
 **Recommended structure:** each project holds folders such as *Documentation* (requirements, meeting notes, architecture), *Design* (UI files, mockups) and *Reports* (progress reports).
 
-### Events and Calendar
+### Events and calendar
 
 | Feature | Description | Priority |
 |---|---|---|
@@ -264,7 +264,7 @@ Ling Lee Hom, Tony Hoe Zhi Wan, Ahmad, Zi Ping
 | Google Calendar Sync | Sync Airost events with Google Calendar | Medium |
 | Event Reminders | Notify users before events | Medium |
 
-### Notifications and Activity Log
+### Notifications and activity log
 
 | Feature | Priority |
 |---|---|
@@ -278,7 +278,7 @@ Ling Lee Hom, Tony Hoe Zhi Wan, Ahmad, Zi Ping
 | Admin Audit Log | High |
 | User Activity | Medium |
 
-### Administration and System Settings
+### Administration and system settings
 
 | Feature | Description | Priority |
 |---|---|---|
@@ -290,12 +290,12 @@ Ling Lee Hom, Tony Hoe Zhi Wan, Ahmad, Zi Ping
 | Activity Logs | Review important actions | High |
 | System Dashboard | Statistics and overview | Medium |
 
-### Dashboard and Search
+### Dashboard and search
 
 - **Dashboard:** summary of everything happening in Airost.
 - **Search:** across People, Projects, Tasks, Documents and Events.
 
-## B3. Priority Summary
+## B3. Priority summary
 
 **Core areas (Essential):**
 
@@ -311,9 +311,9 @@ Ling Lee Hom, Tony Hoe Zhi Wan, Ahmad, Zi Ping
 
 **Nice to have:** Google Calendar synchronization, document versioning, advanced analytics, realtime updates, advanced search, GitHub integration.
 
-## B4. Database Decision
+## B4. Database decision
 
-The system is relationship-heavy (users, projects, tasks, documents, events, notifications, activity history) and may add AI features later. The existing demo uses Node.js, Express, MongoDB/Mongoose and React, and already demonstrates Google login, project tracking, Kanban tasks, task editing and task history.
+The platform model is relationship-heavy (users, projects, tasks, documents, events, notifications, activity history) with planned AI capabilities. The prototype uses Node.js, Express, MongoDB/Mongoose and React, with implemented Google login, project tracking, Kanban tasks, task editing and task history.
 
 ### Comparison
 
@@ -341,15 +341,15 @@ The system is relationship-heavy (users, projects, tasks, documents, events, not
 
 ### Decision: Supabase
 
-Reasons given:
+The team selected Supabase (PostgreSQL) based on the following architectural factors:
 
-1. **Many relationships:** users, projects, tasks, documents, events and notifications fit PostgreSQL well.
-2. **Everything in one platform:** database, auth, storage, realtime and APIs, so more time goes to features than infrastructure.
-3. **Better access control:** RLS enforces platform-level and project-level restrictions at the database level.
-4. **Future AI features:** vector support means Supabase does not block an AI assistant (MongoDB is also strong here).
-5. **AI reduces migration burden:** AI tools can help generate schemas, SQL, CRUD APIs, RLS policies, frontend integration, tests and documentation. AI-generated database and security code must still be reviewed carefully.
+1. **Relational model:** Users, projects, tasks, documents, events, and notifications are interconnected entities that benefit from foreign key constraints and join queries.
+2. **Integrated backend services:** Authentication, object storage, realtime subscriptions, and SQL APIs exist in a unified service.
+3. **Database access control:** PostgreSQL Row Level Security allows platform and project-level authorization rules directly in database policies.
+4. **Vector extensions:** pgvector supports embeddings and vector search for planned AI features.
+5. **Tooling and migrations:** Automated code generation and LLM tooling assist in generating SQL migrations, CRUD queries, RLS policies, and tests.
 
-**Summary of the final recommendation**
+### Summary of the recommendation
 
 | Decision | Platform |
 |---|---|
@@ -357,11 +357,11 @@ Reasons given:
 | Fastest simple prototype | Firebase |
 | Best overall architecture, relational model, built-in services, project-level authorization, future AI | **Supabase** |
 
-**Trade-off:** the team must spend time migrating from MongoDB to PostgreSQL before continuing feature development.
+**Trade-off:** The team invests upfront effort into migrating schemas, authentication, and queries from MongoDB to PostgreSQL before proceeding with new feature development.
 
 ---
 
-# Part C: Notes Across the Two Documents
+# Part C: Notes across the two documents
 
 | Topic | Club Intranet (Part A) | Airost Intranet (Part B) |
 |---|---|---|
