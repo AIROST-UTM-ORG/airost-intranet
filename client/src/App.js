@@ -12,12 +12,10 @@ import useAuth from "./hooks/useAuth";
 import Admin from "./pages/Admin/Admin.js";
 import Unauthorized from "./pages/Unauthorized/Unauthorized";
 import Documentation from "features/documentation";
-import DocBlog from "./pages/Documentation/component/Doc-blog";
 import Events from "./pages/Events/Events";
 import ProjectTracking from "./features/project-tracking/pages/ProjectTracking.js";
 import Board from "./features/project-tracking/components/Board.js";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import CreateDoc from "./pages/Documentation/component/create-documentation/CreateDoc.js";
 import MemberDirectory from "./pages/MemberDirectory/MemberDirectory.js";
 import EditProfile from "./pages/Profile/EditProfile.js";
 import Profile from "./pages/Profile/Profile.js";
@@ -67,8 +65,6 @@ function AppRoutes() {
           <Route path="/events" element={<Events />} />
           <Route path="/doc/*" element={<Documentation />} />
           <Route path="/doc/spaces" element={<Navigate to="/doc" replace />} />
-          <Route path="/doc/:id" element={<DocBlog />} />
-          <Route path="/doc/create/:id" element={<CreateDoc />} />
           <Route path="/projects/tracking" element={<ProjectTracking />} />
           <Route path="/projects/tracking/:projectId" element={<Board />} />
         </Route>
