@@ -3,9 +3,17 @@ jest.mock('../../../src/features/members/models/member.model', () => ({
   countDocuments: jest.fn(),
   findById: jest.fn(),
   findByIdAndUpdate: jest.fn(),
+  findOne: jest.fn(),
+  updateOne: jest.fn(),
+  create: jest.fn(),
+}));
+
+jest.mock('../../../src/features/members/models/verifiedUser.model', () => ({
+  find: jest.fn(),
 }));
 
 const User = require('../../../src/features/members/models/member.model');
+const VerifiedUser = require('../../../src/features/members/models/verifiedUser.model');
 const repository = require('../../../src/features/members/member.repository');
 
 const makeQuery = (result) => {
@@ -99,4 +107,82 @@ describe('member persistence behavior', () => {
     expect(query.populate).toHaveBeenCalledWith({ path: 'featuredProjectIds', select: '_id projectId title description lead' });
   });
 
+  test('findAllUsers selects specific fields and returns lean documents', async () => {
+    const mockUsers = [{ _id: '1', email: 'test@example.com' }];
+    const query = makeQuery(mockUsers);
+    User.find.mockReturnValue(query);
+
+    const result = await repository.findAllUsers();
+
+    expect(User.find).toHaveBeenCalledWith();
+    expect(query.select).toHaveBeenCalledWith('_id email name photoUrl positions googleId');
+    expect(query.lean).toHaveBeenCalledTimes(1);
+    expect(result).toBe(mockUsers);
+  });
+
+  test('findAllVerifiedUsers returns lean documents', async () => {
+    const mockVerified = [{ _id: 'v1', email: 'ver@example.com' }];
+    const query = makeQuery(mockVerified);
+    VerifiedUser.find.mockReturnValue(query);
+
+    const result = await repository.findAllVerifiedUsers();
+
+    expect(VerifiedUser.find).toHaveBeenCalledWith();
+    expect(query.lean).toHaveBeenCalledTimes(1);
+    expect(result).toBe(mockVerified);
+  });
+
+  test('findUserByEmail finds one user by email with normalization', async () => {
+    const user = { _id: 'u1', email: 'find@example.com' };
+    User.findOne.mockResolvedValue(user);
+
+    const result = await repository.findUserByEmail('find@example.com');
+
+    expect(User.findOne).toHaveBeenCalledWith({ email: 'find@example.com' });
+    expect(result).toBe(user);
+  });
+
+  test('findUserByEmail trims and lowercases email before querying User collection', async () => {
+    const user = { _id: 'u1', email: 'find@example.com' };
+    User.findOne.mockResolvedValue(user);
+
+    const result = await repository.findUserByEmail('  FIND@EXAMPLE.COM  ');
+
+    expect(User.findOne).toHaveBeenCalledWith({ email: 'find@example.com' });
+    expect(result).toBe(user);
+  });
+
+  test('addPositionToUser updates user by adding position to positions array', async () => {
+    User.updateOne.mockResolvedValue({ acknowledged: true, modifiedCount: 1 });
+
+    const result = await repository.addPositionToUser('u1', 'admin');
+
+    expect(User.updateOne).toHaveBeenCalledWith(
+      { _id: 'u1' },
+      { $addToSet: { positions: 'admin' } }
+    );
+    expect(result).toEqual({ acknowledged: true, modifiedCount: 1 });
+  });
+
+  test('createUser creates a new user document', async () => {
+    const doc = { name: 'New', email: 'new@example.com', positions: ['member'] };
+    User.create.mockResolvedValue({ _id: 'u2', ...doc });
+
+    const result = await repository.createUser(doc);
+
+    expect(User.create).toHaveBeenCalledWith(doc);
+    expect(result).toEqual({ _id: 'u2', ...doc });
+  });
+
+  test('propagates persistence errors on findUserByEmail, addPositionToUser, and createUser', async () => {
+    const error = new Error('Database disconnected');
+    User.findOne.mockRejectedValue(error);
+    await expect(repository.findUserByEmail('err@example.com')).rejects.toThrow('Database disconnected');
+
+    User.updateOne.mockRejectedValue(error);
+    await expect(repository.addPositionToUser('u1', 'lead')).rejects.toThrow('Database disconnected');
+
+    User.create.mockRejectedValue(error);
+    await expect(repository.createUser({ name: 'Fail' })).rejects.toThrow('Database disconnected');
+  });
 });

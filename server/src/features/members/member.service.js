@@ -43,4 +43,83 @@ const updateProfile = async (id, updates, caller) => {
   return formatUser(user);
 };
 
-module.exports = { getUsers, updateProfile, isAdmin };
+const getMergedUserList = async () => {
+  const [users, verifiedUsers] = await Promise.all([
+    repository.findAllUsers(),
+    repository.findAllVerifiedUsers(),
+  ]);
+
+  const verifiedEmails = new Set(
+    (verifiedUsers || [])
+      .map((v) => (v && v.email ? v.email.toLowerCase().trim() : ''))
+      .filter(Boolean)
+  );
+
+  const seenEmails = new Set();
+  const result = [];
+
+  for (const user of users || []) {
+    const rawEmail = user?.email;
+    const emailKey = rawEmail ? rawEmail.toLowerCase().trim() : '';
+
+    if (emailKey) {
+      if (seenEmails.has(emailKey)) continue;
+      seenEmails.add(emailKey);
+    }
+
+    const positions = user?.positions || (user?.position ? (Array.isArray(user.position) ? user.position : [user.position]) : []);
+
+    result.push({
+      _id: user?._id,
+      email: user?.email,
+      name: user?.name,
+      photo: user?.photoUrl || user?.photo || '',
+      position: positions,
+      loggedIn: true,
+      verified: Boolean(emailKey && verifiedEmails.has(emailKey)),
+    });
+  }
+
+  for (const verUser of verifiedUsers || []) {
+    const rawEmail = verUser?.email;
+    const emailKey = rawEmail ? rawEmail.toLowerCase().trim() : '';
+
+    if (emailKey) {
+      if (seenEmails.has(emailKey)) continue;
+      seenEmails.add(emailKey);
+    }
+
+    const rawPos = verUser?.position || verUser?.positions;
+    const position = Array.isArray(rawPos) ? rawPos : (rawPos ? [rawPos] : []);
+
+    result.push({
+      _id: verUser?._id,
+      email: verUser?.email,
+      name: verUser?.name,
+      photo: '',
+      position,
+      loggedIn: false,
+      verified: true,
+    });
+  }
+
+  return result;
+};
+
+const createVerifiedUser = async ({ name, email, position }) => {
+  const normalizedEmail = typeof email === 'string' ? email.toLowerCase().trim() : email;
+  const existingUser = await repository.findUserByEmail(normalizedEmail);
+
+  if (existingUser) {
+    const result = await repository.addPositionToUser(existingUser._id, position);
+    if (result && result.matchedCount === 0) {
+      throw new AppError(NOT_FOUND, 'NOT_FOUND', 'User not found during position update');
+    }
+    return { status: 200, data: { createStatus: 'success' } };
+  }
+
+  await repository.createUser({ name, email: normalizedEmail, positions: [position] });
+  return { status: 201, data: { createStatus: 'success' } };
+};
+
+module.exports = { getUsers, updateProfile, isAdmin, getMergedUserList, createVerifiedUser };

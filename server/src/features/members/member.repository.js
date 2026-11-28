@@ -1,4 +1,5 @@
 const User = require('./models/member.model');
+const VerifiedUser = require('./models/verifiedUser.model');
 const projectProjection = { path: 'featuredProjectIds', select: '_id projectId title description lead' };
 
 const findDirectoryUsers = (filter, { skip, limit }) => User.find(filter)
@@ -31,4 +32,26 @@ const findByIdAndUpdate = (id, updates) => User.findByIdAndUpdate(
   { new: true, runValidators: true },
 ).populate(projectProjection);
 
-module.exports = { findDirectoryUsers, countDirectoryUsers, findById, findByIdAndUpdate };
+const findAllUsers = () => User.find().select('_id email name photoUrl positions googleId').lean();
+
+const findAllVerifiedUsers = () => VerifiedUser.find().lean();
+
+const findUserByEmail = (email) => User.findOne({
+  email: typeof email === 'string' ? email.toLowerCase().trim() : email,
+});
+
+const addPositionToUser = (id, position) => User.updateOne({ _id: id }, { $addToSet: { positions: position } });
+
+const createUser = (doc) => User.create(doc);
+
+module.exports = {
+  findDirectoryUsers,
+  countDirectoryUsers,
+  findById,
+  findByIdAndUpdate,
+  findAllUsers,
+  findAllVerifiedUsers,
+  findUserByEmail,
+  addPositionToUser,
+  createUser,
+};

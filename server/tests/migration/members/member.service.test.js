@@ -2,10 +2,16 @@ jest.mock('../../../src/features/members/member.repository', () => ({
   findDirectoryUsers: jest.fn(),
   countDirectoryUsers: jest.fn(),
   findByIdAndUpdate: jest.fn(),
+  findAllUsers: jest.fn(),
+  findAllVerifiedUsers: jest.fn(),
+  findUserByEmail: jest.fn(),
+  addPositionToUser: jest.fn(),
+  createUser: jest.fn(),
 }));
 
 const repository = require('../../../src/features/members/member.repository');
 const service = require('../../../src/features/members/member.service');
+const { PLATFORM_ROLES } = require('../../../src/shared/constants/roles');
 
 describe('member service behavior', () => {
   beforeEach(() => jest.resetAllMocks());
@@ -106,11 +112,296 @@ describe('member service behavior', () => {
       .rejects.toBe(error);
   });
 
-  test('recognizes only the platform admin role', () => {
-    expect(service.isAdmin({ positions: ['member', 'ADMIN'] })).toBe(true);
-    expect(service.isAdmin({ position: 'ADMIN' })).toBe(true);
-    expect(service.isAdmin({ positions: ['project lead'] })).toBe(false);
-    expect(service.isAdmin({ position: 'project lead' })).toBe(false);
-    expect(service.isAdmin(null)).toBe(false);
+  describe('isAdmin', () => {
+    test('recognizes platform admin role using PLATFORM_ROLES.ADMIN with case-insensitivity and trimming', () => {
+      expect(PLATFORM_ROLES.ADMIN).toBe('admin');
+
+      // Valid variations of admin
+      expect(service.isAdmin({ positions: ['member', 'ADMIN'] })).toBe(true);
+      expect(service.isAdmin({ positions: ['  admin  '] })).toBe(true);
+      expect(service.isAdmin({ positions: ['\tAdMiN\n'] })).toBe(true);
+      expect(service.isAdmin({ position: 'ADMIN' })).toBe(true);
+      expect(service.isAdmin({ position: '  admin  ' })).toBe(true);
+      expect(service.isAdmin({ position: 'AdMiN' })).toBe(true);
+      expect(service.isAdmin({ positions: 'admin' })).toBe(true);
+
+      // Mixed array with non-string and null elements
+      expect(service.isAdmin({ positions: [null, undefined, 123, 'ADMIN', false] })).toBe(true);
+    });
+
+    test('rejects non-admin roles and near-matches', () => {
+      // Other roles
+      expect(service.isAdmin({ positions: ['project lead'] })).toBe(false);
+      expect(service.isAdmin({ positions: ['advisor'] })).toBe(false);
+      expect(service.isAdmin({ positions: ['member', 'developer'] })).toBe(false);
+      expect(service.isAdmin({ position: 'project lead' })).toBe(false);
+      expect(service.isAdmin({ position: 'advisor' })).toBe(false);
+
+      // Substrings or near matches
+      expect(service.isAdmin({ positions: ['administrator'] })).toBe(false);
+      expect(service.isAdmin({ positions: ['sysadmin'] })).toBe(false);
+      expect(service.isAdmin({ positions: ['admin_user'] })).toBe(false);
+      expect(service.isAdmin({ positions: ['not-admin'] })).toBe(false);
+      expect(service.isAdmin({ position: 'administrator' })).toBe(false);
+
+      // Empty or invalid values
+      expect(service.isAdmin(null)).toBe(false);
+      expect(service.isAdmin(undefined)).toBe(false);
+      expect(service.isAdmin({})).toBe(false);
+      expect(service.isAdmin({ positions: [] })).toBe(false);
+      expect(service.isAdmin({ positions: [''] })).toBe(false);
+      expect(service.isAdmin({ positions: ['   '] })).toBe(false);
+      expect(service.isAdmin({ position: '' })).toBe(false);
+      expect(service.isAdmin({ position: 123 })).toBe(false);
+      expect(service.isAdmin({ positions: [123, null] })).toBe(false);
+    });
+  });
+
+  describe('getMergedUserList', () => {
+    test('merges and normalizes registered and verified users', async () => {
+      repository.findAllUsers.mockResolvedValue([
+        {
+          _id: 'u-1',
+          name: 'Alice',
+          email: 'Alice@example.com',
+          photoUrl: 'https://example.com/alice.png',
+          positions: ['member'],
+          googleId: 'secret-gid',
+          __v: 0,
+        },
+        {
+          _id: 'u-2',
+          name: 'Bob',
+          email: 'bob@example.com',
+          photo: 'https://example.com/bob.png',
+          position: 'lead',
+        },
+      ]);
+      repository.findAllVerifiedUsers.mockResolvedValue([
+        {
+          _id: 'v-1',
+          name: 'Alice Verified',
+          email: 'alice@example.com',
+          position: ['member'],
+        },
+        {
+          _id: 'v-2',
+          name: 'Charlie',
+          email: 'charlie@example.com',
+          position: ['advisor'],
+        },
+      ]);
+
+      const result = await service.getMergedUserList();
+
+      expect(repository.findAllUsers).toHaveBeenCalledTimes(1);
+      expect(repository.findAllVerifiedUsers).toHaveBeenCalledTimes(1);
+
+      expect(result).toHaveLength(3);
+
+      const alice = result.find((u) => u.email === 'Alice@example.com');
+      expect(alice).toEqual({
+        _id: 'u-1',
+        email: 'Alice@example.com',
+        name: 'Alice',
+        photo: 'https://example.com/alice.png',
+        position: ['member'],
+        loggedIn: true,
+        verified: true,
+      });
+      expect(alice).not.toHaveProperty('googleId');
+      expect(alice).not.toHaveProperty('__v');
+
+      const bob = result.find((u) => u.email === 'bob@example.com');
+      expect(bob).toEqual({
+        _id: 'u-2',
+        email: 'bob@example.com',
+        name: 'Bob',
+        photo: 'https://example.com/bob.png',
+        position: ['lead'],
+        loggedIn: true,
+        verified: false,
+      });
+
+      const charlie = result.find((u) => u.email === 'charlie@example.com');
+      expect(charlie).toEqual({
+        _id: 'v-2',
+        email: 'charlie@example.com',
+        name: 'Charlie',
+        photo: '',
+        position: ['advisor'],
+        loggedIn: false,
+        verified: true,
+      });
+    });
+
+    test('performs case-insensitive and whitespace-tolerant email merging and deduplication', async () => {
+      // User has uppercase and whitespace
+      repository.findAllUsers.mockResolvedValue([
+        {
+          _id: 'u-upper',
+          name: 'Upper Alice',
+          email: '  ALICE@EXAMPLE.COM  ',
+          positions: ['member'],
+        },
+      ]);
+      // VerifiedUser has lowercase and duplicates
+      repository.findAllVerifiedUsers.mockResolvedValue([
+        {
+          _id: 'v-1',
+          name: 'Alice In Verified',
+          email: 'alice@example.com',
+          position: ['member'],
+        },
+        {
+          _id: 'v-2',
+          name: 'Charlie Duplicate 1',
+          email: '  CHARLIE@DOMAIN.COM  ',
+          position: 'advisor',
+        },
+        {
+          _id: 'v-3',
+          name: 'Charlie Duplicate 2',
+          email: 'charlie@domain.com',
+          position: ['advisor'],
+        },
+      ]);
+
+      const result = await service.getMergedUserList();
+
+      // Alice should be merged, loggedIn true, verified true, and only appear ONCE
+      const aliceMatches = result.filter((u) => u.email.trim().toLowerCase() === 'alice@example.com');
+      expect(aliceMatches).toHaveLength(1);
+      expect(aliceMatches[0].loggedIn).toBe(true);
+      expect(aliceMatches[0].verified).toBe(true);
+
+      // Charlie should only appear ONCE despite duplicates in VerifiedUser
+      const charlieMatches = result.filter((u) => u.email.trim().toLowerCase() === 'charlie@domain.com');
+      expect(charlieMatches).toHaveLength(1);
+      expect(charlieMatches[0].loggedIn).toBe(false);
+      expect(charlieMatches[0].verified).toBe(true);
+      expect(charlieMatches[0].position).toEqual(['advisor']);
+    });
+
+    test('normalizes positions and photos when fields are missing or non-standard', async () => {
+      repository.findAllUsers.mockResolvedValue([
+        {
+          _id: 'u-empty',
+          name: 'No Position User',
+          email: 'none@example.com',
+        },
+      ]);
+      repository.findAllVerifiedUsers.mockResolvedValue([
+        {
+          _id: 'v-single',
+          name: 'Single Pos Verified',
+          email: 'single@example.com',
+          position: 'member',
+        },
+      ]);
+
+      const result = await service.getMergedUserList();
+
+      const emptyUser = result.find((u) => u.email === 'none@example.com');
+      expect(emptyUser.position).toEqual([]);
+      expect(emptyUser.photo).toBe('');
+
+      const singleUser = result.find((u) => u.email === 'single@example.com');
+      expect(singleUser.position).toEqual(['member']);
+    });
+
+    test('handles empty or missing lists gracefully', async () => {
+      repository.findAllUsers.mockResolvedValue(null);
+      repository.findAllVerifiedUsers.mockResolvedValue(null);
+
+      const result = await service.getMergedUserList();
+      expect(result).toEqual([]);
+    });
+
+    test('propagates repository query rejections', async () => {
+      const error = new Error('Database connection failed');
+      repository.findAllUsers.mockRejectedValue(error);
+      repository.findAllVerifiedUsers.mockResolvedValue([]);
+
+      await expect(service.getMergedUserList()).rejects.toThrow('Database connection failed');
+    });
+  });
+
+  describe('createVerifiedUser', () => {
+    test('updates existing user by adding position when user exists (200)', async () => {
+      const existing = { _id: 'existing-id', email: 'exist@example.com' };
+      repository.findUserByEmail.mockResolvedValue(existing);
+      repository.addPositionToUser.mockResolvedValue({ modifiedCount: 1 });
+
+      const result = await service.createVerifiedUser({
+        name: 'Existing',
+        email: 'exist@example.com',
+        position: 'admin',
+      });
+
+      expect(repository.findUserByEmail).toHaveBeenCalledWith('exist@example.com');
+      expect(repository.addPositionToUser).toHaveBeenCalledWith('existing-id', 'admin');
+      expect(result).toEqual({ status: 200, data: { createStatus: 'success' } });
+      expect(repository.createUser).not.toHaveBeenCalled();
+    });
+
+    test('throws NOT_FOUND AppError when addPositionToUser does not match any document', async () => {
+      const existing = { _id: 'existing-id', email: 'exist@example.com' };
+      repository.findUserByEmail.mockResolvedValue(existing);
+      repository.addPositionToUser.mockResolvedValue({ matchedCount: 0, modifiedCount: 0 });
+
+      await expect(service.createVerifiedUser({
+        name: 'Existing',
+        email: 'exist@example.com',
+        position: 'admin',
+      })).rejects.toThrow('User not found during position update');
+    });
+
+    test('normalizes email with trimming and lowercasing before looking up existing user', async () => {
+      const existing = { _id: 'existing-id', email: 'exist@example.com' };
+      repository.findUserByEmail.mockResolvedValue(existing);
+      repository.addPositionToUser.mockResolvedValue({ modifiedCount: 1 });
+
+      const result = await service.createVerifiedUser({
+        name: 'Existing',
+        email: '  EXIST@EXAMPLE.COM  ',
+        position: 'lead',
+      });
+
+      expect(repository.findUserByEmail).toHaveBeenCalledWith('exist@example.com');
+      expect(repository.addPositionToUser).toHaveBeenCalledWith('existing-id', 'lead');
+      expect(result).toEqual({ status: 200, data: { createStatus: 'success' } });
+    });
+
+    test('creates new user when user does not exist (201)', async () => {
+      repository.findUserByEmail.mockResolvedValue(null);
+      repository.createUser.mockResolvedValue({ _id: 'new-id' });
+
+      const result = await service.createVerifiedUser({
+        name: 'New Person',
+        email: 'new@example.com',
+        position: 'member',
+      });
+
+      expect(repository.findUserByEmail).toHaveBeenCalledWith('new@example.com');
+      expect(repository.createUser).toHaveBeenCalledWith({
+        name: 'New Person',
+        email: 'new@example.com',
+        positions: ['member'],
+      });
+      expect(result).toEqual({ status: 201, data: { createStatus: 'success' } });
+      expect(repository.addPositionToUser).not.toHaveBeenCalled();
+    });
+
+    test('propagates repository failures during createVerifiedUser', async () => {
+      const error = new Error('Database write failed');
+      repository.findUserByEmail.mockRejectedValue(error);
+
+      await expect(service.createVerifiedUser({
+        name: 'New Person',
+        email: 'new@example.com',
+        position: 'member',
+      })).rejects.toThrow('Database write failed');
+    });
   });
 });
