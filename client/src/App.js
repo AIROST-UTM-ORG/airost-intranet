@@ -19,8 +19,8 @@ import Board from "./features/project-tracking/components/Board.js";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import CreateDoc from "./pages/Documentation/component/create-documentation/CreateDoc.js";
 import MemberDirectory from "./features/members/pages/MemberDirectory.js";
-import EditProfile from "./features/members/pages/EditProfile.js";
-import Profile from "./features/members/pages/Profile.js";
+import EditProfile from "./features/members/pages/Profile/EditProfile.js";
+import Profile from "./features/members/pages/Profile/Profile.js";
 
 const queryClient = new QueryClient();
 

@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import apiClient from '../../../shared/api/client.js';
-import useAuth from '../../../hooks/useAuth.js';
-import EditProfileForm from '../components/EditProfileForm.js';
-import { makeSquarePhoto } from '../utils/photo.js';
-import { getInitialForm } from '../utils/profileForm.js';
-import { getSocialErrors } from '../utils/socialUrl.js';
+import apiClient from '../../../../shared/api/client.js';
+import useAuth from '../../../../hooks/useAuth.js';
+import EditProfileForm from '../../components/Profile/EditProfileForm.js';
+import { makeSquarePhoto } from '../../utils/photo.js';
+import { getInitialForm } from '../../utils/profileForm.js';
+import { getSocialErrors } from '../../utils/socialUrl.js';
 
 const EditProfile = () => {
   const { user, setUser } = useAuth();

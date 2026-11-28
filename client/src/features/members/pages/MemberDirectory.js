@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import MemberCard from '../components/MemberCard';
 import MemberFilters from '../components/MemberFilters';
 import MemberHeading from '../components/MemberHeading';
-import ProfileSearch from '../components/ProfileSearch';
+import ProfileSearch from '../components/Profile/ProfileSearch';
 import '../styles/member-directory.css';
 import '../styles/shared.css';
 import useFetchUsers from '../hooks/useFetchUsers';

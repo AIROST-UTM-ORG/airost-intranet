@@ -3,8 +3,8 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import Profile from '../pages/Profile';
-import EditProfile from '../pages/EditProfile';
+import Profile from '../pages/Profile/Profile';
+import EditProfile from '../pages/Profile/EditProfile';
 import apiClient from '../../../shared/api/client';
 import useAuth from '../../../hooks/useAuth';
 import useFetchUsers from '../hooks/useFetchUsers';

@@ -1,9 +1,9 @@
 import React from 'react';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import ProfileDetails from '../components/ProfileDetails';
-import ProfileHero from '../components/ProfileHero';
-import ProfileSearch from '../components/ProfileSearch';
+import ProfileDetails from '../components/Profile/ProfileDetails';
+import ProfileHero from '../components/Profile/ProfileHero';
+import ProfileSearch from '../components/Profile/ProfileSearch';
 import MemberCard from '../components/MemberCard';
 
 describe('ProfileSearch', () => {

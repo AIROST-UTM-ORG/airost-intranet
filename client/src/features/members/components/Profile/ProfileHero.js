@@ -1,7 +1,7 @@
 import React from 'react';
 import { CgProfile } from 'react-icons/cg';
 import { FiEdit2, FiGithub, FiInstagram, FiLinkedin, FiMail, FiMapPin } from 'react-icons/fi';
-import { getSocialUrl } from '../utils/socialUrl';
+import { getSocialUrl } from '../../utils/socialUrl';
 
 const ProfileHero = ({ member, location, onEdit }) => {
   const instagramUrl = getSocialUrl(member.instagramUrl, 'instagram');
