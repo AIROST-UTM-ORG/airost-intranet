@@ -3,12 +3,12 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import Profile from '../../../pages/Profile/Profile';
-import EditProfile from '../../../pages/Profile/EditProfile';
+import Profile from '../pages/Profile/Profile';
+import EditProfile from '../pages/Profile/EditProfile';
 import apiClient from '../../../shared/api/client';
 import useAuth from '../../../hooks/useAuth';
-import useFetchUsers from '../../../hooks/useFetchUsers';
-import { makeSquarePhoto } from '../../../pages/Profile/utils/photo';
+import useFetchUsers from '../hooks/useFetchUsers';
+import { makeSquarePhoto } from '../utils/photo';
 
 jest.mock('../../../shared/api/client', () => ({
   __esModule: true,
@@ -19,8 +19,8 @@ jest.mock('@tanstack/react-query', () => ({
   useQueryClient: jest.fn(),
 }));
 jest.mock('../../../hooks/useAuth', () => jest.fn());
-jest.mock('../../../hooks/useFetchUsers', () => jest.fn());
-jest.mock('../../../pages/Profile/utils/photo', () => ({
+jest.mock('../hooks/useFetchUsers', () => jest.fn());
+jest.mock('../utils/photo', () => ({
   makeSquarePhoto: jest.fn(),
 }));
 

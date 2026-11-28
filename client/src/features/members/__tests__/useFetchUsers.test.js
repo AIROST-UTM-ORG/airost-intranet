@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import useFetchUsers from '../../../hooks/useFetchUsers';
+import useFetchUsers from '../hooks/useFetchUsers';
 import apiClient from '../../../shared/api/client';
 
 jest.mock('../../../shared/api/client', () => {

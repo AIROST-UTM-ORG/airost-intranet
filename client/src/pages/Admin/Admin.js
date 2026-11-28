@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import './Admin.css';
 import { FaCheck } from "react-icons/fa6";
-import apiClient from '../../shared/api/client';
+import { fetchUsers, createVerifiedUser } from "features/members/services";
 import useAuth from "../../hooks/useAuth";
 import AdminDocumentationPanel from "features/documentation/admin";
 
@@ -25,14 +25,14 @@ const Admin = () => {
     }, []);
 
     const getUsers = async () => {
-        apiClient.get('/user/users')
+        fetchUsers()
         .then(users => setUsers(users.data))
         .catch(err => console.log(err));
     };
 
     const approveUser = async (user) => {
         try {
-            const response = await apiClient.post('/admin/users/verified', {
+            const response = await createVerifiedUser({
                 name: user.name,
                 email: user.email,
                 position: "member"
@@ -50,7 +50,7 @@ const Admin = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
   
-        const response = await apiClient.post('/admin/users/verified', {
+        const response = await createVerifiedUser({
             name : name,
             email : email,
             position : position,

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import Column from "./Column";
 import BurnBarrel from "./BurnBarrel";
 import { useQuery } from '@tanstack/react-query';
-import useFetchUsers from "../../../hooks/useFetchUsers";
+import useFetchUsers from "../../members/hooks/useFetchUsers";
 import { useParams } from "react-router-dom";
 import useAuth from "../../../hooks/useAuth";
 import useGetProjects from "../../projects/hooks/useGetProjects";

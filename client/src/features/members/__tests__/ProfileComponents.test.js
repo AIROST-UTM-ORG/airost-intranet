@@ -1,10 +1,10 @@
 import React from 'react';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import ProfileDetails from '../../../pages/Profile/components/ProfileDetails';
-import ProfileHero from '../../../pages/Profile/components/ProfileHero';
-import ProfileSearch from '../../../pages/MemberDirectory/components/ProfileSearch';
-import MemberCard from '../../../pages/MemberDirectory/components/MemberCard';
+import ProfileDetails from '../components/Profile/ProfileDetails';
+import ProfileHero from '../components/Profile/ProfileHero';
+import ProfileSearch from '../components/Profile/ProfileSearch';
+import MemberCard from '../components/MemberCard';
 
 describe('ProfileSearch', () => {
   test('shows matching member names and selects a result without leaving on input', async () => {

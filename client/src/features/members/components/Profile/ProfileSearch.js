@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { FiSearch, FiX } from 'react-icons/fi';
-import '../styles/shared.css';
-import { getPositions } from '../utils/memberUtils';
+import '../../styles/shared.css';
+import { getPositions } from '../../utils/memberUtils';
 
 const ProfileSearch = ({
   users = [],
