@@ -917,10 +917,7 @@ interface DocEventPayload {
 
 ## 8. Client routes
 
-The documentation feature is accessed on the client under the base path `/doc`.
-
-### 8.1 Client route definitions
-The following table defines the official client URL routes, corresponding screen representations, and query parameter specifications:
+The documentation feature is accessed on the client under the base path `/doc`. The following table defines the official client URL routes, corresponding screen representations, and query parameter specifications:
 
 | View / Action | Route Pattern | Query Parameters | Screen Spec Ref | Description |
 | :--- | :--- | :--- | :--- | :--- |
