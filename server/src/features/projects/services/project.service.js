@@ -27,7 +27,7 @@ const createProject = async (data) => {
         && error.code === 11000
         && error.keyPattern?.projectId;
       if (projectIdConflict && attempt < 2) continue;
-      throw new AppError(INTERNAL_SERVER_ERROR, 'INTERNAL_SERVER_ERROR', error.message);
+      throw new AppError(INTERNAL_SERVER_ERROR, 'INTERNAL_SERVER_ERROR', "Failed to create project.");
     } finally {
       await session.endSession();
     }
