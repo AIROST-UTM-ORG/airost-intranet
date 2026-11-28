@@ -7,7 +7,7 @@
  *   DELETE /calendar/:id
  */
 
-jest.mock('../../google_calendar', () => ({
+jest.mock('../../src/config/googleCalendar', () => ({
   getEvents: jest.fn(),
   insertEvent: jest.fn(),
   removeEvent: jest.fn(),
@@ -15,7 +15,7 @@ jest.mock('../../google_calendar', () => ({
 
 const request = require('supertest');
 const { createApp } = require('../../app');
-const { getEvents, insertEvent, removeEvent } = require('../../google_calendar');
+const { getEvents, insertEvent, removeEvent } = require('../../src/config/googleCalendar');
 
 let app;
 
