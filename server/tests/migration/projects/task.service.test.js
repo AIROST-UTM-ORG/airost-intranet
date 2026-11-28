@@ -57,7 +57,7 @@ describe('projects task service authorization and history', () => {
     expect(repository.updateBoardTasks).not.toHaveBeenCalled();
 
     await taskService.refreshProjectBoard({ projectId: 3, tasks: [] }, { email: 'owner@example.com' });
-    expect(repository.updateBoardTasks).toHaveBeenCalledWith(3, [], expect.any(Object));
+    expect(repository.updateBoardTasks).toHaveBeenCalledWith(3, [], 0, expect.any(Object));
     expect(history.trackTaskDeletion).toHaveBeenCalledWith(protectedTask, 3, 'owner@example.com', expect.any(Object));
   });
 
@@ -96,8 +96,8 @@ describe('projects task service authorization and history', () => {
 
   test('preserves persisted owner and whitelists update fields', async () => {
     const oldTask = { _id: 'subdoc-id', task_id: 'owned', title: 'Old', createdBy: 'owner@example.com' };
-    repository.findBoard.mockResolvedValue({ tasks: [oldTask] });
-    repository.updateTask.mockResolvedValue({ projectId: 5 });
+    repository.findBoard.mockResolvedValue({ tasks: [oldTask], __v: 2 });
+    repository.updateBoardTasks.mockResolvedValue({ projectId: 5 });
 
     await taskService.updateTask({
       projectId: 5,
@@ -109,12 +109,12 @@ describe('projects task service authorization and history', () => {
       },
     }, { email: 'owner@example.com' });
 
-    expect(repository.updateTask).toHaveBeenCalledWith(5, 'owned', {
+    expect(repository.updateBoardTasks).toHaveBeenCalledWith(5, [expect.objectContaining({
       task_id: 'owned',
       title: 'Updated',
       createdBy: 'owner@example.com',
       _id: 'subdoc-id',
-    }, expect.any(Object));
+    })], 2, expect.any(Object));
     expect(history.trackTaskChanges).toHaveBeenCalledWith(
       oldTask,
       expect.objectContaining({ title: 'Updated', createdBy: 'owner@example.com' }),

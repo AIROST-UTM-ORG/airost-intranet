@@ -6,10 +6,25 @@ const {
   BAD_REQUEST,
   NOT_FOUND,
   FORBIDDEN,
+  CONFLICT,
 } = require('../../../shared/constants/httpStatus');
 const { PLATFORM_ROLES } = require('../../../shared/constants/roles');
 
 const TASK_EDITABLE_FIELDS = ['title', 'column', 'assignee', 'description', 'priority', 'dueDate'];
+
+const throwConcurrentModification = () => {
+  throw new AppError(CONFLICT, 'CONCURRENT_MODIFICATION', 'Project board was modified. Please reload and retry.');
+};
+
+const assertStableTransactionVersion = (board, state) => {
+  const version = board ? (board.__v ?? 0) : null;
+  if (!state.initialized) {
+    state.initialized = true;
+    state.version = version;
+    return;
+  }
+  if (state.version !== version) throwConcurrentModification();
+};
 
 const getProjectBoard = async (projectId) => {
   const board = await repository.findBoard({ projectId });
@@ -116,9 +131,11 @@ const recordTaskChanges = async (changes, projectId, user, session) => {
 const createOrUpdateProjectBoard = async ({ projectId, tasks }, user) => {
   const session = await mongoose.startSession();
   let result;
+  const transactionVersion = { initialized: false };
   try {
     await session.withTransaction(async () => {
       const board = await repository.findBoard({ projectId }, session);
+      assertStableTransactionVersion(board, transactionVersion);
       const oldTasks = board?.tasks || [];
       const { nextTasks, changes } = prepareBoardChanges(oldTasks, tasks, user);
 
@@ -129,10 +146,14 @@ const createOrUpdateProjectBoard = async ({ projectId, tasks }, user) => {
         return;
       }
 
-      board.tasks = nextTasks;
-      await repository.saveBoard(board, session);
+      if (changes.created.length || changes.updated.length || changes.deleted.length) {
+        const updatedBoard = await repository.updateBoardTasks(projectId, nextTasks, board.__v ?? 0, session);
+        if (!updatedBoard) throwConcurrentModification();
+        result = { board: updatedBoard, status: 200 };
+      } else {
+        result = { board, status: 200 };
+      }
       await recordTaskChanges(changes, projectId, user, session);
-      result = { board, status: 200 };
     });
   } finally {
     await session.endSession();
@@ -143,13 +164,20 @@ const createOrUpdateProjectBoard = async ({ projectId, tasks }, user) => {
 const refreshProjectBoard = async ({ projectId, tasks }, user) => {
   const session = await mongoose.startSession();
   let updatedBoard;
+  const transactionVersion = { initialized: false };
   try {
     await session.withTransaction(async () => {
       const board = await repository.findBoard({ projectId }, session);
       if (!board) throw new AppError(NOT_FOUND, 'NOT_FOUND', 'Project board not found');
+      assertStableTransactionVersion(board, transactionVersion);
 
       const { nextTasks, changes } = prepareBoardChanges(board.tasks || [], tasks, user);
-      updatedBoard = await repository.updateBoardTasks(projectId, nextTasks, session);
+      if (!changes.created.length && !changes.updated.length && !changes.deleted.length) {
+        updatedBoard = board;
+        return;
+      }
+      updatedBoard = await repository.updateBoardTasks(projectId, nextTasks, board.__v ?? 0, session);
+      if (!updatedBoard) throwConcurrentModification();
       await recordTaskChanges(changes, projectId, user, session);
     });
   } finally {
@@ -162,16 +190,29 @@ const updateTask = async ({ projectId, tasks }, user) => {
   assertUniqueTaskIds([tasks], 'Submitted');
   const session = await mongoose.startSession();
   let updatedBoard;
+  const transactionVersion = { initialized: false };
   try {
     await session.withTransaction(async () => {
       const board = await repository.findBoard({ projectId, 'tasks.task_id': tasks.task_id }, session);
       if (!board) throw new AppError(NOT_FOUND, 'NOT_FOUND', 'Task not found');
+      assertStableTransactionVersion(board, transactionVersion);
       assertUniqueTaskIds(board.tasks || [], 'Persisted');
       const oldTask = board.tasks.find((task) => task.task_id === tasks.task_id);
       assertCanChangeTask(oldTask, user);
 
+      const hasChanges = TASK_EDITABLE_FIELDS.some(
+        (field) => Object.prototype.hasOwnProperty.call(tasks, field)
+          && !history.valuesAreEqual(oldTask[field], tasks[field], field),
+      );
+      if (!hasChanges) {
+        updatedBoard = board;
+        return;
+      }
+
       const updatedTask = toStoredTask(tasks, oldTask, user);
-      updatedBoard = await repository.updateTask(projectId, oldTask.task_id, updatedTask, session);
+      const nextTasks = board.tasks.map((task) => task.task_id === oldTask.task_id ? updatedTask : task);
+      updatedBoard = await repository.updateBoardTasks(projectId, nextTasks, board.__v ?? 0, session);
+      if (!updatedBoard) throwConcurrentModification();
       await history.trackTaskChanges(oldTask, updatedTask, projectId, taskOwner(user), session);
     });
   } finally {

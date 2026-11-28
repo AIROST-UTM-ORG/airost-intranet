@@ -35,21 +35,13 @@ const deleteProjectByProjectId = (projectId, session) =>
 const findBoard = (filter, session) => ProjectBoard.findOne(filter).session(session || null);
 const createBoard = (board, session) => new ProjectBoard(board).save({ session });
 const deleteBoard = (projectId, session) => ProjectBoard.findOneAndDelete({ projectId }, { session });
-const updateBoardTasks = (projectId, tasks, session) =>
+const updateBoardTasks = (projectId, tasks, expectedVersion, session) =>
   ProjectBoard.findOneAndUpdate(
-    { projectId },
-    { $set: { tasks } },
+    { projectId, __v: expectedVersion },
+    { $set: { tasks }, $inc: { __v: 1 } },
     { new: true, session },
   );
 const saveBoard = (board, session) => board.save({ session });
-
-const updateTask = (projectId, taskId, task, session) =>
-  ProjectBoard.findOneAndUpdate(
-    { projectId, "tasks.task_id": taskId },
-    { $set: { "tasks.$": task } },
-    { new: true, session },
-  );
-
 
 const findTaskHistory = (taskId) =>
   TaskHistory.find({ taskId }).sort({ timestamp: -1 });
@@ -73,7 +65,6 @@ module.exports = {
   createBoard,
   deleteBoard,
   updateBoardTasks,
-  updateTask,
   saveBoard,
   findTaskHistory,
   findProjectHistory,
