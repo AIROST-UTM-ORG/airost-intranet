@@ -208,6 +208,26 @@ describe('event.service', () => {
     expect(result).toBe(mockEvents);
   });
 
+  test('getUpcomingEvents throws AppError 502 when eventRepository.getEvents returns 0 or non-array', async () => {
+    jest.spyOn(eventRepository, 'getEvents').mockResolvedValueOnce(0);
+
+    await expect(eventService.getUpcomingEvents()).rejects.toMatchObject({
+      statusCode: 502,
+      code: 'UPSTREAM_ERROR',
+      message: 'Failed to fetch Google Calendar events',
+    });
+  });
+
+  test('getUpcomingEvents throws AppError 502 when eventRepository.getEvents rejects', async () => {
+    jest.spyOn(eventRepository, 'getEvents').mockRejectedValueOnce(new Error('Network error'));
+
+    await expect(eventService.getUpcomingEvents()).rejects.toMatchObject({
+      statusCode: 502,
+      code: 'UPSTREAM_ERROR',
+      message: 'Network error',
+    });
+  });
+
   test('addEvent calls eventRepository.insertEvent', async () => {
     const eventData = { summary: 'New Event' };
     jest.spyOn(eventRepository, 'insertEvent').mockResolvedValueOnce(1);

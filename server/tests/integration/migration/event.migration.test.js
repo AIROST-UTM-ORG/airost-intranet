@@ -59,6 +59,20 @@ describe('Google Calendar feature migration (/api/calendar)', () => {
       });
       expect(googleCalendar.getEvents).toHaveBeenCalledTimes(1);
     });
+
+    test('returns 502 UPSTREAM_ERROR when Google Calendar fetch fails', async () => {
+      googleCalendar.getEvents.mockRejectedValueOnce(new Error('Calendar API offline'));
+
+      const res = await request(app).get('/api/calendar/upcoming-events').expect(502);
+
+      expect(res.body).toEqual({
+        success: false,
+        error: {
+          code: 'UPSTREAM_ERROR',
+          message: 'Calendar API offline',
+        },
+      });
+    });
   });
 
   describe('POST /api/calendar/add', () => {

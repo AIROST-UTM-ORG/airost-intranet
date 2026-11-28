@@ -51,7 +51,7 @@ const getEvents = async (options = {}) => {
     return response.data.items || [];
   } catch (error) {
     console.error('Error fetching Google Calendar events:', error.message || error);
-    return 0;
+    throw error;
   }
 };
 
