@@ -9,7 +9,7 @@ const adminRoutes = require('../../routes/adminRoutes');
 const userRoutes = require('../features/members/member.routes');
 const memberRepository = require('../features/members/member.repository');
 const eventRoutes = require('../../routes/eventRoutes');
-const projectRoutes = require('../../routes/projectsRoutes');
+const projectRoutes = require('../features/projects/project.routes');
 
 const router = express.Router();
 

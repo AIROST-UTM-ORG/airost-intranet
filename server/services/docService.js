@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const DocumentationSpace = require('../models/DocumentationSpace');
 const Document = require('../models/Document');
-const Project = require('../models/Project');
+const projectRepository = require('../src/features/projects/project.repository');
 const ProjectMember = require('../models/ProjectMember');
 const User = require('../models/User');
 const Doc = require('../models/docModel');
@@ -78,7 +78,7 @@ const getUserProjectRole = async (userId, projectId) => {
     }
 
     // 2. Fallback: Project.lead matching
-    const project = await Project.findById(projectId);
+    const project = await projectRepository.findProjectById(projectId);
     if (!project || !project.lead || typeof project.lead !== 'string') {
       return null;
     }
@@ -159,7 +159,7 @@ registerProjectRoleResolver(getUserProjectRole);
  * Look up a Project by ID.
  */
 const findProjectById = async (projectId) => {
-  return await Project.findById(projectId);
+  return await projectRepository.findProjectById(projectId);
 };
 
 /* ========================================================================== */
@@ -239,9 +239,7 @@ const getUserProjectRolesMap = async (user) => {
           leadConditions.push({ lead: { $regex: nameRegex } });
         } else if (count > 1) {
           // Ambiguous display name: log warning without user details
-          const ambiguousProjects = await Project.find({
-            lead: { $regex: nameRegex },
-          }).select('_id').lean();
+          const ambiguousProjects = await projectRepository.findProjectsMatchingLead(nameRegex);
 
           for (const p of ambiguousProjects) {
             console.warn(
@@ -253,9 +251,7 @@ const getUserProjectRolesMap = async (user) => {
     }
 
     if (leadConditions.length > 0) {
-      const leadProjects = await Project.find({
-        $or: leadConditions,
-      }).select('_id lead').lean();
+      const leadProjects = await projectRepository.findProjectsForLeadConditions(leadConditions);
 
       for (const p of leadProjects) {
         const pIdStr = String(p._id);
@@ -625,9 +621,7 @@ const adminListSpaces = async ({ page = 1, limit = 25, q = '' } = {}) => {
     const escaped = escapeRegex(trimmedQ);
     const regex = new RegExp(escaped, 'i');
 
-    const matchingProjects = await Project.find({
-      $or: [{ title: { $regex: regex } }, { name: { $regex: regex } }],
-    }).select('_id');
+    const matchingProjects = await projectRepository.findProjectsMatchingSearch(regex);
     const projectIds = matchingProjects.map((p) => p._id);
 
     const matchingUsers = await User.find({

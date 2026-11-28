@@ -12,7 +12,7 @@ const ROUTE_MODULES = [
   ['../../../routes/adminRoutes', 'admin'],
   ['../../../src/features/members/member.routes', 'users'],
   ['../../../routes/eventRoutes', 'events'],
-  ['../../../routes/projectsRoutes', 'projects'],
+  ['../../../src/features/projects/project.routes', 'projects'],
 ];
 
 const registerRouteMocks = () => {

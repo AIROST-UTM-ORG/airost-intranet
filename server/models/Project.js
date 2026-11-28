@@ -1,13 +1,2 @@
-const mongoose = require('mongoose'); 
-
-const project = new mongoose.Schema({
-    projectId:{
-        type:Number,
-        required:true,
-     },
-    title: String,
-    description: String,
-    lead: String,
-},{timestamps: true});
-
-module.exports = mongoose.model('Project', project);
+// Compatibility forwarding module; the projects feature owns the Project schema.
+module.exports = require('../src/features/projects/models/project.model');

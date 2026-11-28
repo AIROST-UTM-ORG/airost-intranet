@@ -18,6 +18,8 @@ const { connect, clearDatabase, closeDatabase } = require('../setup/mongoSetup')
 const { createApp } = require('../../app');
 const Project = require('../../models/Project');
 const ProjectBoard = require('../../models/ProjectBoard');
+const User = require('../../models/User');
+const projectRepository = require('../../src/features/projects/project.repository');
 
 let app;
 
@@ -52,6 +54,13 @@ const seedBoard = (overrides = {}) =>
     ...overrides,
   });
 
+const authenticatedAdmin = async () => {
+  const user = await User.create({ name: 'Project Admin', email: 'project-admin@example.com', positions: ['admin'] });
+  const agent = request.agent(app);
+  await agent.post('/test/auth/login').send({ userId: user._id }).expect(200);
+  return agent;
+};
+
 // ── GET /projects ─────────────────────────────────────────────────────────────
 
 describe('GET /projects', () => {
@@ -71,12 +80,23 @@ describe('GET /projects', () => {
     expect(res.body.length).toBe(2);
   });
 
+  test('returns the canonical success envelope on /api/projects', async () => {
+    await seedProject();
+    const res = await request(app).get('/api/projects');
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data).toHaveLength(1);
+  });
+
   test('returns 500 when Project.find throws an error', async () => {
     const findSpy = jest.spyOn(Project, 'find').mockRejectedValueOnce(new Error('Database query failed'));
 
     const res = await request(app).get('/projects');
     expect(res.status).toBe(500);
-    expect(res.body).toEqual({ error: 'Database query failed' });
+    expect(res.body).toEqual({
+      success: false,
+      error: { code: 'INTERNAL_SERVER_ERROR', message: 'An unexpected error occurred' },
+    });
 
     findSpy.mockRestore();
   });
@@ -85,6 +105,12 @@ describe('GET /projects', () => {
 // ── POST /projects ────────────────────────────────────────────────────────────
 
 describe('POST /projects', () => {
+  test('rejects a missing or blank title with a validation error', async () => {
+    const res = await request(app).post('/api/projects').send({ title: '  ' });
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+  });
+
   test('creates the first project with projectId=1 and creates an empty board', async () => {
     const payload = {
       title: 'First Project',
@@ -115,8 +141,21 @@ describe('POST /projects', () => {
     expect(res.body.projectId).toBe(6);
   });
 
-  test('rolls back project creation and returns 500 when ProjectBoard.create throws an error', async () => {
-    const createBoardSpy = jest.spyOn(ProjectBoard, 'create').mockRejectedValueOnce(new Error('Board creation failed'));
+  test('allocates unique sequential project IDs for concurrent creations', async () => {
+    await seedProject({ projectId: 20, title: 'Existing Project' });
+
+    const responses = await Promise.all([
+      request(app).post('/projects').send({ title: 'Concurrent Project A' }),
+      request(app).post('/projects').send({ title: 'Concurrent Project B' }),
+    ]);
+
+    expect(responses.map((response) => response.status)).toEqual([201, 201]);
+    expect(responses.map((response) => response.body.projectId).sort((a, b) => a - b)).toEqual([21, 22]);
+    expect(await ProjectBoard.countDocuments({ projectId: { $in: [21, 22] } })).toBe(2);
+  });
+
+  test('rolls back project creation and returns 500 when board creation fails', async () => {
+    const createBoardSpy = jest.spyOn(projectRepository, 'createBoard').mockRejectedValueOnce(new Error('Board creation failed'));
 
     const payload = {
       title: 'Rollback Project',
@@ -124,15 +163,20 @@ describe('POST /projects', () => {
       lead: 'Lead Dev',
     };
 
-    const res = await request(app).post('/projects').send(payload);
-    expect(res.status).toBe(500);
-    expect(res.body).toEqual({ error: 'Board creation failed' });
+    try {
+      const res = await request(app).post('/projects').send(payload);
+      expect(res.status).toBe(500);
+      expect(res.body).toEqual({
+        success: false,
+        error: { code: 'INTERNAL_SERVER_ERROR', message: 'Board creation failed' },
+      });
 
-    // Confirm project was rolled back and not found in database
-    const project = await Project.findOne({ title: 'Rollback Project' });
-    expect(project).toBeNull();
-
-    createBoardSpy.mockRestore();
+      // Confirm project was rolled back and not found in database
+      const project = await Project.findOne({ title: 'Rollback Project' });
+      expect(project).toBeNull();
+    } finally {
+      createBoardSpy.mockRestore();
+    }
   });
 });
 
@@ -154,7 +198,7 @@ describe('DELETE /projects/:id', () => {
   test('returns 404 when the project does not exist', async () => {
     const res = await request(app).delete('/projects/9999');
     expect(res.status).toBe(404);
-    expect(res.body.message).toContain('not found');
+    expect(res.body.error.message).toContain('not found');
   });
 });
 
@@ -172,13 +216,13 @@ describe('GET /projects/tracking/:uid', () => {
   test('returns 404 when board does not exist for numeric projectId', async () => {
     const res = await request(app).get('/projects/tracking/999');
     expect(res.status).toBe(404);
-    expect(res.body.message).toContain('not found');
+    expect(res.body.error.message).toContain('not found');
   });
 
   test('returns 400 for non-numeric uid', async () => {
     const res = await request(app).get('/projects/tracking/not-a-number');
     expect(res.status).toBe(400);
-    expect(res.body.message).toContain('not a number');
+    expect(res.body.error.message).toContain('positive integer');
   });
 });
 
@@ -186,7 +230,8 @@ describe('GET /projects/tracking/:uid', () => {
 
 describe('POST /projects/tracking', () => {
   test('creates a new project board when none exists', async () => {
-    const res = await request(app)
+    const agent = await authenticatedAdmin();
+    const res = await agent
       .post('/projects/tracking')
       .send({ projectId: 7, tasks: [] });
 
@@ -195,6 +240,7 @@ describe('POST /projects/tracking', () => {
   });
 
   test('updates existing board tasks when board already exists', async () => {
+    const agent = await authenticatedAdmin();
     await seedBoard({ projectId: 8, tasks: [] });
 
     const task = {
@@ -207,7 +253,7 @@ describe('POST /projects/tracking', () => {
       task_id: 'task-abc-123',
     };
 
-    const res = await request(app)
+    const res = await agent
       .post('/projects/tracking')
       .send({ projectId: 8, tasks: [task] });
 
@@ -221,6 +267,7 @@ describe('POST /projects/tracking', () => {
 
 describe('PUT /projects/tracking', () => {
   test('refreshes the tasks of an existing project board and returns 200', async () => {
+    const agent = await authenticatedAdmin();
     await seedBoard({ projectId: 12, tasks: [] });
 
     const newTasks = [
@@ -232,7 +279,7 @@ describe('PUT /projects/tracking', () => {
       },
     ];
 
-    const res = await request(app)
+    const res = await agent
       .put('/projects/tracking')
       .send({ projectId: 12, tasks: newTasks });
 
@@ -243,12 +290,25 @@ describe('PUT /projects/tracking', () => {
   });
 
   test('returns 404 when project board does not exist', async () => {
-    const res = await request(app)
+    const agent = await authenticatedAdmin();
+    const res = await agent
       .put('/projects/tracking')
       .send({ projectId: 9999, tasks: [] });
 
     expect(res.status).toBe(404);
-    expect(res.body.message).toContain('not found');
+    expect(res.body.error.message).toContain('not found');
+  });
+
+  test('does not allow a non-creator member to delete a protected task', async () => {
+    const user = await User.create({ name: 'Project Member', email: 'project-member@example.com', positions: ['member'] });
+    const agent = request.agent(app);
+    await agent.post('/test/auth/login').send({ userId: user._id }).expect(200);
+    await seedBoard({ projectId: 13, tasks: [{ task_id: 'protected', createdBy: 'another-user', title: 'Keep me' }] });
+
+    const res = await agent.put('/projects/tracking').send({ projectId: 13, tasks: [] });
+    expect(res.status).toBe(403);
+    const board = await ProjectBoard.findOne({ projectId: 13 });
+    expect(board.tasks).toHaveLength(1);
   });
 });
 
@@ -256,6 +316,7 @@ describe('PUT /projects/tracking', () => {
 
 describe('PUT /projects/update', () => {
   test('updates a specific task within a project board', async () => {
+    const agent = await authenticatedAdmin();
     const task = {
       title: 'Original Title',
       column: 'Todo',
@@ -269,7 +330,7 @@ describe('PUT /projects/update', () => {
 
     const updatedTask = { ...task, title: 'Updated Title', column: 'In Progress' };
 
-    const res = await request(app)
+    const res = await agent
       .put('/projects/update')
       .send({ projectId: 9, tasks: updatedTask, changedBy: 'Alice' });
 
@@ -293,6 +354,7 @@ describe('GET /projects/tasks/:taskId/history', () => {
   });
 
   test('returns history records for a task after updates', async () => {
+    const agent = await authenticatedAdmin();
     const task = {
       title: 'Original Title',
       column: 'Todo',
@@ -303,7 +365,7 @@ describe('GET /projects/tasks/:taskId/history', () => {
     await seedBoard({ projectId: 20, tasks: [task] });
 
     // Update the task to trigger history tracking
-    await request(app)
+    await agent
       .put('/projects/update')
       .send({
         projectId: 20,
@@ -328,6 +390,7 @@ describe('GET /projects/:projectId/history', () => {
   });
 
   test('returns project history when tasks have been tracked', async () => {
+    const agent = await authenticatedAdmin();
     const task = {
       title: 'Project Task',
       column: 'Todo',
@@ -337,7 +400,7 @@ describe('GET /projects/:projectId/history', () => {
     };
     await seedBoard({ projectId: 25, tasks: [task] });
 
-    await request(app)
+    await agent
       .put('/projects/update')
       .send({
         projectId: 25,
