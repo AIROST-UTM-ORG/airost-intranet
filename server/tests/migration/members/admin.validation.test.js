@@ -84,6 +84,7 @@ describe('admin request validation', () => {
       [{ body: { name: 'Alice', email: 'user name@domain.com', position: 'member' } }, 'space inside user part'],
       [{ body: { name: 'Alice', email: 'user@domain name.com', position: 'member' } }, 'space inside domain part'],
       [{ body: { name: 'Alice', email: 'user@domain@extra.com', position: 'member' } }, 'multiple @ symbols'],
+      [{ body: { name: 'Alice', email: `${'a'.repeat(245)}@example.com`, position: 'member' } }, 'email exceeding 254 characters'],
     ])('rejects invalid email: %s (%s)', (req) => {
       expect(() => validateCreateVerifiedUser(req)).toThrow(
         expect.objectContaining({

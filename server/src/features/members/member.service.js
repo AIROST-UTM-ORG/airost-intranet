@@ -111,7 +111,10 @@ const createVerifiedUser = async ({ name, email, position }) => {
   const existingUser = await repository.findUserByEmail(normalizedEmail);
 
   if (existingUser) {
-    await repository.addPositionToUser(existingUser._id, position);
+    const result = await repository.addPositionToUser(existingUser._id, position);
+    if (result && result.matchedCount === 0) {
+      throw new AppError(NOT_FOUND, 'NOT_FOUND', 'User not found during position update');
+    }
     return { status: 200, data: { createStatus: 'success' } };
   }
 

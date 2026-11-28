@@ -26,7 +26,7 @@ const validateCreateVerifiedUser = (req) => {
     invalid('Name must be a non-empty string under 100 characters.');
   }
 
-  if (typeof email !== 'string' || !email.trim() || !EMAIL_REGEX.test(email.trim())) {
+  if (typeof email !== 'string' || !email.trim() || email.trim().length > 254 || !EMAIL_REGEX.test(email.trim())) {
     invalid('Email must be a valid email address.');
   }
 

@@ -345,6 +345,18 @@ describe('member service behavior', () => {
       expect(repository.createUser).not.toHaveBeenCalled();
     });
 
+    test('throws NOT_FOUND AppError when addPositionToUser does not match any document', async () => {
+      const existing = { _id: 'existing-id', email: 'exist@example.com' };
+      repository.findUserByEmail.mockResolvedValue(existing);
+      repository.addPositionToUser.mockResolvedValue({ matchedCount: 0, modifiedCount: 0 });
+
+      await expect(service.createVerifiedUser({
+        name: 'Existing',
+        email: 'exist@example.com',
+        position: 'admin',
+      })).rejects.toThrow('User not found during position update');
+    });
+
     test('normalizes email with trimming and lowercasing before looking up existing user', async () => {
       const existing = { _id: 'existing-id', email: 'exist@example.com' };
       repository.findUserByEmail.mockResolvedValue(existing);
